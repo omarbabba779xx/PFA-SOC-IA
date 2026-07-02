@@ -162,7 +162,15 @@ Sur la criticité, la baseline reste légèrement plus précise (0.13 contre 0.5
 
 ![Cortex - analyseur activé](docs/screenshots/cortex_analyzer_enabled.png)
 
-Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés, et l'analyseur `FileInfo_8_0` (extraction de métadonnées PE/PDF/OLE, sans dépendance à une clé API externe) a été activé et vérifié fonctionnel. La grande majorité des ~275 analyseurs Cortex disponibles nécessitent une clé d'API tierce payante (VirusTotal, AbuseIPDB, AnyRun...), hors de portée d'un laboratoire étudiant — ce choix est cohérent avec le périmètre "extension, si le temps et les ressources le permettent" prévu dans le cadrage initial du projet.
+Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés. Trois analyseurs ont été activés et testés avec des résultats réels :
+
+| Analyseur | Couvre | Clé requise | Résultat de test |
+|---|---|---|---|
+| `FileInfo_8_0` | Fichiers (PE, PDF, OLE) | Aucune (local) | Extraction de métadonnées fonctionnelle |
+| `AbuseIPDB_2_0` | IP | Gratuite (inscription) | IP `8.8.8.8` → score d'abus **0/100**, "Content Delivery Network", 28 signalements historiques |
+| `VirusTotal_GetReport_3_1` | Fichier, hash, domaine, IP, URL | Gratuite (inscription) | Hash EICAR (fichier de test antivirus standard) → **66/74 moteurs antivirus** le détectent comme malveillant |
+
+Les clés VirusTotal et AbuseIPDB utilisées sont des comptes personnels gratuits (quota limité, sans carte bancaire), ce qui reste cohérent avec le périmètre d'un laboratoire étudiant. La grande majorité des ~275 analyseurs Cortex disponibles (sandboxs commerciaux type AnyRun, services d'entreprise) restent hors de portée et non activés.
 
 **Reste à faire** : le lien API Cortex ↔ TheHive (pour lancer une analyse Cortex directement depuis un cas TheHive) nécessite une gestion du jeton CSRF de l'API Cortex, non finalisée dans cette itération — prochaine étape naturelle de l'intégration.
 
