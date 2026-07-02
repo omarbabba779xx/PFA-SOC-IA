@@ -213,9 +213,16 @@ Sur 30 jours de données réelles issues du jeu de test : 1884 alertes, dominée
 
 ![Workflow Shuffle](docs/screenshots/shuffle_workflow.png)
 
-Un premier workflow de triage automatisé (`SOC PFA - Triage automatise Wazuh`) a été créé : un déclencheur **Webhook** reçoit une alerte (destinée à être appelée depuis le script Python de triage ou directement depuis Wazuh), branché sur une action **HTTP** pointant vers l'API de création de cas TheHive — posant la structure de base d'un playbook de réponse SOAR.
+Un premier workflow de triage automatisé (`SOC PFA - Triage automatise Wazuh`) a été créé : un déclencheur **Webhook** reçoit une alerte, branché sur une action **HTTP** qui appelle l'API de création de cas TheHive.
 
-**Reste à faire** : connecter les conteneurs Shuffle et TheHive sur un réseau Docker partagé pour une exécution de bout en bout, et enrichir le workflow avec des étapes conditionnelles (ex. escalade automatique si criticité "Haute").
+**Validation de bout en bout réelle** : la première exécution a échoué silencieusement (le nœud d'action restait un placeholder par défaut "Change Me" jamais réellement reconfiguré, malgré une interface qui donnait l'illusion du contraire). Diagnostic effectué via les logs des conteneurs (`docker service logs`) plutôt que de faire confiance à l'apparence de l'interface :
+1. Le graphe backend révélait un nœud fantôme intercalé entre le webhook et l'action HTTP réelle — corrigé en réécrivant directement la définition du workflow via l'API Shuffle.
+2. Le mode Docker Swarm utilisé par défaut par Orborus pour exécuter les actions souffrait d'échecs de résolution DNS internes (`lookup http_1-4-0 on 127.0.0.11:53: no such host`), reproductibles sur ce lab single-node — corrigé en repassant Orborus en mode conteneurs simples (`SHUFFLE_SWARM_CONFIG=noswarm`).
+3. Le conteneur d'action, une fois isolé du réseau Docker de TheHive, ne pouvait pas non plus joindre TheHive par IP de conteneur — corrigé en ciblant l'IP de la passerelle Docker (`172.17.0.1`) via le port publié de TheHive plutôt qu'une IP interne.
+
+Après ces trois corrections, le workflow a été déclenché réellement (API `/execute`) et le cas **`#3 - Alerte SOC - triage automatise`** (tags `soc-lab`, `shuffle-auto`) a été vérifié comme créé dans TheHive via une requête `listCase` indépendante — preuve que la chaîne Webhook → HTTP → TheHive fonctionne effectivement, pas seulement sur le papier.
+
+**Reste à faire** : enrichir le workflow avec des étapes conditionnelles (ex. escalade automatique si criticité "Haute"), et fiabiliser le déclenchement automatique depuis une vraie alerte Wazuh plutôt qu'un déclenchement manuel de test.
 
 ## Scénarios de test
 
