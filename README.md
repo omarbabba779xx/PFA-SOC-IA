@@ -85,9 +85,15 @@ Scénario **Brute force SSH (MITRE T1110)** exécuté sur l'agent de test :
 
 Ce résultat valide le concept central du projet : le LLM local produit une classification structurée, exploitable automatiquement (création de cas, scoring, mapping MITRE) sans dépendre d'une API externe payante.
 
+**Pipeline complet validé — cas créé automatiquement dans TheHive à partir du triage IA :**
+
+![Cas TheHive créé automatiquement](docs/screenshots/thehive_case_created.png)
+
+Le cas `#1 - [HAUTE] alert - Brute force SSH (T1110)` a été créé par [`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py) sans intervention manuelle, avec sévérité, tags et mapping MITRE dérivés directement de la sortie du LLM.
+
 ### Leçon retenue — contrainte matérielle
 
-Sur une configuration à 8 Go de RAM allouée à la VM, faire tourner Wazuh + TheHive + l'inférence Mistral 7B simultanément est limite : un premier test d'inférence a déclenché un **OOM kill** du process `llama-server`, avec redémarrage automatique du service avant d'obtenir une réponse valide. Conformément au plan de mitigation identifié en amont, la stratégie retenue est de ne pas faire tourner l'inférence LLM en continu en parallèle du reste de la stack, mais de l'invoquer ponctuellement, ou de libérer temporairement de la RAM (arrêt d'un service inutilisé) au moment du triage. Ce constat conforte la nécessité, soulignée dans le cadrage du projet, d'un minimum de 16 Go de RAM pour une exécution confortable de la stack complète.
+Sur une configuration à 8 Go de RAM allouée à la VM, faire tourner Wazuh + TheHive + l'inférence Mistral 7B **simultanément** n'est pas viable : deux tentatives distinctes d'inférence ont provoqué un **OOM kill** du process `llama-server` (confirmé via `journalctl` : `A process of this unit has been killed by the OOM killer`). La stratégie finalement adoptée, conforme au plan de mitigation prévu dans le cadrage du projet, est une **exécution séquentielle** : arrêt temporaire de TheHive pendant le triage LLM, puis redémarrage de TheHive pour la création du cas une fois le résultat obtenu. Ce constat, vécu concrètement plutôt que supposé, conforte la nécessité d'un minimum de 16 Go de RAM (idéalement 24-32 Go) pour une exécution confortable et simultanée de la stack complète en production de laboratoire.
 
 ## Scénarios de test
 

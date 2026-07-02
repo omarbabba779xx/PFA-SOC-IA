@@ -63,7 +63,7 @@ def fetch_recent_alerts(minutes: int = 15, size: int = 20) -> list[dict]:
         "query": {"range": {"timestamp": {"gte": since}}},
     }
     resp = requests.get(
-        f"{WAZUH_INDEXER_URL}/wazuh-alerts-*/_search",
+        f"{WAZUH_INDEXER_URL}/wazuh-alerts-4.x-*/_search",
         auth=(WAZUH_INDEXER_USER, WAZUH_INDEXER_PASSWORD),
         json=query,
         verify=False,
@@ -98,20 +98,26 @@ def triage_with_llm(alert: dict) -> dict:
 
 def create_thehive_case(alert: dict, triage: dict) -> str:
     """Cree un cas TheHive a partir du resultat de triage IA. Retourne l'id du cas."""
+    criticite = triage.get("criticite", "moyenne").lower()
+    mitre_technique = triage.get("mitre_technique", "unknown")
+    if isinstance(mitre_technique, list):
+        mitre_technique = ", ".join(mitre_technique)
+    recommandation = triage.get("recommandation", triage.get("recommendation", "N/A"))
+
     payload = {
-        "title": f"[{triage['criticite'].upper()}] {triage['incident_type']}",
+        "title": f"[{criticite.upper()}] {triage['incident_type']}",
         "description": (
             f"{triage['resume']}\n\n"
             f"**Tactique MITRE** : {triage['mitre_tactic']}\n"
-            f"**Technique MITRE** : {triage['mitre_technique']}\n"
-            f"**Recommandation IA** : {triage['recommandation']}\n\n"
+            f"**Technique MITRE** : {mitre_technique}\n"
+            f"**Recommandation IA** : {recommandation}\n\n"
             f"Genere automatiquement depuis l'alerte Wazuh (agent : "
             f"{alert.get('agent', {}).get('name', 'N/A')})."
         ),
         "severity": {"basse": 1, "moyenne": 2, "haute": 3, "critique": 4}.get(
-            triage["criticite"], 2
+            criticite, 2
         ),
-        "tags": ["wazuh", "triage-ia", triage.get("mitre_technique", "unknown")],
+        "tags": ["wazuh", "triage-ia", mitre_technique],
         "source": "wazuh-ai-triage",
     }
     resp = requests.post(
@@ -131,9 +137,11 @@ def main() -> None:
 
     for alert in alerts:
         triage = triage_with_llm(alert)
-        criticite = triage.get("criticite", "basse")
+        criticite = triage.get("criticite", "basse").lower()
         print(f"  - {triage.get('incident_type')} -> criticite={criticite}")
 
+        if criticite not in CRITICALITY_ORDER:
+            criticite = "basse"
         if CRITICALITY_ORDER.index(criticite) >= threshold_idx:
             case_id = create_thehive_case(alert, triage)
             print(f"    -> cas TheHive cree : {case_id}")
