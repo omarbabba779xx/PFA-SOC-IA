@@ -24,7 +24,7 @@ Ce projet ne vise pas à remplacer l'analyste ni à construire un SOC de product
 | Gestion incidents | TheHive 5 | Création de cas, suivi des observables, clôture des incidents |
 | Assistant IA | Ollama + Mistral 7B | Résumé, classification, scoring, mapping MITRE ATT&CK |
 | Analyse observables | Cortex | Analyse automatique IP/URL/domaines/hash |
-| Threat Intelligence | MISP *(à venir)* | Enrichissement IOC |
+| Threat Intelligence | MISP | Enrichissement IOC |
 | SOAR | Shuffle *(à venir)* | Playbooks de réponse automatisés |
 | Automatisation | Python | Scripts de liaison entre API |
 | Infrastructure | VirtualBox + Docker Compose | Déploiement reproductible, isolation de la maquette |
@@ -46,8 +46,10 @@ Détection (Wazuh) → Indexation → Triage IA (Ollama/Mistral) → Évaluation
 | Ollama + Mistral 7B (quantifié Q4) | ✅ Déployé, triage testé avec succès |
 | Script Python Wazuh → LLM → TheHive | ✅ Premier jet fonctionnel ([`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)) |
 | Jeu de 38 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé ([voir résultats](#évaluation-expérimentale-s5)) |
-| Cortex (analyse d'observables) | ✅ Déployé, analyseur FileInfo activé et testé |
-| MISP / Shuffle | ⏳ Extensions prévues (S7) |
+| Cortex (analyse d'observables) | ✅ Déployé, 3 analyseurs réels testés (FileInfo, AbuseIPDB, VirusTotal) |
+| MISP (Threat Intelligence) | ✅ Déployé, événement + IOC de test créés |
+| Shuffle (SOAR) | ⏳ Extension prévue |
+| Rapports PDF automatiques | ⏳ Prévu (noyau obligatoire, restant à faire) |
 
 ### Captures d'écran
 
@@ -173,6 +175,19 @@ Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés.
 Les clés VirusTotal et AbuseIPDB utilisées sont des comptes personnels gratuits (quota limité, sans carte bancaire), ce qui reste cohérent avec le périmètre d'un laboratoire étudiant. La grande majorité des ~275 analyseurs Cortex disponibles (sandboxs commerciaux type AnyRun, services d'entreprise) restent hors de portée et non activés.
 
 **Reste à faire** : le lien API Cortex ↔ TheHive (pour lancer une analyse Cortex directement depuis un cas TheHive) nécessite une gestion du jeton CSRF de l'API Cortex, non finalisée dans cette itération — prochaine étape naturelle de l'intégration.
+
+## Threat Intelligence (S6 — MISP)
+
+[MISP](https://www.misp-project.org/) (déploiement officiel [misp-docker](https://github.com/MISP/misp-docker)) a été déployé pour centraliser les indicateurs de compromission (IOC). Contraintes rencontrées et résolues :
+
+- **Conflit de port** : le port 443 était déjà occupé par le dashboard Wazuh → MISP redéployé sur le port `8444` (`BASE_URL`, `CORE_HTTPS_PORT` ajustés, voir [`docker/misp.env.example`](docker/misp.env.example)).
+- **Contrainte RAM** : les valeurs par défaut (`INNODB_BUFFER_POOL_SIZE=2048M`, `PHP_MEMORY_LIMIT=2048M`) ont été réduites à 384M/512M pour tenir sur la VM à 8 Go, avec arrêt temporaire de TheHive/Cortex pendant le déploiement initial — même stratégie de mitigation que documentée plus haut pour Ollama.
+
+Un événement de test a été créé avec un IOC réel, en lien direct avec le scénario de brute force SSH déjà validé dans Wazuh/TheHive :
+
+![Événement MISP créé](docs/screenshots/misp_event.png)
+
+**Reste à faire** : synchronisation automatique MISP → Cortex/TheHive (feed IOC), et alimentation d'IOC réels via un flux de threat intelligence public plutôt que des indicateurs de test.
 
 ## Scénarios de test
 
