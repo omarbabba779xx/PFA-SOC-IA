@@ -103,24 +103,38 @@ Chaque alerte a été classifiée par deux méthodes indépendantes et comparée
 - **Baseline à règles** : mapping natif de Wazuh (`rule.level` → criticité, `rule.mitre` → tactique/technique), sans LLM.
 - **LLM** : Mistral 7B via Ollama, avec un prompt structuré demandant une sortie JSON stricte.
 
-### Résultats
+### Résultats — itération 1 (prompt initial)
 
 | Métrique | Baseline (règles) | LLM (Mistral 7B) |
 |---|---|---|
 | Écart moyen de criticité (0 = parfait, 4 = max) | **0.76** | 1.55 |
 | Taux de correspondance MITRE (technique) | **28.9 %** | 2.6 % |
-| Temps de traitement | ~0 s (instantané) | 46.5 s en moyenne |
 | Erreurs de parsing JSON | N/A | 26.3 % des réponses |
 | Non-respect du vocabulaire de criticité demandé (ex. réponse en anglais `"high"` au lieu de `"haute"`) | N/A | 18.4 % des réponses |
 
+Sur ce premier essai, la baseline à règles surpassait nettement le LLM. En creusant les réponses brutes, deux causes techniques expliquaient l'essentiel de l'écart : un quart des réponses n'étaient pas du JSON valide, et le modèle dérivait parfois vers l'anglais ou du texte libre au lieu du code MITRE standard — deux problèmes de **format de sortie**, pas de capacité de raisonnement.
+
+### Résultats — itération 2 (prompt corrigé)
+
+Correctifs appliqués : sortie JSON forcée côté Ollama (`format: "json"`), ajout du log brut complet dans le contexte, consigne explicite sur le vocabulaire de criticité et le format du code MITRE (`Txxxx`), température réduite à 0.1.
+
+| Métrique | Baseline (règles) | LLM v1 (bugué) | **LLM v2 (corrigé)** |
+|---|---|---|---|
+| Écart moyen de criticité | 0.76 | 1.55 | **0.71** ✅ *(légèrement meilleur que la baseline)* |
+| Taux de correspondance MITRE | **28.9 %** | 2.6 % | 13.2 % |
+| Erreurs de parsing JSON | N/A | 26.3 % | **0 %** |
+| Dérive de vocabulaire/langue | N/A | 18.4 % | **0 %** |
+| Temps moyen de triage | instantané | 46.5 s | 52.0 s |
+
+Résultats bruts : [`docs/evaluation/evaluation_results.json`](docs/evaluation/evaluation_results.json) (itération 1) et [`docs/evaluation/evaluation_results_v2.json`](docs/evaluation/evaluation_results_v2.json) (itération 2).
+
 ### Interprétation
 
-Sur ce test précis, **la baseline à règles surpasse le LLM local**, ce qui est un résultat scientifiquement valide et informatif, pas un échec du projet. Deux causes principales, identifiées en creusant les réponses brutes du modèle :
+Une fois les problèmes de format corrigés, **le LLM égale voire dépasse légèrement la baseline sur l'estimation de la criticité** (0.71 contre 0.76), ce qui confirme qu'il est capable d'un jugement de gravité pertinent à partir du contexte brut d'une alerte — sans règle écrite à la main pour ce cas précis.
 
-1. **Fiabilité du format de sortie** : dans plus d'un quart des cas, Mistral 7B ne renvoie pas un JSON strictement valide (texte explicatif autour du JSON, guillemets mal fermés), ce qui casse le parsing automatique et pénalise artificiellement le score.
-2. **Dérive de vocabulaire** : le modèle répond parfois en anglais (`"high"`) malgré une consigne explicite en français, et utilise des noms de technique MITRE en texte libre (`"SSH Authentication"`) plutôt que le code standard (`T1110`), alors que Wazuh expose déjà ce code nativement dans ses règles.
+En revanche, le LLM reste **nettement en retrait sur le mapping MITRE technique exact** (13.2 % contre 28.9 %). C'est une limite structurelle attendue plutôt qu'un bug : la baseline Wazuh n'a pas besoin de "deviner" le code MITRE, elle le lit directement dans une table de correspondance écrite par des experts et associée à chaque règle de détection. Le LLM, lui, doit le retrouver de mémoire à partir du contexte, sans base de connaissances externe (pas de RAG dans cette version du projet). C'est une piste d'amélioration concrète et documentée pour la suite : coupler le LLM à une base de référence MITRE ATT&CK consultable (recherche vectorielle ou lookup direct) plutôt que de compter uniquement sur sa mémorisation.
 
-Ces deux limites pointent vers des pistes d'amélioration concrètes pour la suite du projet (S6-S7) : contraindre la sortie du LLM via un schéma JSON strict (grammar-constrained decoding d'Ollama), forcer la langue de réponse plus explicitement, et normaliser les codes MITRE en sortie plutôt que de les laisser en texte libre. Le temps de triage LLM (~46 s/alerte sur ce matériel CPU-only) confirme par ailleurs qu'un usage en continu sur le flux d'alertes réel n'est pas envisageable sans accélération matérielle (GPU) ou modèle plus léger — ce qui rejoint la contrainte RAM déjà documentée plus haut.
+**Conclusion pour la problématique de recherche du projet** : un LLM local mal outillé (sortie non contrainte) peut sembler moins fiable qu'une approche à règles — mais ce n'est pas une limite du modèle, c'est une limite d'ingénierie de prompt. Une fois corrigée, sa valeur ajoutée est réelle sur le jugement de criticité (tâche qui demande du contexte et du raisonnement), et clairement limitée sur le rappel de faits précis (mapping MITRE), un point où l'enrichissement par une base de connaissances externe serait la prochaine étape logique. Le temps de triage (~50 s/alerte sur ce matériel CPU-only) confirme par ailleurs qu'un usage en continu sur un flux d'alertes réel nécessiterait une accélération matérielle (GPU) ou un modèle plus léger.
 
 ## Scénarios de test
 
