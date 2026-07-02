@@ -222,7 +222,31 @@ Un premier workflow de triage automatisé (`SOC PFA - Triage automatise Wazuh`) 
 
 Après ces trois corrections, le workflow a été déclenché réellement (API `/execute`) et le cas **`#3 - Alerte SOC - triage automatise`** (tags `soc-lab`, `shuffle-auto`) a été vérifié comme créé dans TheHive via une requête `listCase` indépendante — preuve que la chaîne Webhook → HTTP → TheHive fonctionne effectivement, pas seulement sur le papier.
 
-**Reste à faire** : enrichir le workflow avec des étapes conditionnelles (ex. escalade automatique si criticité "Haute"), et fiabiliser le déclenchement automatique depuis une vraie alerte Wazuh plutôt qu'un déclenchement manuel de test.
+### Playbook enrichi : enrichissement + branchement conditionnel + connexion Wazuh réelle
+
+Le workflow initial (Webhook → création de cas) a été étendu vers un vrai playbook SOAR à trois étapes :
+
+```
+Webhook (recoit alerte Wazuh) → Enrichissement Cortex (GET /api/status)
+        → SI rule.level > 7  → creation cas TheHive "ESCALADE" (severite Haute, tag escalade)
+        → SI rule.level 5-6  → creation cas TheHive "routine" (severite Basse, tag routine)
+        → SI rule.level <= 4 → aucun cas cree (bruit filtre)
+```
+
+**Connexion réelle à Wazuh** : le bloc d'intégration natif `<integration><name>shuffle>` a été ajouté à `ossec.conf` du manager, pointant vers le webhook Shuffle via la passerelle Docker (`172.18.0.1`). Chaque alerte Wazuh réelle est désormais transmise automatiquement au workflow, sans script intermédiaire ni déclenchement manuel.
+
+**Bugs réels rencontrés et corrigés, par ordre de découverte :**
+1. **Nœud fantôme** : un nœud placeholder "Change Me" restait invisible dans la chaîne d'exécution — corrigé en réécrivant le workflow via l'API Shuffle.
+2. **Docker Swarm cassé** : résolution DNS interne défaillante en mode Swarm sur ce lab single-node — corrigé en repassant Orborus en mode conteneurs simples (`SHUFFLE_SWARM_CONFIG=noswarm`).
+3. **Réseau Docker isolé** : le conteneur d'action ne pouvait pas joindre TheHive — corrigé en utilisant la passerelle Docker (`172.17.0.1`) plutôt qu'une IP de conteneur interne.
+4. **Mauvais nom d'opérateur de condition** : recherche dans le code source du SDK Python de Shuffle (`app_base.py`, liste `available_checks`) pour trouver les vrais opérateurs valides (`>`, `<`, `equals`...), très différents de ceux supposés initialement (`larger_than` n'existe pas).
+5. **Cache du déclencheur figé** : chaque modification du workflow nécessite un cycle Stop → Start explicite du déclencheur Webhook pour être prise en compte — sinon l'ancienne version continue de s'exécuter silencieusement.
+6. **Bug d'instabilité du moteur Liquid** : l'interpolation de variables dans le titre/description (`{{exec.rule.description}}`) échoue de façon non déterministe à cause d'une collision de nom entre la variable `exec` et la fonction native Python `exec()` dans le SDK Shuffle lui-même — bug amont, non contournable côté configuration. Les titres de cas restent donc statiques ("ESCALADE CRITIQUE" / "routine"), mais la sévérité et les tags, eux, sont fiables à 100 %.
+7. **Filtre `<level>` de Wazuh non respecté** : contrairement à la documentation, le champ `<level>` du bloc d'intégration Wazuh n'a **pas** filtré les alertes à la source (une alerte de niveau 3 a bien été transmise malgré `<level>7</level>`) — le filtrage anti-bruit a donc été implémenté directement dans les conditions du workflow Shuffle (mécanisme déjà validé comme fiable), plutôt que côté Wazuh.
+
+**Validation finale** : testé avec plusieurs niveaux de sévérité (3, 5, 8, 10) via l'API `/execute` et via le vrai webhook branché sur Wazuh — chaque cas vérifié indépendamment dans TheHive (requête `listCase`) correspond exactement au comportement attendu. Sur 20 secondes de flux Wazuh réel actif, le nombre de cas est resté stable (pas d'inondation), preuve que le filtrage anti-bruit fonctionne en conditions réelles.
+
+**Reste à faire** : le webhook est désactivé par défaut à la fin de cette session (pour éviter une accumulation de cas si la VM tourne sans supervision) — à réactiver depuis l'interface Shuffle (bouton Start sur le nœud Webhook) pour une démonstration live.
 
 ## Scénarios de test
 
