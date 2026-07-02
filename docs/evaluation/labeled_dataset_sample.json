@@ -1,0 +1,3243 @@
+[
+  {
+    "scenario": "ssh_bruteforce",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:18"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcip": "10.0.2.2",
+        "dstuser": "soc",
+        "srcport": "58480"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "hipaa": [
+          "164.312.b"
+        ],
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "sshd: authentication success.",
+        "groups": [
+          "syslog",
+          "sshd",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 41,
+        "mitre": {
+          "technique": [
+            "Valid Accounts",
+            "Remote Services"
+          ],
+          "id": [
+            "T1078",
+            "T1021"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access",
+            "Lateral Movement"
+          ]
+        },
+        "id": "5715",
+        "gpg13": [
+          "7.1",
+          "7.2"
+        ]
+      },
+      "decoder": {
+        "parent": "sshd",
+        "name": "sshd"
+      },
+      "full_log": "Jul 02 00:58:18 soc-lab sshd[30345]: Accepted publickey for soc from 10.0.2.2 port 58480 ssh2: ED25519 SHA256:QGlzbPgYK4Ropuk80+iBh+JUYCI2azdRoksnvZJP/AA",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:19.631Z",
+      "location": "journald",
+      "id": "1782953899.168920",
+      "timestamp": "2026-07-02T00:58:19.631+0000"
+    },
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1110"
+    }
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:19"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "bfuser2",
+        "srcip": "127.0.0.1",
+        "srcport": "60254"
+      },
+      "rule": {
+        "mail": false,
+        "level": 5,
+        "hipaa": [
+          "164.312.b"
+        ],
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5",
+          "10.6.1"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "sshd: Attempt to login using a non-existent user",
+        "groups": [
+          "syslog",
+          "sshd",
+          "authentication_failed",
+          "invalid_login"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AU.6"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 1,
+        "mitre": {
+          "technique": [
+            "Password Guessing",
+            "SSH"
+          ],
+          "id": [
+            "T1110.001",
+            "T1021.004"
+          ],
+          "tactic": [
+            "Credential Access",
+            "Lateral Movement"
+          ]
+        },
+        "id": "5710",
+        "gpg13": [
+          "7.1"
+        ]
+      },
+      "decoder": {
+        "parent": "sshd",
+        "name": "sshd"
+      },
+      "full_log": "Jul 02 00:58:19 soc-lab sshd[30409]: Invalid user bfuser2 from 127.0.0.1 port 60254",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:19.677Z",
+      "location": "journald",
+      "id": "1782953899.169844",
+      "timestamp": "2026-07-02T00:58:19.677+0000"
+    },
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1110"
+    }
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:19"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "bfuser4",
+        "srcip": "127.0.0.1",
+        "srcport": "60280"
+      },
+      "rule": {
+        "mail": false,
+        "level": 5,
+        "hipaa": [
+          "164.312.b"
+        ],
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5",
+          "10.6.1"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "sshd: Attempt to login using a non-existent user",
+        "groups": [
+          "syslog",
+          "sshd",
+          "authentication_failed",
+          "invalid_login"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AU.6"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 3,
+        "mitre": {
+          "technique": [
+            "Password Guessing",
+            "SSH"
+          ],
+          "id": [
+            "T1110.001",
+            "T1021.004"
+          ],
+          "tactic": [
+            "Credential Access",
+            "Lateral Movement"
+          ]
+        },
+        "id": "5710",
+        "gpg13": [
+          "7.1"
+        ]
+      },
+      "decoder": {
+        "parent": "sshd",
+        "name": "sshd"
+      },
+      "full_log": "Jul 02 00:58:19 soc-lab sshd[30415]: Invalid user bfuser4 from 127.0.0.1 port 60280",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:19.677Z",
+      "location": "journald",
+      "id": "1782953899.170862",
+      "timestamp": "2026-07-02T00:58:19.677+0000"
+    },
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1110"
+    }
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:18"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "0",
+        "dstuser": "soc(uid=1000)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 54,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:18 soc-lab sshd[30345]: pam_unix(sshd:session): session opened for user soc(uid=1000) by (uid=0)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:19.677Z",
+      "location": "journald",
+      "id": "1782953899.169414",
+      "timestamp": "2026-07-02T00:58:19.677+0000"
+    },
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1110"
+    }
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:19"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "bfuser3",
+        "srcip": "127.0.0.1",
+        "srcport": "60270"
+      },
+      "rule": {
+        "mail": false,
+        "level": 5,
+        "hipaa": [
+          "164.312.b"
+        ],
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5",
+          "10.6.1"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "sshd: Attempt to login using a non-existent user",
+        "groups": [
+          "syslog",
+          "sshd",
+          "authentication_failed",
+          "invalid_login"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AU.6"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 2,
+        "mitre": {
+          "technique": [
+            "Password Guessing",
+            "SSH"
+          ],
+          "id": [
+            "T1110.001",
+            "T1021.004"
+          ],
+          "tactic": [
+            "Credential Access",
+            "Lateral Movement"
+          ]
+        },
+        "id": "5710",
+        "gpg13": [
+          "7.1"
+        ]
+      },
+      "decoder": {
+        "parent": "sshd",
+        "name": "sshd"
+      },
+      "full_log": "Jul 02 00:58:19 soc-lab sshd[30412]: Invalid user bfuser3 from 127.0.0.1 port 60270",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:19.677Z",
+      "location": "journald",
+      "id": "1782953899.170353",
+      "timestamp": "2026-07-02T00:58:19.677+0000"
+    },
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1110"
+    }
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/true"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 14,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30448]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/true",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.639Z",
+      "location": "journald",
+      "id": "1782953907.172898",
+      "timestamp": "2026-07-02T00:58:27.639+0000"
+    },
+    "reference": {
+      "incident_type": "Connexions repetees compte valide",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 56,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30452]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.174972",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Connexions repetees compte valide",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/ls /root"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 15,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30452]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/ls /root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.175343",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Connexions repetees compte valide",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 57,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30454]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.176283",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Connexions repetees compte valide",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/whoami"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 17,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30450]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/whoami",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.177086",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Connexions repetees compte valide",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "sudo_success",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/true"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 14,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30448]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/true",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.639Z",
+      "location": "journald",
+      "id": "1782953907.172898",
+      "timestamp": "2026-07-02T00:58:27.639+0000"
+    },
+    "reference": {
+      "incident_type": "Utilisation sudo legitime",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_success",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 56,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30452]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.174972",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Utilisation sudo legitime",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_success",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/ls /root"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 15,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30452]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/ls /root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.175343",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Utilisation sudo legitime",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_success",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 57,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30454]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.176283",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Utilisation sudo legitime",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_success",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:26"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/whoami"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 17,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:26 soc-lab sudo[30450]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/whoami",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:27.681Z",
+      "location": "journald",
+      "id": "1782953907.177086",
+      "timestamp": "2026-07-02T00:58:27.681+0000"
+    },
+    "reference": {
+      "incident_type": "Utilisation sudo legitime",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:29"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/true"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 18,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:29 soc-lab sudo[30460]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/true",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:29.641Z",
+      "location": "journald",
+      "id": "1782953909.177990",
+      "timestamp": "2026-07-02T00:58:29.641+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification sudo",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:29"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 59,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:29 soc-lab sudo[30460]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:29.641Z",
+      "location": "journald",
+      "id": "1782953909.178458",
+      "timestamp": "2026-07-02T00:58:29.641+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification sudo",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:29"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 58,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:29 soc-lab sudo[30460]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:29.644Z",
+      "location": "journald",
+      "id": "1782953909.178890",
+      "timestamp": "2026-07-02T00:58:29.644+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification sudo",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:29"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/bin/true"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 19,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:29 soc-lab sudo[30463]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/true",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:29.646Z",
+      "location": "journald",
+      "id": "1782953909.179261",
+      "timestamp": "2026-07-02T00:58:29.646+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification sudo",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "sudo_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:29"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 60,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:29 soc-lab sudo[30463]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:29.648Z",
+      "location": "journald",
+      "id": "1782953909.179729",
+      "timestamp": "2026-07-02T00:58:29.648+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification sudo",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "su_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "su",
+        "timestamp": "Jul 02 00:58:32"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "uid": "1000",
+        "euid": "0",
+        "dstuser": "root"
+      },
+      "rule": {
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: User login failed.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_failed"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 1,
+        "mitre": {
+          "technique": [
+            "Password Guessing"
+          ],
+          "id": [
+            "T1110.001"
+          ],
+          "tactic": [
+            "Credential Access"
+          ]
+        },
+        "id": "5503",
+        "gpg13": [
+          "7.8"
+        ]
+      },
+      "decoder": {
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:32 soc-lab su[30475]: pam_unix(su-l:auth): authentication failure; logname= uid=1000 euid=0 tty= ruser=soc rhost=  user=root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:33.644Z",
+      "location": "journald",
+      "id": "1782953913.183074",
+      "timestamp": "2026-07-02T00:58:33.644+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification su",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "su_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "su",
+        "timestamp": "Jul 02 00:58:34"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "rule": {
+        "firedtimes": 1,
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "User missed the password to change UID (user id).",
+        "groups": [
+          "syslog",
+          "su",
+          "authentication_failed"
+        ],
+        "id": "5301",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "su",
+        "name": "su"
+      },
+      "full_log": "Jul 02 00:58:34 soc-lab su[30475]: FAILED SU (to root) soc on none",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:35.645Z",
+      "location": "journald",
+      "id": "1782953915.183560",
+      "timestamp": "2026-07-02T00:58:35.645+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification su",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "su_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "su",
+        "timestamp": "Jul 02 00:58:35"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "uid": "1000",
+        "euid": "0",
+        "dstuser": "root"
+      },
+      "rule": {
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: User login failed.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_failed"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 2,
+        "mitre": {
+          "technique": [
+            "Password Guessing"
+          ],
+          "id": [
+            "T1110.001"
+          ],
+          "tactic": [
+            "Credential Access"
+          ]
+        },
+        "id": "5503",
+        "gpg13": [
+          "7.8"
+        ]
+      },
+      "decoder": {
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:35 soc-lab su[30477]: pam_unix(su-l:auth): authentication failure; logname= uid=1000 euid=0 tty= ruser=soc rhost=  user=root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:35.645Z",
+      "location": "journald",
+      "id": "1782953915.183971",
+      "timestamp": "2026-07-02T00:58:35.645+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification su",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "su_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "su",
+        "timestamp": "Jul 02 00:58:37"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "rule": {
+        "firedtimes": 2,
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "User missed the password to change UID (user id).",
+        "groups": [
+          "syslog",
+          "su",
+          "authentication_failed"
+        ],
+        "id": "5301",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "su",
+        "name": "su"
+      },
+      "full_log": "Jul 02 00:58:37 soc-lab su[30477]: FAILED SU (to root) soc on none",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:37.646Z",
+      "location": "journald",
+      "id": "1782953917.184457",
+      "timestamp": "2026-07-02T00:58:37.646+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification su",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "su_failed",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "su",
+        "timestamp": "Jul 02 00:58:38"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "uid": "1000",
+        "euid": "0",
+        "dstuser": "root"
+      },
+      "rule": {
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.4",
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.1",
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: User login failed.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_failed"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 3,
+        "mitre": {
+          "technique": [
+            "Password Guessing"
+          ],
+          "id": [
+            "T1110.001"
+          ],
+          "tactic": [
+            "Credential Access"
+          ]
+        },
+        "id": "5503",
+        "gpg13": [
+          "7.8"
+        ]
+      },
+      "decoder": {
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:38 soc-lab su[30481]: pam_unix(su-l:auth): authentication failure; logname= uid=1000 euid=0 tty= ruser=soc rhost=  user=root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:39.647Z",
+      "location": "journald",
+      "id": "1782953919.184868",
+      "timestamp": "2026-07-02T00:58:39.647+0000"
+    },
+    "reference": {
+      "incident_type": "Echecs authentification su",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "user_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:44"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/sbin/useradd -M testaccount1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 22,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:44 soc-lab sudo[30495]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/sbin/useradd -M testaccount1",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:45.651Z",
+      "location": "journald",
+      "id": "1782953925.185765",
+      "timestamp": "2026-07-02T00:58:45.651+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "user_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:44"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 62,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:44 soc-lab sudo[30495]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:45.693Z",
+      "location": "journald",
+      "id": "1782953925.187172",
+      "timestamp": "2026-07-02T00:58:45.693+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "user_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:44"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/sbin/useradd -M testaccount2"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 23,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:44 soc-lab sudo[30503]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/sbin/useradd -M testaccount2",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:45.693Z",
+      "location": "journald",
+      "id": "1782953925.187543",
+      "timestamp": "2026-07-02T00:58:45.693+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "user_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "useradd",
+        "timestamp": "Jul 02 00:58:44"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1002",
+        "gid": "1002",
+        "shell": "/bin/sh,",
+        "dstuser": "testaccount2",
+        "home": "/home/testaccount2"
+      },
+      "rule": {
+        "mail": false,
+        "level": 8,
+        "pci_dss": [
+          "10.2.7",
+          "10.2.5",
+          "8.1.2"
+        ],
+        "hipaa": [
+          "164.312.b",
+          "164.312.a.2.I",
+          "164.312.a.2.II"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "New user added to the system.",
+        "groups": [
+          "syslog",
+          "adduser"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.2",
+          "IA.4"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 1,
+        "mitre": {
+          "technique": [
+            "Create Account"
+          ],
+          "id": [
+            "T1136"
+          ],
+          "tactic": [
+            "Persistence"
+          ]
+        },
+        "id": "5902",
+        "gpg13": [
+          "4.13"
+        ]
+      },
+      "decoder": {
+        "parent": "useradd",
+        "name": "useradd"
+      },
+      "full_log": "Jul 02 00:58:44 soc-lab useradd[30504]: new user: name=testaccount2, UID=1002, GID=1002, home=/home/testaccount2, shell=/bin/sh, from=none",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:45.693Z",
+      "location": "journald",
+      "id": "1782953925.188518",
+      "timestamp": "2026-07-02T00:58:45.693+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "user_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:44"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 64,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:44 soc-lab sudo[30503]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:45.693Z",
+      "location": "journald",
+      "id": "1782953925.189495",
+      "timestamp": "2026-07-02T00:58:45.693+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "user_deletion",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:47"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/sbin/userdel testaccount1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 24,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:47 soc-lab sudo[30515]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/sbin/userdel testaccount1",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:49.653Z",
+      "location": "journald",
+      "id": "1782953929.190533",
+      "timestamp": "2026-07-02T00:58:49.653+0000"
+    },
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    }
+  },
+  {
+    "scenario": "user_deletion",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:47"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 65,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:47 soc-lab sudo[30515]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:49.653Z",
+      "location": "journald",
+      "id": "1782953929.191035",
+      "timestamp": "2026-07-02T00:58:49.653+0000"
+    },
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    }
+  },
+  {
+    "scenario": "user_deletion",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "userdel",
+        "timestamp": "Jul 02 00:58:47"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "testaccount1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.7",
+          "10.2.5",
+          "8.1.2"
+        ],
+        "hipaa": [
+          "164.312.b",
+          "164.312.a.2.I",
+          "164.312.a.2.II"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Group (or user) deleted from the system.",
+        "groups": [
+          "syslog",
+          "adduser"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.2",
+          "IA.4"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 1,
+        "mitre": {
+          "technique": [
+            "Account Access Removal"
+          ],
+          "id": [
+            "T1531"
+          ],
+          "tactic": [
+            "Impact"
+          ]
+        },
+        "id": "5903",
+        "gpg13": [
+          "4.13"
+        ]
+      },
+      "decoder": {
+        "name": "open-userdel"
+      },
+      "full_log": "Jul 02 00:58:47 soc-lab userdel[30516]: delete user 'testaccount1'",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:49.656Z",
+      "location": "journald",
+      "id": "1782953929.191467",
+      "timestamp": "2026-07-02T00:58:49.656+0000"
+    },
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    }
+  },
+  {
+    "scenario": "user_deletion",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:47"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 64,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:47 soc-lab sudo[30515]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:49.662Z",
+      "location": "journald",
+      "id": "1782953929.191932",
+      "timestamp": "2026-07-02T00:58:49.662+0000"
+    },
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    }
+  },
+  {
+    "scenario": "user_deletion",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 02 00:58:47"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/sbin/userdel testaccount2"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 25,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 02 00:58:47 soc-lab sudo[30524]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/sbin/userdel testaccount2",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:49.664Z",
+      "location": "journald",
+      "id": "1782953929.192303",
+      "timestamp": "2026-07-02T00:58:49.664+0000"
+    },
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    }
+  },
+  {
+    "scenario": "cron_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "crontab",
+        "timestamp": "Jul 02 00:58:50"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "rule": {
+        "firedtimes": 1,
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.7",
+          "10.6.1"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Crontab entry changed.",
+        "groups": [
+          "syslog",
+          "cron"
+        ],
+        "id": "2832",
+        "nist_800_53": [
+          "AU.14",
+          "AU.6"
+        ],
+        "gpg13": [
+          "4.13"
+        ],
+        "gdpr": [
+          "IV_35.7.d"
+        ]
+      },
+      "decoder": {},
+      "full_log": "Jul 02 00:58:50 soc-lab crontab[30537]: (soc) REPLACE (soc)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:51.654Z",
+      "location": "journald",
+      "id": "1782953931.194073",
+      "timestamp": "2026-07-02T00:58:51.654+0000"
+    },
+    "reference": {
+      "incident_type": "Creation tache planifiee",
+      "criticite": "moyenne",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1053"
+    }
+  },
+  {
+    "scenario": "cron_creation",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:53"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "soc"
+      },
+      "rule": {
+        "firedtimes": 66,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:53 soc-lab sshd[30345]: pam_unix(sshd:session): session closed for user soc",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:55.701Z",
+      "location": "journald",
+      "id": "1782953935.194408",
+      "timestamp": "2026-07-02T00:58:55.701+0000"
+    },
+    "reference": {
+      "incident_type": "Creation tache planifiee",
+      "criticite": "moyenne",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1053"
+    }
+  },
+  {
+    "scenario": "base64_decode_exec",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 02 00:58:53"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "soc"
+      },
+      "rule": {
+        "firedtimes": 66,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 02 00:58:53 soc-lab sshd[30345]: pam_unix(sshd:session): session closed for user soc",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-02T00:58:55.701Z",
+      "location": "journald",
+      "id": "1782953935.194408",
+      "timestamp": "2026-07-02T00:58:55.701+0000"
+    },
+    "reference": {
+      "incident_type": "Commande obfusquee",
+      "criticite": "haute",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1140"
+    }
+  }
+]

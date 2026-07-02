@@ -45,8 +45,8 @@ Détection (Wazuh) → Indexation → Triage IA (Ollama/Mistral) → Évaluation
 | TheHive 5.4 | ✅ Déployé |
 | Ollama + Mistral 7B (quantifié Q4) | ✅ Déployé, triage testé avec succès |
 | Script Python Wazuh → LLM → TheHive | ✅ Premier jet fonctionnel ([`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)) |
+| Jeu de 38 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé ([voir résultats](#évaluation-expérimentale-s5)) |
 | Cortex / MISP / Shuffle | ⏳ Extensions prévues (S6-S7) |
-| Jeu de 30-50 alertes labellisées + métriques | ⏳ Prévu S5 |
 
 ### Captures d'écran
 
@@ -94,6 +94,33 @@ Le cas `#1 - [HAUTE] alert - Brute force SSH (T1110)` a été créé par [`scrip
 ### Leçon retenue — contrainte matérielle
 
 Sur une configuration à 8 Go de RAM allouée à la VM, faire tourner Wazuh + TheHive + l'inférence Mistral 7B **simultanément** n'est pas viable : deux tentatives distinctes d'inférence ont provoqué un **OOM kill** du process `llama-server` (confirmé via `journalctl` : `A process of this unit has been killed by the OOM killer`). La stratégie finalement adoptée, conforme au plan de mitigation prévu dans le cadrage du projet, est une **exécution séquentielle** : arrêt temporaire de TheHive pendant le triage LLM, puis redémarrage de TheHive pour la création du cas une fois le résultat obtenu. Ce constat, vécu concrètement plutôt que supposé, conforte la nécessité d'un minimum de 16 Go de RAM (idéalement 24-32 Go) pour une exécution confortable et simultanée de la stack complète en production de laboratoire.
+
+## Évaluation expérimentale (S5)
+
+Conformément à la méthodologie prévue, un jeu de **38 alertes labellisées manuellement** a été constitué à partir de 9 scénarios distincts (brute force SSH, connexions valides répétées, sudo/su réussis et échoués, création/suppression de compte, tâche planifiée, commande obfusquée). Voir [`scripts/generate_test_dataset.sh`](scripts/generate_test_dataset.sh) et les artefacts dans [`docs/evaluation/`](docs/evaluation/).
+
+Chaque alerte a été classifiée par deux méthodes indépendantes et comparée à la référence manuelle :
+- **Baseline à règles** : mapping natif de Wazuh (`rule.level` → criticité, `rule.mitre` → tactique/technique), sans LLM.
+- **LLM** : Mistral 7B via Ollama, avec un prompt structuré demandant une sortie JSON stricte.
+
+### Résultats
+
+| Métrique | Baseline (règles) | LLM (Mistral 7B) |
+|---|---|---|
+| Écart moyen de criticité (0 = parfait, 4 = max) | **0.76** | 1.55 |
+| Taux de correspondance MITRE (technique) | **28.9 %** | 2.6 % |
+| Temps de traitement | ~0 s (instantané) | 46.5 s en moyenne |
+| Erreurs de parsing JSON | N/A | 26.3 % des réponses |
+| Non-respect du vocabulaire de criticité demandé (ex. réponse en anglais `"high"` au lieu de `"haute"`) | N/A | 18.4 % des réponses |
+
+### Interprétation
+
+Sur ce test précis, **la baseline à règles surpasse le LLM local**, ce qui est un résultat scientifiquement valide et informatif, pas un échec du projet. Deux causes principales, identifiées en creusant les réponses brutes du modèle :
+
+1. **Fiabilité du format de sortie** : dans plus d'un quart des cas, Mistral 7B ne renvoie pas un JSON strictement valide (texte explicatif autour du JSON, guillemets mal fermés), ce qui casse le parsing automatique et pénalise artificiellement le score.
+2. **Dérive de vocabulaire** : le modèle répond parfois en anglais (`"high"`) malgré une consigne explicite en français, et utilise des noms de technique MITRE en texte libre (`"SSH Authentication"`) plutôt que le code standard (`T1110`), alors que Wazuh expose déjà ce code nativement dans ses règles.
+
+Ces deux limites pointent vers des pistes d'amélioration concrètes pour la suite du projet (S6-S7) : contraindre la sortie du LLM via un schéma JSON strict (grammar-constrained decoding d'Ollama), forcer la langue de réponse plus explicitement, et normaliser les codes MITRE en sortie plutôt que de les laisser en texte libre. Le temps de triage LLM (~46 s/alerte sur ce matériel CPU-only) confirme par ailleurs qu'un usage en continu sur le flux d'alertes réel n'est pas envisageable sans accélération matérielle (GPU) ou modèle plus léger — ce qui rejoint la contrainte RAM déjà documentée plus haut.
 
 ## Scénarios de test
 
