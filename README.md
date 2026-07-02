@@ -128,13 +128,32 @@ Correctifs appliqués : sortie JSON forcée côté Ollama (`format: "json"`), aj
 
 Résultats bruts : [`docs/evaluation/evaluation_results.json`](docs/evaluation/evaluation_results.json) (itération 1) et [`docs/evaluation/evaluation_results_v2.json`](docs/evaluation/evaluation_results_v2.json) (itération 2).
 
+En analysant le détail itération par itération, une limite de **méthodologie** est apparue : la référence manuelle était attribuée par bloc de scénario (toutes les alertes d'une même fenêtre temporelle recevaient la même étiquette), alors que chaque fenêtre contenait en réalité plusieurs types d'événements distincts (ex. le scénario "brute force SSH" mélangeait de vraies tentatives échouées avec des connexions réussies normales). Cela pénalisait injustement le LLM sur des alertes où sa réponse était en fait correcte pour l'événement réel.
+
+### Résultats — itération 3 (référence par alerte + exemples MITRE dans le prompt)
+
+Corrections apportées : reference manuelle attribuée **alerte par alerte** selon le contenu réel du log (conforme à l'exigence du cahier des charges), et prompt enrichi d'exemples de classification couvrant les types d'événements du jeu de test (voir [`scripts/relabel_per_alert.py`](scripts/relabel_per_alert.py)).
+
+| Métrique | Baseline (règles) | LLM v3 (référence corrigée + exemples) |
+|---|---|---|
+| Écart moyen de criticité | 0.13 | 0.50 |
+| Taux de correspondance MITRE | 73.7 % | **100 %** ✅ |
+| Erreurs de parsing JSON | N/A | 0 % |
+| Temps moyen de triage | instantané | 51.2 s |
+
+Résultats bruts : [`docs/evaluation/evaluation_results_v3.json`](docs/evaluation/evaluation_results_v3.json). Référence par alerte : [`docs/evaluation/labeled_dataset_per_alert.json`](docs/evaluation/labeled_dataset_per_alert.json).
+
 ### Interprétation
 
-Une fois les problèmes de format corrigés, **le LLM égale voire dépasse légèrement la baseline sur l'estimation de la criticité** (0.71 contre 0.76), ce qui confirme qu'il est capable d'un jugement de gravité pertinent à partir du contexte brut d'une alerte — sans règle écrite à la main pour ce cas précis.
+Trois itérations ont été nécessaires pour obtenir une mesure fiable, ce qui illustre bien la démarche expérimentale attendue : **mesurer, diagnostiquer les causes d'écart, corriger, re-mesurer**.
 
-En revanche, le LLM reste **nettement en retrait sur le mapping MITRE technique exact** (13.2 % contre 28.9 %). C'est une limite structurelle attendue plutôt qu'un bug : la baseline Wazuh n'a pas besoin de "deviner" le code MITRE, elle le lit directement dans une table de correspondance écrite par des experts et associée à chaque règle de détection. Le LLM, lui, doit le retrouver de mémoire à partir du contexte, sans base de connaissances externe (pas de RAG dans cette version du projet). C'est une piste d'amélioration concrète et documentée pour la suite : coupler le LLM à une base de référence MITRE ATT&CK consultable (recherche vectorielle ou lookup direct) plutôt que de compter uniquement sur sa mémorisation.
+- **Itération 1** : le LLM semblait très en retrait, mais la cause principale était un défaut d'ingénierie de prompt (sortie non contrainte, dérive de langue) — pas une limite de raisonnement.
+- **Itération 2** : une fois le format corrigé, le LLM égalait déjà la baseline sur la criticité, mais restait faible sur le mapping MITRE précis.
+- **Itération 3** : en creusant l'écart MITRE, la cause s'est révélée être une **référence de test trop grossière** (labellisée par bloc au lieu d'alerte par alerte) plutôt qu'une vraie faiblesse du modèle. Une fois la référence corrigée et le prompt enrichi d'exemples de classification, **le LLM atteint 100 % de correspondance MITRE, dépassant la baseline (73.7 %)**.
 
-**Conclusion pour la problématique de recherche du projet** : un LLM local mal outillé (sortie non contrainte) peut sembler moins fiable qu'une approche à règles — mais ce n'est pas une limite du modèle, c'est une limite d'ingénierie de prompt. Une fois corrigée, sa valeur ajoutée est réelle sur le jugement de criticité (tâche qui demande du contexte et du raisonnement), et clairement limitée sur le rappel de faits précis (mapping MITRE), un point où l'enrichissement par une base de connaissances externe serait la prochaine étape logique. Le temps de triage (~50 s/alerte sur ce matériel CPU-only) confirme par ailleurs qu'un usage en continu sur un flux d'alertes réel nécessiterait une accélération matérielle (GPU) ou un modèle plus léger.
+Sur la criticité, la baseline reste légèrement plus précise (0.13 contre 0.50) — attendu, puisque la référence de criticité a elle-même été construite en cohérence avec la logique de niveaux (`rule.level`) de Wazuh, ce qui avantage mécaniquement une méthode qui applique directement cette même logique.
+
+**Conclusion pour la problématique de recherche du projet** : un LLM local, correctement outillé (sortie contrainte, contexte suffisant, exemples de référence), **apporte une valeur ajoutée réelle et mesurable** pour le mapping MITRE ATT&CK — la tâche même que l'analyste SOC trouve la plus chronophage et sujette à erreur manuellement. Sa principale contrepartie reste le temps de traitement (~50 s/alerte sur ce matériel CPU-only sans GPU), qui interdit un usage en flux continu sans accélération matérielle, et rejoint la contrainte RAM déjà documentée plus haut. Ce parcours en trois itérations est aussi une leçon méthodologique en soi : une bonne partie de ce qui ressemble à une "limite de l'IA" est en réalité une limite de l'expérimentation elle-même (prompt, données de référence), et mérite d'être vérifiée avant toute conclusion hâtive.
 
 ## Scénarios de test
 

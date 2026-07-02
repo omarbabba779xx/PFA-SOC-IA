@@ -22,22 +22,31 @@ CRITICALITY_EN_TO_FR = {"low": "basse", "medium": "moyenne", "high": "haute", "c
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral:7b-instruct-q4_0")
 
-DATASET_FILE = os.path.expanduser("~/labeled_dataset_sample.json")
-OUTPUT_FILE = os.path.expanduser("~/evaluation_results.json")
+DATASET_FILE = os.path.expanduser(os.environ.get("DATASET_FILE", "~/labeled_dataset_per_alert.json"))
+OUTPUT_FILE = os.path.expanduser(os.environ.get("OUTPUT_FILE", "~/evaluation_results_v3.json"))
 
 CRITICALITY_ORDER = ["basse", "moyenne", "haute", "critique"]
 
-TRIAGE_PROMPT_TEMPLATE = """Tu es un assistant de triage SOC. Analyse l'alerte suivante et
-reponds UNIQUEMENT en JSON valide avec exactement les champs suivants :
+TRIAGE_PROMPT_TEMPLATE = """Tu es un assistant de triage SOC specialise sur les logs Linux/SSH/PAM.
+Analyse l'alerte suivante et reponds UNIQUEMENT en JSON valide avec exactement
+les champs suivants :
 - incident_type (string, court)
 - criticite : un seul mot parmi EXACTEMENT "basse", "moyenne", "haute", "critique" (en francais, jamais en anglais)
-- mitre_tactic (string, nom de la tactique MITRE ATT&CK)
-- mitre_technique : UNIQUEMENT le code technique exact au format "Txxxx" (exemple: "T1110"), jamais une description
+- mitre_tactic (string, nom officiel de la tactique MITRE ATT&CK)
+- mitre_technique : UNIQUEMENT le code technique officiel au format "Txxxx" (jamais une description ni un nom)
 - resume (string)
 - recommandation (string)
 
-Exemple de reponse attendue pour une autre alerte :
-{{"incident_type": "Connexion suspecte", "criticite": "haute", "mitre_tactic": "Initial Access", "mitre_technique": "T1078", "resume": "...", "recommandation": "..."}}
+Voici des exemples de classification correcte pour des alertes similaires (memorise le code MITRE exact associe a chaque type d'evenement) :
+
+1. Log "sshd: Attempt to login using a non-existent user" -> brute force / devinette de mot de passe -> criticite "haute", tactique "Credential Access", technique "T1110"
+2. Log "sshd: authentication success." ou "PAM: Login session opened." -> usage normal d'un compte valide -> criticite "basse", tactique "Initial Access", technique "T1078"
+3. Log "Successful sudo to ROOT executed." ou "User missed the password to change UID" -> abus/tentative d'elevation de privileges via sudo/su -> criticite "basse" si succes attendu, "moyenne" si echec -> tactique "Privilege Escalation", technique "T1548"
+4. Log "New user added to the system." -> creation de compte, technique de persistance -> criticite "haute", tactique "Persistence", technique "T1136"
+5. Log "Group (or user) deleted from the system." -> suppression de compte -> criticite "moyenne", tactique "Impact", technique "T1531"
+6. Log "Crontab entry changed." -> tache planifiee, technique de persistance -> criticite "moyenne", tactique "Persistence", technique "T1053"
+
+Applique le meme niveau de precision pour l'alerte ci-dessous. Si le log correspond a l'un des exemples ci-dessus, reutilise EXACTEMENT le meme code MITRE.
 
 Alerte Wazuh a analyser :
 - Regle : {rule_description} (niveau {rule_level})

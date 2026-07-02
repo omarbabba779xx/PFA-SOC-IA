@@ -1,0 +1,1142 @@
+[
+  {
+    "scenario": "ssh_bruteforce",
+    "reference": {
+      "incident_type": "Connexion SSH reussie",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "sshd: authentication success.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication_success",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Accepted publickey for soc from 10.0.2.2 port 58480 ssh2: ED25519 SHA256:QGlzbPgYK4Ropuk80+iBh+JUYCI2azdRoksnvZJP/AA",
+      "recommandation": "No action required."
+    },
+    "llm_duration_sec": 117.2,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110"
+    },
+    "baseline": {
+      "incident_type": "sshd: Attempt to login using a non-existent user",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110.001"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Attempt to login using a non-existent user detected on sshd server.",
+      "recommandation": "Investigate the source of the invalid login attempt and take appropriate measures to prevent further unauthorized access."
+    },
+    "llm_duration_sec": 47.1,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110"
+    },
+    "baseline": {
+      "incident_type": "sshd: Attempt to login using a non-existent user",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110.001"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Attempt to login using a non-existent user detected on sshd server.",
+      "recommandation": "Investigate the source of the invalid login attempt and implement appropriate security measures to prevent similar attacks in the future."
+    },
+    "llm_duration_sec": 42.9,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication_success",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Login session opened for user soc(uid=1000) by (uid=0)",
+      "recommandation": "No action required"
+    },
+    "llm_duration_sec": 42.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_bruteforce",
+    "reference": {
+      "incident_type": "Brute force SSH",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110"
+    },
+    "baseline": {
+      "incident_type": "sshd: Attempt to login using a non-existent user",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110.001"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Attempt to login using a non-existent user detected on sshd server.",
+      "recommandation": "Investigate the source of the invalid login attempt and take appropriate measures to prevent further unauthorized access."
+    },
+    "llm_duration_sec": 47.9,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user with the group 'sudo' successfully executed a sudo command as root. The command was to execute '/usr/bin/true'. This action may indicate an attempt to escalate privileges.",
+      "recommandation": "Investigate the user who performed the sudo command and review their access rights. Implement additional controls to limit the use of sudo and monitor for suspicious activity."
+    },
+    "llm_duration_sec": 63.5,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture d'une session PAM pour l'utilisateur root.",
+      "recommandation": "V\u00e9rifier les logs SSH et PAM pour d\u00e9tecter d'autres tentatives de connexion ou de changement de privil\u00e8ges."
+    },
+    "llm_duration_sec": 52.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "Successful sudo to ROOT executed.",
+      "recommandation": "Investigate the user who performed the sudo command and review their privileges."
+    },
+    "llm_duration_sec": 43.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 2,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication_success",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Login session opened for user root(uid=0) by (uid=1000)",
+      "recommandation": "No action required."
+    },
+    "llm_duration_sec": 41.2,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "ssh_valid_repeated",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user has successfully executed a sudo command with root privileges.",
+      "recommandation": "Investigate the user's motive for elevating privileges and audit their actions."
+    },
+    "llm_duration_sec": 46.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_success",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user with the 'sudo' privilege has successfully executed a command as root. This action may indicate an attempt to escalate privileges or gain unauthorized access.",
+      "recommandation": "Investigate the user who performed the sudo command and review their access rights. Implement additional security measures, such as auditing and monitoring of sudo usage, to prevent future privilege escalations."
+    },
+    "llm_duration_sec": 58.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_success",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture d'une session PAM pour l'utilisateur root",
+      "recommandation": "V\u00e9rifier les logs SSH pour d\u00e9tecter des tentatives de brute force ou de devinette de mot de passe."
+    },
+    "llm_duration_sec": 51.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_success",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user has successfully executed a sudo command with root privileges.",
+      "recommandation": "Investigate the user's motive for elevating privileges and implement additional security measures to prevent unauthorized access."
+    },
+    "llm_duration_sec": 51.5,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_success",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication_success",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Login session opened for user root(uid=0) by (uid=1000)",
+      "recommandation": "Monitor the system for unusual login activity and investigate further if necessary."
+    },
+    "llm_duration_sec": 44.7,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_success",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "Ex\u00e9cution r\u00e9ussie d'un commande sudo avec privil\u00e8ges ROOT",
+      "recommandation": "Investiguer l'utilisateur qui a ex\u00e9cut\u00e9 le commande sudo et v\u00e9rifier les logs pour d\u00e9terminer si cela est une tentative d'abus ou un acte malicieux."
+    },
+    "llm_duration_sec": 58.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 2,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_failed",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user with the group 'sudo' successfully executed a sudo command as root. The command was to execute '/usr/bin/true'. This action may indicate an attempt to escalate privileges.",
+      "recommandation": "Investigate the user who performed the sudo command and review their access rights. Implement additional controls to limit the use of sudo and monitor for suspicious activity."
+    },
+    "llm_duration_sec": 60.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_failed",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication",
+      "criticite": "moyenne",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Login session opened for user root(uid=0) by (uid=1000)",
+      "recommandation": "Investigate the login attempt and verify if it is legitimate."
+    },
+    "llm_duration_sec": 45.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_failed",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture d'une session PAM pour l'utilisateur root.",
+      "recommandation": "V\u00e9rifier les logs SSH pour d\u00e9tecter des tentatives de brute force ou de devinette de mot de passe."
+    },
+    "llm_duration_sec": 48.4,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_failed",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user has successfully executed a sudo command with root privileges.",
+      "recommandation": "Investigate the user's motive for elevating privileges and audit their access to sensitive systems."
+    },
+    "llm_duration_sec": 48.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "sudo_failed",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "Login session opened",
+      "criticite": "moyenne",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "A new user has logged in to the system using sudo.",
+      "recommandation": "Investigate the user's identity and motive for accessing root privileges."
+    },
+    "llm_duration_sec": 44.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "su_failed",
+    "reference": {
+      "incident_type": "Echec authentification",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110"
+    },
+    "baseline": {
+      "incident_type": "PAM: User login failed.",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110.001"
+    },
+    "llm": {
+      "incident_type": "authentication_failed",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Authentication failure for user 1000. Root account was used.",
+      "recommandation": "Investigate the root login and implement multi-factor authentication to prevent unauthorized access."
+    },
+    "llm_duration_sec": 47.2,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "su_failed",
+    "reference": {
+      "incident_type": "Echec elevation de privileges (su)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "User missed the password to change UID (user id).",
+      "criticite": "moyenne",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "Log",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "User missed the password to change UID (user id).",
+      "recommandation": "Investigate and mitigate the privilege escalation attempt."
+    },
+    "llm_duration_sec": 42.1,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "su_failed",
+    "reference": {
+      "incident_type": "Echec authentification",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110"
+    },
+    "baseline": {
+      "incident_type": "PAM: User login failed.",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110.001"
+    },
+    "llm": {
+      "incident_type": "authentication_failed",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Un utilisateur a tent\u00e9 de se connecter \u00e0 un service en utilisant des informations incorrectes.",
+      "recommandation": "V\u00e9rifier les informations fournies par l'utilisateur et bloquer son acc\u00e8s si les informations sont incorrectes."
+    },
+    "llm_duration_sec": 52.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "su_failed",
+    "reference": {
+      "incident_type": "Echec elevation de privileges (su)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "User missed the password to change UID (user id).",
+      "criticite": "moyenne",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "Log",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "User missed the password to change UID (user id).",
+      "recommandation": "Investigate and take appropriate action to prevent further privilege escalation attempts."
+    },
+    "llm_duration_sec": 42.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "su_failed",
+    "reference": {
+      "incident_type": "Echec authentification",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110"
+    },
+    "baseline": {
+      "incident_type": "PAM: User login failed.",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110.001"
+    },
+    "llm": {
+      "incident_type": "authentication_failed",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Log de failed authentication attempt for user 1000. Root account was used.",
+      "recommandation": "Investigate the cause of the failed authentication attempt and take appropriate measures to prevent similar incidents in the future."
+    },
+    "llm_duration_sec": 49.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_creation",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "Ex\u00e9cution r\u00e9ussie d'un commande sudo avec privil\u00e8ges root.",
+      "recommandation": "V\u00e9rifier les logs de l'utilisateur qui a ex\u00e9cut\u00e9 le commande sudo et v\u00e9rifier si la cr\u00e9ation d'un compte est autoris\u00e9."
+    },
+    "llm_duration_sec": 54.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_creation",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture d'une session PAM pour l'utilisateur root",
+      "recommandation": "V\u00e9rifier les logs SSH et PAM pour d\u00e9tecter des tentatives de brute force ou de devinette de mot de passe."
+    },
+    "llm_duration_sec": 49.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_creation",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "sudo",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "Successful sudo to ROOT executed.",
+      "recommandation": "Investigate the user who performed the action and monitor their activity."
+    },
+    "llm_duration_sec": 42.7,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_creation",
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    },
+    "baseline": {
+      "incident_type": "New user added to the system.",
+      "criticite": "moyenne",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    },
+    "llm": {
+      "incident_type": "New user added to the system.",
+      "criticite": "haute",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136",
+      "resume": "A new user has been added to the system. The user's name is 'testaccount2', UID is 1002, GID is 1002, home directory is '/home/testaccount2', and shell is '/bin/sh'. The user was created from 'none'.",
+      "recommandation": "Investigate the new user's privileges and ensure they have appropriate access levels."
+    },
+    "llm_duration_sec": 64.9,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_creation",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication",
+      "criticite": "moyenne",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Login session opened for user root(uid=0) by (uid=1000)",
+      "recommandation": "Investigate the login attempt and verify if it is legitimate."
+    },
+    "llm_duration_sec": 44.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_deletion",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "sudo",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "Successful sudo to ROOT executed.",
+      "recommandation": "Investigate the user who performed the action and monitor their activity."
+    },
+    "llm_duration_sec": 42.9,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_deletion",
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session opened.",
+      "criticite": "basse",
+      "mitre_tactic": "Defense Evasion",
+      "mitre_technique": "T1078"
+    },
+    "llm": {
+      "incident_type": "authentication_success",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Login session opened for user root(uid=0) by (uid=1000)",
+      "recommandation": "Monitor the system for unusual activity and investigate further if necessary."
+    },
+    "llm_duration_sec": 44.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_deletion",
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    },
+    "baseline": {
+      "incident_type": "Group (or user) deleted from the system.",
+      "criticite": "basse",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    },
+    "llm": {
+      "incident_type": "Group (or user) deleted from the system.",
+      "criticite": "moyenne",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531",
+      "resume": "A user was deleted from the system. The affected group is 'syslog' and the user is 'testaccount1'. This event occurred on July 2nd, 2026 at 00:58:47 UTC.",
+      "recommandation": "Investigate the reason for the deletion of the user and verify if it was intentional. Check the system logs for any suspicious activity related to this event."
+    },
+    "llm_duration_sec": 63.7,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_deletion",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture de session PAM pour l'utilisateur root.",
+      "recommandation": "V\u00e9rifier les logs SSH pour d\u00e9tecter d'autres tentatives de connexion non autoris\u00e9es."
+    },
+    "llm_duration_sec": 46.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "user_deletion",
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    },
+    "baseline": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548.003"
+    },
+    "llm": {
+      "incident_type": "Successful sudo to ROOT executed.",
+      "criticite": "moyenne",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548",
+      "resume": "A user has successfully executed a sudo command with root privileges. This could indicate an attempt to escalate privileges or gain unauthorized access.",
+      "recommandation": "Investigate the user who performed the sudo command and review their access rights. Implement additional security measures such as auditing and monitoring of sudo commands."
+    },
+    "llm_duration_sec": 59.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "cron_creation",
+    "reference": {
+      "incident_type": "Modification de tache planifiee",
+      "criticite": "moyenne",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1053"
+    },
+    "baseline": {
+      "incident_type": "Crontab entry changed.",
+      "criticite": "moyenne",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "Crontab entry changed",
+      "criticite": "moyenne",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1053",
+      "resume": "A log was generated indicating that a crontab entry was changed. The log corresponds to the 'Crontab entry changed' rule with a severity level of 5.",
+      "recommandation": "Investigate the change in the crontab entry and determine if it is suspicious or not."
+    },
+    "llm_duration_sec": 54.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "cron_creation",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture d'une session SSH pour un utilisateur.",
+      "recommandation": "V\u00e9rifier les logs de l'utilisateur pour d\u00e9tecter des tentatives de brute force ou de devinette de mot de passe."
+    },
+    "llm_duration_sec": 49.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "base64_decode_exec",
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    },
+    "baseline": {
+      "incident_type": "PAM: Login session closed.",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Log de fermeture d'une session SSH pour un utilisateur.",
+      "recommandation": "V\u00e9rifier les logs de l'utilisateur pour d\u00e9tecter des tentatives d'authentification malveillantes."
+    },
+    "llm_duration_sec": 38.4,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  }
+]
