@@ -1,0 +1,7 @@
+*.vdi
+*.iso
+*.vbox
+*.vbox-prev
+__pycache__/
+*.pyc
+.env
