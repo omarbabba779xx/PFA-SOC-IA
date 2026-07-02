@@ -11,10 +11,13 @@ Sortie  : evaluation_results.json + resume des metriques sur stdout
 
 import json
 import os
+import re
 import sys
 import time
 
 import requests
+
+CRITICALITY_EN_TO_FR = {"low": "basse", "medium": "moyenne", "high": "haute", "critical": "critique"}
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral:7b-instruct-q4_0")
@@ -25,16 +28,25 @@ OUTPUT_FILE = os.path.expanduser("~/evaluation_results.json")
 CRITICALITY_ORDER = ["basse", "moyenne", "haute", "critique"]
 
 TRIAGE_PROMPT_TEMPLATE = """Tu es un assistant de triage SOC. Analyse l'alerte suivante et
-reponds UNIQUEMENT en JSON valide avec les champs : incident_type, criticite
-(basse/moyenne/haute/critique), mitre_tactic, mitre_technique, resume, recommandation.
+reponds UNIQUEMENT en JSON valide avec exactement les champs suivants :
+- incident_type (string, court)
+- criticite : un seul mot parmi EXACTEMENT "basse", "moyenne", "haute", "critique" (en francais, jamais en anglais)
+- mitre_tactic (string, nom de la tactique MITRE ATT&CK)
+- mitre_technique : UNIQUEMENT le code technique exact au format "Txxxx" (exemple: "T1110"), jamais une description
+- resume (string)
+- recommandation (string)
 
-Alerte Wazuh :
+Exemple de reponse attendue pour une autre alerte :
+{{"incident_type": "Connexion suspecte", "criticite": "haute", "mitre_tactic": "Initial Access", "mitre_technique": "T1078", "resume": "...", "recommandation": "..."}}
+
+Alerte Wazuh a analyser :
 - Regle : {rule_description} (niveau {rule_level})
 - Groupes : {rule_groups}
+- Log complet : {full_log}
 - Agent : {agent_name}
 - Horodatage : {timestamp}
 
-Reponds uniquement avec le JSON, sans texte autour.
+Reponds uniquement avec le JSON, sans texte autour, sans balises markdown.
 """
 
 
@@ -69,13 +81,20 @@ def llm_classify(alert: dict) -> tuple[dict, float]:
         rule_description=rule.get("description", "N/A"),
         rule_level=rule.get("level", "N/A"),
         rule_groups=", ".join(rule.get("groups", [])),
+        full_log=str(alert.get("full_log", "N/A"))[:400],
         agent_name=alert.get("agent", {}).get("name", "N/A"),
         timestamp=alert.get("timestamp", "N/A"),
     )
     start = time.monotonic()
     resp = requests.post(
         f"{OLLAMA_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+        json={
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",  # force Ollama a contraindre la sortie a du JSON valide
+            "options": {"temperature": 0.1},  # reduit la variabilite/derive du modele
+        },
         timeout=180,
     )
     duration = time.monotonic() - start
@@ -93,20 +112,41 @@ def llm_classify(alert: dict) -> tuple[dict, float]:
     return parsed, duration
 
 
+def normalize_criticality(value: str) -> tuple[str, bool]:
+    """Normalise la criticite (ex: anglais -> francais). Retourne (valeur, a_ete_normalisee)."""
+    if not value:
+        return "", False
+    value_lower = value.lower().strip()
+    if value_lower in CRITICALITY_ORDER:
+        return value_lower, False
+    if value_lower in CRITICALITY_EN_TO_FR:
+        return CRITICALITY_EN_TO_FR[value_lower], True
+    return value_lower, False
+
+
 def criticality_gap(ref: str, predicted: str) -> int:
+    normalized, _ = normalize_criticality(predicted)
     try:
-        return abs(CRITICALITY_ORDER.index(ref.lower()) - CRITICALITY_ORDER.index(predicted.lower()))
+        return abs(CRITICALITY_ORDER.index(ref.lower()) - CRITICALITY_ORDER.index(normalized))
     except (ValueError, AttributeError):
         return len(CRITICALITY_ORDER)  # penalite max si valeur invalide
 
 
+def extract_mitre_code(value) -> str | None:
+    """Extrait un code MITRE (Txxxx) d'une chaine, meme si le modele a renvoye du texte libre."""
+    if value is None:
+        return None
+    if isinstance(value, list):
+        value = " ".join(str(v) for v in value)
+    match = re.search(r"T\d{4}(\.\d{3})?", str(value))
+    return match.group(0) if match else None
+
+
 def mitre_match(ref_technique: str, predicted_technique) -> bool:
-    if predicted_technique is None:
+    extracted = extract_mitre_code(predicted_technique)
+    if extracted is None:
         return False
-    if isinstance(predicted_technique, list):
-        predicted_technique = " ".join(predicted_technique)
-    predicted_technique = str(predicted_technique)
-    return ref_technique in predicted_technique or predicted_technique in ref_technique
+    return ref_technique in extracted or extracted in ref_technique
 
 
 def main() -> None:
@@ -131,6 +171,8 @@ def main() -> None:
             "llm_criticality_gap": criticality_gap(ref["criticite"], llm_result.get("criticite", "")),
             "baseline_mitre_match": mitre_match(ref["mitre_technique"], baseline["mitre_technique"]),
             "llm_mitre_match": mitre_match(ref["mitre_technique"], llm_result.get("mitre_technique")),
+            "llm_parse_error": llm_result.get("incident_type") == "PARSE_ERROR",
+            "llm_criticality_normalized": normalize_criticality(llm_result.get("criticite", ""))[1],
         }
         results.append(entry)
         print(f"[{i}/{len(dataset)}] {item['scenario']}: "
@@ -148,6 +190,8 @@ def main() -> None:
     baseline_mitre_rate = sum(r["baseline_mitre_match"] for r in results) / n
     llm_mitre_rate = sum(r["llm_mitre_match"] for r in results) / n
     avg_llm_time = sum(r["llm_duration_sec"] for r in results) / n
+    parse_error_rate = sum(r["llm_parse_error"] for r in results) / n
+    normalized_rate = sum(r["llm_criticality_normalized"] for r in results) / n
 
     print("\n===== RESUME METRIQUES =====")
     print(f"Nombre d'alertes evaluees        : {n}")
@@ -156,6 +200,8 @@ def main() -> None:
     print(f"Taux de correspondance MITRE (regles) : {baseline_mitre_rate:.1%}")
     print(f"Taux de correspondance MITRE (LLM)     : {llm_mitre_rate:.1%}")
     print(f"Temps moyen de triage LLM          : {avg_llm_time:.1f}s")
+    print(f"Taux d'erreurs de parsing JSON (LLM) : {parse_error_rate:.1%}")
+    print(f"Taux de reponses necessitant une normalisation de langue (LLM) : {normalized_rate:.1%}")
 
 
 if __name__ == "__main__":
