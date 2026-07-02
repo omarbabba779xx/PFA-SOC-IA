@@ -46,9 +46,10 @@ Détection (Wazuh) → Indexation → Triage IA (Ollama/Mistral) → Évaluation
 | Ollama + Mistral 7B (quantifié Q4) | ✅ Déployé, triage testé avec succès |
 | Script Python Wazuh → LLM → TheHive | ✅ Premier jet fonctionnel ([`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)) |
 | Jeu de 38 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé ([voir résultats](#évaluation-expérimentale-s5)) |
-| Cortex (analyse d'observables) | ✅ Déployé, 3 analyseurs réels testés (FileInfo, AbuseIPDB, VirusTotal) |
-| MISP (Threat Intelligence) | ✅ Déployé, événement + IOC de test créés |
-| Shuffle (SOAR) | ⏳ Extension prévue |
+| Cortex (analyse d'observables) | ✅ Déployé, 3 analyseurs réels testés (FileInfo, AbuseIPDB, VirusTotal), connecteur TheHive ↔ Cortex lié et testé |
+| MISP (Threat Intelligence) | ✅ Déployé, événement + IOC de test créés, connecteur TheHive ↔ MISP lié et testé |
+| Dashboard SOC personnalisé (Wazuh/OpenSearch Dashboards) | ✅ 4 indicateurs : nb incidents, répartition par criticité, répartition par type d'alerte, techniques MITRE ATT&CK détectées |
+| Shuffle (SOAR) | ✅ Déployé, workflow de triage automatisé créé (webhook → action HTTP) |
 | Rapports PDF automatiques | ⏳ Prévu (noyau obligatoire, restant à faire) |
 
 ### Captures d'écran
@@ -174,7 +175,7 @@ Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés.
 
 Les clés VirusTotal et AbuseIPDB utilisées sont des comptes personnels gratuits (quota limité, sans carte bancaire), ce qui reste cohérent avec le périmètre d'un laboratoire étudiant. La grande majorité des ~275 analyseurs Cortex disponibles (sandboxs commerciaux type AnyRun, services d'entreprise) restent hors de portée et non activés.
 
-**Reste à faire** : le lien API Cortex ↔ TheHive (pour lancer une analyse Cortex directement depuis un cas TheHive) nécessite une gestion du jeton CSRF de l'API Cortex, non finalisée dans cette itération — prochaine étape naturelle de l'intégration.
+**Lien TheHive ↔ Cortex** : configuré via l'interface native de TheHive (Platform Management > Connectors > Cortex), qui gère l'authentification et évite les problèmes de jeton CSRF rencontrés avec des appels API bruts. Le test de connexion renvoie *"Cortex configuration has been successfully tested"* — les analyseurs Cortex sont désormais invocables directement depuis un cas TheHive.
 
 ## Threat Intelligence (S6 — MISP)
 
@@ -187,7 +188,34 @@ Un événement de test a été créé avec un IOC réel, en lien direct avec le 
 
 ![Événement MISP créé](docs/screenshots/misp_event.png)
 
-**Reste à faire** : synchronisation automatique MISP → Cortex/TheHive (feed IOC), et alimentation d'IOC réels via un flux de threat intelligence public plutôt que des indicateurs de test.
+**Lien TheHive ↔ MISP** : configuré via l'interface native de TheHive (Platform Management > Connectors > MISP), en connectant les deux conteneurs sur le même réseau Docker et en générant une clé d'API MISP dédiée à l'intégration. Le test de connexion renvoie *"Misp configuration has been successfully tested"* — TheHive peut désormais importer/exporter des IOC depuis/vers MISP.
+
+**Reste à faire** : alimentation d'IOC réels via un flux de threat intelligence public plutôt que des indicateurs de test.
+
+## Dashboard SOC personnalisé (S7 — Kibana/OpenSearch Dashboards)
+
+Un tableau de bord dédié a été construit dans le module Visualize/Dashboards de Wazuh (OpenSearch Dashboards), avec 4 indicateurs clés directement branchés sur les données réelles de l'index `wazuh-alerts-*` :
+
+| Indicateur | Type de visualisation | Champ utilisé |
+|---|---|---|
+| Nombre total d'incidents (30j) | Métrique | `count` |
+| Répartition des alertes par type | Barres verticales (top 10) | `rule.description` |
+| Répartition par criticité | Camembert | `rule.level` |
+| Techniques MITRE ATT&CK détectées | Tableau de données | `rule.mitre.id` |
+
+![Dashboard SOC personnalisé](docs/screenshots/kibana_soc_dashboard.png)
+
+Sur 30 jours de données réelles issues du jeu de test : 1884 alertes, dominées par les événements PAM/sshd (sessions, authentifications), et une couverture MITRE de 9 techniques distinctes (T1078, T1021, T1548.003, T1040, T1110.001, T1021.004, T1499, T1136, T1531).
+
+## Orchestration et réponse automatisée (S7 — Shuffle SOAR)
+
+[Shuffle](https://github.com/Shuffle/Shuffle) a été déployé depuis les sources officielles (frontend, backend, orborus, OpenSearch) sur la VM, avec le port OpenSearch remappé sur `9250` pour éviter le conflit avec l'indexer Wazuh déjà sur `9200`, et un heap Java réduit à 1 Go pour tenir dans la contrainte RAM du lab.
+
+![Workflow Shuffle](docs/screenshots/shuffle_workflow.png)
+
+Un premier workflow de triage automatisé (`SOC PFA - Triage automatise Wazuh`) a été créé : un déclencheur **Webhook** reçoit une alerte (destinée à être appelée depuis le script Python de triage ou directement depuis Wazuh), branché sur une action **HTTP** pointant vers l'API de création de cas TheHive — posant la structure de base d'un playbook de réponse SOAR.
+
+**Reste à faire** : connecter les conteneurs Shuffle et TheHive sur un réseau Docker partagé pour une exécution de bout en bout, et enrichir le workflow avec des étapes conditionnelles (ex. escalade automatique si criticité "Haute").
 
 ## Scénarios de test
 
@@ -232,8 +260,8 @@ python scripts/wazuh_ai_triage.py
 | S3 | Gestion incidents (TheHive) | ✅ |
 | S4 | Assistant IA (Ollama + Mistral) | ✅ |
 | S5 | Évaluation IA (jeu de 30-50 alertes, baseline, métriques) | ⏳ |
-| S6 | Enrichissement (Cortex, MISP) | ⏳ |
-| S7 | Automatisation (Shuffle, dashboard, rapports PDF) | ⏳ |
+| S6 | Enrichissement (Cortex, MISP) | ✅ |
+| S7 | Automatisation (Shuffle, dashboard, rapports PDF) | ✅ (rapport PDF restant) |
 | S8 | Validation finale, rapport, soutenance | ⏳ |
 
 ## Valeur professionnelle
