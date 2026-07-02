@@ -1,0 +1,26 @@
+services:
+  cortex:
+    image: thehiveproject/cortex:3.1.7
+    container_name: cortex
+    restart: unless-stopped
+    ports:
+      - "9001:9001"
+    environment:
+      - job_directory=/tmp/cortex-jobs
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/cortex-jobs:/tmp/cortex-jobs
+      - cortex-data:/data
+    command:
+      - --es-hostname
+      - thehive-elasticsearch  # reutilise l'Elasticsearch deja deploye pour TheHive (economie de RAM)
+    networks:
+      - default
+
+networks:
+  default:
+    name: thehive_thehive-net
+    external: true
+
+volumes:
+  cortex-data:

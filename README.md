@@ -23,7 +23,7 @@ Ce projet ne vise pas à remplacer l'analyste ni à construire un SOC de product
 | Centralisation | Wazuh Indexer + Dashboard | Indexation, recherche, visualisation, métriques SOC |
 | Gestion incidents | TheHive 5 | Création de cas, suivi des observables, clôture des incidents |
 | Assistant IA | Ollama + Mistral 7B | Résumé, classification, scoring, mapping MITRE ATT&CK |
-| Analyse observables | Cortex *(à venir)* | Analyse automatique IP/URL/domaines/hash |
+| Analyse observables | Cortex | Analyse automatique IP/URL/domaines/hash |
 | Threat Intelligence | MISP *(à venir)* | Enrichissement IOC |
 | SOAR | Shuffle *(à venir)* | Playbooks de réponse automatisés |
 | Automatisation | Python | Scripts de liaison entre API |
@@ -46,7 +46,8 @@ Détection (Wazuh) → Indexation → Triage IA (Ollama/Mistral) → Évaluation
 | Ollama + Mistral 7B (quantifié Q4) | ✅ Déployé, triage testé avec succès |
 | Script Python Wazuh → LLM → TheHive | ✅ Premier jet fonctionnel ([`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)) |
 | Jeu de 38 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé ([voir résultats](#évaluation-expérimentale-s5)) |
-| Cortex / MISP / Shuffle | ⏳ Extensions prévues (S6-S7) |
+| Cortex (analyse d'observables) | ✅ Déployé, analyseur FileInfo activé et testé |
+| MISP / Shuffle | ⏳ Extensions prévues (S7) |
 
 ### Captures d'écran
 
@@ -154,6 +155,16 @@ Trois itérations ont été nécessaires pour obtenir une mesure fiable, ce qui 
 Sur la criticité, la baseline reste légèrement plus précise (0.13 contre 0.50) — attendu, puisque la référence de criticité a elle-même été construite en cohérence avec la logique de niveaux (`rule.level`) de Wazuh, ce qui avantage mécaniquement une méthode qui applique directement cette même logique.
 
 **Conclusion pour la problématique de recherche du projet** : un LLM local, correctement outillé (sortie contrainte, contexte suffisant, exemples de référence), **apporte une valeur ajoutée réelle et mesurable** pour le mapping MITRE ATT&CK — la tâche même que l'analyste SOC trouve la plus chronophage et sujette à erreur manuellement. Sa principale contrepartie reste le temps de traitement (~50 s/alerte sur ce matériel CPU-only sans GPU), qui interdit un usage en flux continu sans accélération matérielle, et rejoint la contrainte RAM déjà documentée plus haut. Ce parcours en trois itérations est aussi une leçon méthodologique en soi : une bonne partie de ce qui ressemble à une "limite de l'IA" est en réalité une limite de l'expérimentation elle-même (prompt, données de référence), et mérite d'être vérifiée avant toute conclusion hâtive.
+
+## Enrichissement des observables (S6 — Cortex)
+
+[Cortex](https://github.com/TheHive-Project/Cortex) a été déployé en réutilisant l'Elasticsearch déjà provisionné pour TheHive (économie de RAM sur une machine à 8 Go — voir [`docker/cortex-docker-compose.yml`](docker/cortex-docker-compose.yml)), plutôt que de dupliquer un second cluster.
+
+![Cortex - analyseur activé](docs/screenshots/cortex_analyzer_enabled.png)
+
+Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés, et l'analyseur `FileInfo_8_0` (extraction de métadonnées PE/PDF/OLE, sans dépendance à une clé API externe) a été activé et vérifié fonctionnel. La grande majorité des ~275 analyseurs Cortex disponibles nécessitent une clé d'API tierce payante (VirusTotal, AbuseIPDB, AnyRun...), hors de portée d'un laboratoire étudiant — ce choix est cohérent avec le périmètre "extension, si le temps et les ressources le permettent" prévu dans le cadrage initial du projet.
+
+**Reste à faire** : le lien API Cortex ↔ TheHive (pour lancer une analyse Cortex directement depuis un cas TheHive) nécessite une gestion du jeton CSRF de l'API Cortex, non finalisée dans cette itération — prochaine étape naturelle de l'intégration.
 
 ## Scénarios de test
 
