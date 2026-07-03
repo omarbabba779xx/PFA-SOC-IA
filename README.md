@@ -222,6 +222,20 @@ Plutôt que de chercher à améliorer le LLM sur la criticité (une tâche où i
 
 Le coût de ~40 s/alerte du LLM sur ce matériel CPU-only reste réel et n'a pas été réduit techniquement (pas de GPU disponible), mais son impact a été réduit par la conception : `wazuh_ai_triage.py` filtre désormais les alertes par la baseline **avant** d'invoquer le LLM (variable `LLM_INVOCATION_THRESHOLD_LEVEL`, défaut `rule.level >= 5`). Les alertes de faible niveau (bruit) ne déclenchent plus jamais d'appel LLM — seul le sous-ensemble déjà remonté comme potentiellement significatif par la corrélation Wazuh native est soumis au modèle, ce qui correspond à une architecture réaliste de SOC à deux étages plutôt qu'à un correctif de contournement.
 
+**Vérification end-to-end du script réécrit (pas seulement une vérification de syntaxe)**
+
+Les points 2 et 3 ci-dessus modifient le script de **production** (`wazuh_ai_triage.py`), distinct du script d'évaluation. Pour éviter d'affirmer un comportement non testé, ce script réécrit a été réellement exécuté sur un lot d'alertes fraîches après la réécriture (pas seulement compilé) :
+
+```
+[+] 20 alerte(s) recuperee(s) depuis Wazuh
+  - rule.level=3 < seuil 5 -> filtre par la baseline (LLM non invoque)   [x17]
+  - sshd: Attempt to login using a non-existent user -> criticite (hybride/baseline)=moyenne
+    -> cas TheHive cree : ~32816
+[+] Resume : 3 alerte(s) soumise(s) au LLM, 17 filtree(s) par la baseline (bruit, rule.level < 5)
+```
+
+Le cas `#214` ainsi créé a été vérifié indépendamment via l'API TheHive (`getCase`) : `severity: 2` (`MEDIUM` = "moyenne", cohérent avec la criticité baseline pour ce niveau d'alerte), technique MITRE `Ssh` fournie par le LLM, tag `triage-ia` présent. Le filtrage deux-niveaux (17 alertes de bruit écartées, 3 seulement soumises au LLM) et la criticité hybride (issue de la baseline, pas du LLM) sont donc des comportements **prouvés en exécution réelle**, pas de simples affirmations de code.
+
 **4. Variance mesurée sur plusieurs répétitions (pas un chiffre unique)**
 
 L'évaluation S5 a été rejouée **3 fois** sur le jeu de 38 alertes (mêmes données, température LLM non nulle à 0.1) :
