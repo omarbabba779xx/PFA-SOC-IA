@@ -159,6 +159,46 @@ Sur la criticité, la baseline reste légèrement plus précise (0.13 contre 0.5
 
 **Conclusion pour la problématique de recherche du projet** : un LLM local, correctement outillé (sortie contrainte, contexte suffisant, exemples de référence), **apporte une valeur ajoutée réelle et mesurable** pour le mapping MITRE ATT&CK — la tâche même que l'analyste SOC trouve la plus chronophage et sujette à erreur manuellement. Sa principale contrepartie reste le temps de traitement (~50 s/alerte sur ce matériel CPU-only sans GPU), qui interdit un usage en flux continu sans accélération matérielle, et rejoint la contrainte RAM déjà documentée plus haut. Ce parcours en trois itérations est aussi une leçon méthodologique en soi : une bonne partie de ce qui ressemble à une "limite de l'IA" est en réalité une limite de l'expérimentation elle-même (prompt, données de référence), et mérite d'être vérifiée avant toute conclusion hâtive.
 
+## Re-vérification complète du pipeline (session ultérieure)
+
+Après la mise en place initiale, une session de re-vérification a été menée pour s'assurer que l'ensemble de la chaîne fonctionnait encore réellement, plutôt que de supposer que l'état validé précédemment tenait toujours. Cette vérification a révélé et corrigé plusieurs problèmes réels, listés ici dans un souci de transparence :
+
+**1. Sous-dimensionnement CPU de la VM (2 vCPU → 4 vCPU)**
+
+La VM avait été provisionnée avec seulement 2 vCPU. Faire tourner Wazuh + TheHive + l'inférence Mistral 7B en parallèle provoquait une contention CPU extrême (`load average` observé jusqu'à 100+ sur 2 cœurs), bloquant de fait tout traitement. Diagnostiqué via `uptime`/`ps aux --sort=-%cpu`, corrigé en arrêtant proprement la VM (`VBoxManage modifyvm --cpus 4`) puis en la redémarrant.
+
+**2. Panne silencieuse de l'indexation Wazuh (Filebeat ↔ Indexer)**
+
+Un test `filebeat test output` a révélé une erreur `401 Unauthorized` : un reset antérieur du mot de passe administrateur Wazuh (via `securityadmin.sh`) n'avait jamais été répercuté sur les identifiants utilisés par Filebeat pour expédier les alertes vers l'indexeur. Résultat : plus aucune nouvelle alerte n'était indexée depuis ce reset, sans erreur visible côté dashboard. Une première tentative de correction directe du fichier de configuration généré a été automatiquement annulée par le script d'initialisation `s6` du conteneur à chaque redémarrage. Correction définitive : mise à jour de la variable `INDEXER_PASSWORD` dans `docker-compose.yml` puis recréation des conteneurs (`docker compose up -d`) pour que la nouvelle valeur soit réellement prise en compte. Vérifié via `filebeat test output` → `OK` et une reprise effective de l'indexation.
+
+**3. Quatre bugs réels dans le script de production `wazuh_ai_triage.py`**
+
+Le script n'avait jamais été ré-exécuté avec des données fraîches depuis sa validation initiale. En le relançant réellement (plutôt que de supposer qu'il fonctionnait toujours), quatre plantages distincts sont apparus et ont été corrigés :
+- Plantage sur la casse des chaînes de criticité renvoyées par le LLM (`'Haute' is not in list`) — corrigé par normalisation `.lower()`.
+- Plantage quand le LLM répond en anglais plutôt qu'en français (`'high' is not in list`) — corrigé par un dictionnaire de normalisation multilingue.
+- Plantage de parsing JSON (`Invalid \escape`) sur une sortie LLM malformée — corrigé en forçant `format: "json"` côté Ollama, en réduisant la température, et en ajoutant un repli défensif si le parsing échoue malgré tout.
+- Plantage par `KeyError` sur le champ `recommandation` (et d'autres) quand le LLM omettait ce champ — corrigé en remplaçant les accès directs `triage['champ']` par `triage.get('champ', '')` avec valeur par défaut.
+
+Chaque plantage isole désormais une alerte problématique sans interrompre le traitement du lot entier.
+
+**4. Crashs OOM récurrents d'Ollama par contention mémoire**
+
+Une fois les bugs logiciels corrigés, Ollama continuait à planter (`ollama.service: A process of this unit has been killed by the OOM killer`, confirmé via `journalctl`) au chargement du modèle 7B, la RAM de la VM étant presque entièrement consommée par MISP, `tenzir-node` et le dashboard Wazuh tournant simultanément. Mitigation appliquée : arrêt temporaire de ces trois services non essentiels au triage pendant l'exécution du lot LLM, puis redémarrage systématique une fois le traitement terminé. Cette contrainte confirme et élargit le constat déjà documenté plus haut (contrainte RAM sur une VM à 8-10 Go) : la stack complète (Wazuh + TheHive + MISP + Cortex + Shuffle + LLM) ne tient pas confortablement en simultané sur cette configuration.
+
+**Validation finale du pipeline** : après ces quatre corrections, le script a produit **26 cas réels** taggés `triage-ia` dans TheHive, vérifiés indépendamment via l'API `listCase` de TheHive (pas seulement via la sortie du script) — confirmant que la chaîne Wazuh → LLM → TheHive fonctionne réellement de bout en bout, pas seulement en apparence.
+
+**Re-mesure de l'évaluation S5** : l'évaluation baseline vs LLM a été rejouée intégralement sur les 38 alertes du jeu de test, avec des résultats cohérents avec l'itération 3 précédente :
+
+| Métrique | Baseline (règles) | LLM (Mistral 7B) |
+|---|---|---|
+| Écart moyen de criticité | 0.13 | 0.58 |
+| Taux de correspondance MITRE | 73.7 % | **97.4 %** |
+| Erreurs de parsing JSON | N/A | 0 % |
+| Dérive de vocabulaire/langue | N/A | 0 % |
+| Temps moyen de triage | instantané | 41.3 s |
+
+Le léger écart avec l'itération 3 (100 % au lieu de 97.4 % de correspondance MITRE, 0.50 au lieu de 0.58 sur la criticité) s'explique par la nature non strictement déterministe de l'inférence LLM (température 0.1, non nulle) : une seule alerte sur 38 a divergé sur le mapping MITRE lors de cette re-mesure. Cette variance, bien que faible, est documentée ici plutôt que dissimulée, et confirme que les résultats de l'itération 3 étaient reproductibles et non un artefact ponctuel.
+
 ## Enrichissement des observables (S6 — Cortex)
 
 [Cortex](https://github.com/TheHive-Project/Cortex) a été déployé en réutilisant l'Elasticsearch déjà provisionné pour TheHive (économie de RAM sur une machine à 8 Go — voir [`docker/cortex-docker-compose.yml`](docker/cortex-docker-compose.yml)), plutôt que de dupliquer un second cluster.
@@ -290,7 +330,7 @@ python scripts/wazuh_ai_triage.py
 | S2 | SIEM (Wazuh + collecte logs) | ✅ |
 | S3 | Gestion incidents (TheHive) | ✅ |
 | S4 | Assistant IA (Ollama + Mistral) | ✅ |
-| S5 | Évaluation IA (jeu de 30-50 alertes, baseline, métriques) | ⏳ |
+| S5 | Évaluation IA (jeu de 30-50 alertes, baseline, métriques) | ✅ |
 | S6 | Enrichissement (Cortex, MISP) | ✅ |
 | S7 | Automatisation (Shuffle, dashboard, rapports PDF) | ✅ (rapport PDF restant) |
 | S8 | Validation finale, rapport, soutenance | ⏳ |
