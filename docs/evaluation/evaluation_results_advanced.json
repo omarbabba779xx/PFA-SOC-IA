@@ -1,0 +1,542 @@
+[
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1566"
+    },
+    "baseline": {
+      "incident_type": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1028",
+      "resume": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "recommandation": "Investigate the source of the curl/wget command and verify if it is legitimate or not. Implement network segmentation to limit the impact of such activities."
+    },
+    "llm_duration_sec": 87.7,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1566"
+    },
+    "baseline": {
+      "incident_type": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1028",
+      "resume": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "recommandation": "Investigate the source of the network traffic and block any suspicious activity."
+    },
+    "llm_duration_sec": 44.1,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1566"
+    },
+    "baseline": {
+      "incident_type": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1028",
+      "resume": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "recommandation": "Investigate the source of the request and verify if it is legitimate."
+    },
+    "llm_duration_sec": 43.4,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1566"
+    },
+    "baseline": {
+      "incident_type": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078",
+      "resume": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "recommandation": "Investigate the source of the curl command and verify if it is legitimate."
+    },
+    "llm_duration_sec": 42.3,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1566"
+    },
+    "baseline": {
+      "incident_type": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1028",
+      "resume": "Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)",
+      "recommandation": "Investigate the source of the curl/wget command and verify if it is legitimate or not. Implement network segmentation to limit the impact of such activities."
+    },
+    "llm_duration_sec": 47.1,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Detection of suspicious PowerShell execution via auditd",
+      "recommandation": "Investigate the PowerShell script executed by the user and its potential impact on the system."
+    },
+    "llm_duration_sec": 41.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Detection of suspicious PowerShell execution via auditd.",
+      "recommandation": "Investigate the PowerShell script executed by the user and verify if it is legitimate."
+    },
+    "llm_duration_sec": 40.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 2,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "alerte",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Detection of suspicious PowerShell execution via auditd",
+      "recommandation": "Investigate the PowerShell script executed by the user and its potential impact on the system."
+    },
+    "llm_duration_sec": 39.9,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "alert",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Suspicious PowerShell execution detected via auditd (niveau 12)",
+      "recommandation": "Investigate the PowerShell script executed by the user and check if it is malicious or not."
+    },
+    "llm_duration_sec": 44.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "alert",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Suspicious PowerShell execution detected via auditd",
+      "recommandation": "Investigate the PowerShell script executed by the user and its potential impact on the system."
+    },
+    "llm_duration_sec": 41.9,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 1,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Repeated network fetch commands executed in a short window (possible C2 beaconing) detected. This could indicate a potential C2 channel.",
+      "recommandation": "Investigate the source of the requests and block any unauthorized access."
+    },
+    "llm_duration_sec": 53.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Repeated network fetch commands executed in a short window (possible C2 beaconing) detected on system. This could indicate a potential compromise.",
+      "recommandation": "Investigate the source of the requests and implement measures to prevent unauthorized access."
+    },
+    "llm_duration_sec": 51.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "Repeated network fetch commands executed in a short window",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1021",
+      "resume": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "recommandation": "Investigate the source of the requests and block them if necessary."
+    },
+    "llm_duration_sec": 43.7,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "Repeated network fetch commands executed in a short window (possible C2 beaconing) detected on system. This could indicate a potential compromise.",
+      "recommandation": "Investigate further to determine the source and nature of the network traffic, and take appropriate action to mitigate any potential security risks."
+    },
+    "llm_duration_sec": 54.7,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1056",
+      "resume": "The system has detected repeated network fetch commands executed in a short window. This behavior may indicate C2 beaconing.",
+      "recommandation": "Investigate the source of these requests and take appropriate action to prevent further communication with the attacker."
+    },
+    "llm_duration_sec": 51.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "lateral_movement_simulated",
+    "reference": {
+      "incident_type": "Connexions SSH successives avec elevation (mouvement lateral simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Lateral Movement",
+      "mitre_technique": "T1021.004"
+    },
+    "baseline": {
+      "incident_type": "Multiple successive SSH sessions followed by privilege escalation (possible lateral movement)",
+      "criticite": "haute",
+      "mitre_tactic": "Lateral Movement",
+      "mitre_technique": "T1021.004"
+    },
+    "llm": {
+      "incident_type": "Multiple SSH sessions followed by privilege escalation",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Multiple SSH sessions followed by privilege escalation (possible lateral movement)",
+      "recommandation": "Investigate the source of the publickey and review access controls to prevent further lateral movement."
+    },
+    "llm_duration_sec": 42.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "lateral_movement_simulated",
+    "reference": {
+      "incident_type": "Connexions SSH successives avec elevation (mouvement lateral simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Lateral Movement",
+      "mitre_technique": "T1021.004"
+    },
+    "baseline": {
+      "incident_type": "Multiple successive SSH sessions followed by privilege escalation (possible lateral movement)",
+      "criticite": "haute",
+      "mitre_tactic": "Lateral Movement",
+      "mitre_technique": "T1021.004"
+    },
+    "llm": {
+      "incident_type": "Multiple SSH sessions followed by privilege escalation",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Multiple SSH sessions followed by privilege escalation (possible lateral movement)",
+      "recommandation": "Investigate the source of the SSH sessions and implement additional security measures to prevent further privilege escalation."
+    },
+    "llm_duration_sec": 39.4,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "lateral_movement_simulated",
+    "reference": {
+      "incident_type": "Connexions SSH successives avec elevation (mouvement lateral simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Lateral Movement",
+      "mitre_technique": "T1021.004"
+    },
+    "baseline": {
+      "incident_type": "Multiple successive SSH sessions followed by privilege escalation (possible lateral movement)",
+      "criticite": "haute",
+      "mitre_tactic": "Lateral Movement",
+      "mitre_technique": "T1021.004"
+    },
+    "llm": {
+      "incident_type": "Multiple SSH sessions followed by privilege escalation",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Multiple SSH sessions followed by privilege escalation (possible lateral movement)",
+      "recommandation": "Investigate the source of the SSH sessions and the user/group that performed the privilege escalation. Implement additional security measures to prevent unauthorized access."
+    },
+    "llm_duration_sec": 43.5,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  }
+]

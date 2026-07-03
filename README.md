@@ -351,10 +351,40 @@ Webhook (recoit alerte Wazuh) → Enrichissement Cortex (GET /api/status)
 | Niveau | Scénario | Statut |
 |---|---|---|
 | Base | Brute force SSH (T1110) | ✅ Réalisé |
-| Base | Email de phishing / URL suspecte | ⏳ Prévu |
-| Avancé | Activité PowerShell suspecte | ⏳ Prévu |
-| Avancé | Mouvement latéral simulé | ⏳ Prévu |
-| Optionnel | C2 beaconing simulé | ⏳ Prévu |
+| Base | Email de phishing / URL suspecte | ✅ Réalisé (proxy technique, voir note ci-dessous) |
+| Avancé | Activité PowerShell suspecte | ✅ Réalisé |
+| Avancé | Mouvement latéral simulé | ✅ Réalisé |
+| Optionnel | C2 beaconing simulé | ✅ Réalisé |
+
+### Scénarios avancés — détection au niveau commande (auditd + règles personnalisées)
+
+Les quatre scénarios ci-dessus (hors brute force SSH) nécessitaient une capacité que le ruleset Wazuh par défaut n'a pas : l'inspection des **commandes exécutées** (quel programme, avec quels arguments). Le ruleset natif de Wazuh sur cette distribution ne couvre que PAM/sshd/sudo/su/useradd/crontab — aucune règle ne surveille l'exécution générique de programmes (`curl`, `wget`, `pwsh`).
+
+**Mise en place réelle (pas de simulation de façade) :**
+1. **`auditd`** installé sur la VM (absent jusqu'ici) avec une règle de surveillance `execve` (`auditctl -a always,exit -F arch=b64 -S execve -k cmd_exec`), et un `<localfile>` ajouté à `ossec.conf` de l'agent pour faire remonter `/var/log/audit/audit.log` à Wazuh.
+2. **PowerShell Core (`pwsh`)** installé via snap, ce lab étant Linux uniquement (pas d'agent Windows disponible) — l'activité PowerShell est donc réellement exécutée, pas simulée par un texte de log fabriqué.
+3. **Quatre règles Wazuh personnalisées** ajoutées dans [`scripts/local_rules.xml`](scripts/local_rules.xml) (le ruleset par défaut ne matchait que la règle générique `80700 - Audit: Messages grouped` de niveau 0, sans alerte réelle) :
+
+| ID règle | Détection | Technique MITRE | Mécanisme |
+|---|---|---|---|
+| `100099` | Exécution de `curl`/`wget` (proxy retrait de payload / phishing) | T1105 | `audit.command` |
+| `100101` | Exécution de `pwsh`/`powershell` | T1059.001 | `audit.command` |
+| `100103` | `curl`/`wget` répétés (≥3 en 90s, même règle de base) | T1071 | corrélation par fréquence sur `100099` |
+| `100105` | Connexions SSH répétées + élévation sudo (≥3 en 120s) | T1021.004 | corrélation par fréquence sur la règle native `5715` |
+
+**Validation réelle** : chaque règle a été testée via `wazuh-logtest` avant déploiement, puis déclenchée par de vraies commandes sur l'agent et confirmée par une requête directe sur l'indexeur (pas juste une supposition). Les 18 alertes réelles collectées ont été rejouées dans le pipeline d'évaluation ([`docs/evaluation/evaluation_results_advanced.json`](docs/evaluation/evaluation_results_advanced.json)) :
+
+| Métrique | Baseline (règles) | LLM (Mistral 7B) |
+|---|---|---|
+| Écart moyen de criticité | 0.28 | 0.56 |
+| Taux de correspondance MITRE | 72.2 % | **0.0 %** |
+| Temps moyen de triage | instantané | 47.4 s |
+
+**Le 0 % du LLM n'est pas un échec de raisonnement du modèle — c'est une limite de télémétrie, identifiée en creusant plutôt qu'en acceptant le chiffre tel quel.** Le décodeur `auditd` de Wazuh traite l'enregistrement `SYSCALL` (identité du processus : `comm="curl"`) et l'enregistrement `EXECVE` (arguments réels : l'URL, la commande PowerShell encodée) comme **deux logs distincts non fusionnés**. Le champ `full_log` transmis au LLM (et à un analyste humain lisant l'alerte brute) ne contient que la ligne `SYSCALL` — jamais l'URL ni le contenu de la commande PowerShell. Le LLM devine donc à l'aveugle sans le contexte discriminant, et la baseline ne "gagne" ici que parce qu'elle hérite mécaniquement du code MITRE déjà codé en dur dans la règle Wazuh elle-même (72.2 % de correspondance, pas une vraie inférence). C'est une limite honnête de l'intégration `auditd`/Wazuh sur ce lab, pas une victoire de la baseline sur le LLM.
+
+**Note sur le scénario phishing** : sans passerelle mail dans ce lab, le scénario "phishing" est un proxy technique (récupération de payload via `curl`/`wget`), qui prouve réellement une capacité de détection d'*ingress tool transfer* (T1105) — mais ne peut pas, avec cette seule télémétrie, distinguer une intention de phishing d'un simple téléchargement. C'est documenté ici explicitement plutôt que présenté comme une détection de phishing à part entière.
+
+**Bug redécouvert pendant cette implémentation** : chaque redémarrage du manager Wazuh (nécessaire pour recharger `local_rules.xml`) casse à nouveau la collecte `journald` de l'agent (même bug que documenté plus haut) — un `sudo systemctl restart wazuh-agent` après chaque modification de règle a été nécessaire pour que les nouvelles alertes remontent.
 
 ## Reproduire l'environnement
 

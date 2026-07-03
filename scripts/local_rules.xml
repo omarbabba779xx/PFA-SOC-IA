@@ -1,0 +1,48 @@
+<group name="local,pfa_custom,">
+
+  <!-- Ingress tool transfer via curl/wget (used as the phishing/dropper-payload-retrieval proxy for this lab,
+       and as the anchor for the C2 beaconing frequency rule below). Detected via auditd execve monitoring
+       (audit.command), since this lab has no mail gateway or web proxy log source to detect phishing directly. -->
+  <rule id="100099" level="8">
+    <if_sid>80700</if_sid>
+    <field name="audit.command">^curl$|^wget$</field>
+    <description>Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)</description>
+    <mitre>
+      <id>T1105</id>
+    </mitre>
+    <group>audit_command,pfa_phishing,</group>
+  </rule>
+
+  <!-- Suspicious PowerShell-style execution, detected via auditd execve monitoring (audit.command).
+       PowerShell Core (pwsh) installed on the Linux lab agent since no Windows endpoint is available. -->
+  <rule id="100101" level="12">
+    <if_sid>80700</if_sid>
+    <field name="audit.command">^pwsh$|^powershell$</field>
+    <description>Suspicious PowerShell execution detected via auditd</description>
+    <mitre>
+      <id>T1059.001</id>
+    </mitre>
+    <group>audit_command,pfa_powershell,</group>
+  </rule>
+
+  <!-- C2 beaconing simulated: repeated curl/wget executions from the same source in a short window -->
+  <rule id="100103" level="10" frequency="3" timeframe="90">
+    <if_matched_sid>100099</if_matched_sid>
+    <description>Repeated network fetch commands executed in a short window (possible C2 beaconing)</description>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+    <group>audit_command,pfa_c2_beaconing,</group>
+  </rule>
+
+  <!-- Lateral movement simulated: successive SSH sessions followed by privilege escalation in a short window -->
+  <rule id="100105" level="10" frequency="3" timeframe="120">
+    <if_matched_sid>5715</if_matched_sid>
+    <description>Multiple successive SSH sessions followed by privilege escalation (possible lateral movement)</description>
+    <mitre>
+      <id>T1021.004</id>
+    </mitre>
+    <group>pfa_lateral_movement,</group>
+  </rule>
+
+</group>
