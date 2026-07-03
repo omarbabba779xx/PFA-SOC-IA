@@ -212,6 +212,10 @@ def main() -> None:
     print(f"Taux d'erreurs de parsing JSON (LLM) : {parse_error_rate:.1%}")
     print(f"Taux de reponses necessitant une normalisation de langue (LLM) : {normalized_rate:.1%}")
 
+    print("\n===== APPROCHE HYBRIDE (criticite=regles + MITRE=LLM) =====")
+    print(f"Ecart moyen de criticite (hybride = baseline) : {avg_baseline_gap:.2f}")
+    print(f"Taux de correspondance MITRE (hybride = LLM)  : {llm_mitre_rate:.1%}")
+
 
 if __name__ == "__main__":
     sys.exit(main())

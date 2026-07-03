@@ -199,6 +199,46 @@ Une fois les bugs logiciels corrigés, Ollama continuait à planter (`ollama.ser
 
 Le léger écart avec l'itération 3 (100 % au lieu de 97.4 % de correspondance MITRE, 0.50 au lieu de 0.58 sur la criticité) s'explique par la nature non strictement déterministe de l'inférence LLM (température 0.1, non nulle) : une seule alerte sur 38 a divergé sur le mapping MITRE lors de cette re-mesure. Cette variance, bien que faible, est documentée ici plutôt que dissimulée, et confirme que les résultats de l'itération 3 étaient reproductibles et non un artefact ponctuel.
 
+## Renforcement de la rigueur méthodologique
+
+Après une relecture critique honnête des résultats de l'évaluation S5, quatre limites méthodologiques réelles ont été identifiées et traitées, pas simplement discutées :
+
+**1. Jeu de test indépendant (généralisation, pas mémorisation)**
+
+Le jeu de 38 alertes servait à la fois à calibrer le prompt few-shot et à mesurer la performance — un même jeu ne peut pas remplir les deux rôles sans biais. Un second jeu de **36 alertes issues de 6 scénarios entièrement nouveaux** a été généré ([`scripts/generate_holdout_dataset.sh`](scripts/generate_holdout_dataset.sh)), jamais utilisé pour construire le prompt : échecs de frappe sudo suivis d'un succès légitime, onboarding de compte avec répertoire home, nettoyage de compte de service, tâche cron bénigne (`logrotate`), décodage base64 bénin, connexions SSH légitimes à fréquence inhabituelle.
+
+| Métrique | Baseline (règles) | LLM (Mistral 7B) |
+|---|---|---|
+| Écart moyen de criticité | 0.11 | 0.75 |
+| Taux de correspondance MITRE | **61.1 %** | **94.4 %** |
+
+Résultat notable et honnête : sur ce jeu jamais vu, la baseline à règles perd en précision MITRE (61.1 % contre 73.7 % sur le jeu d'entraînement), alors que le LLM reste stable (94.4 % contre 97.4 %). Cela renforce l'argument de généralisation du LLM plutôt que de l'affaiblir — mais l'écart de criticité du LLM se creuse également (0.75 contre ~0.60), confirmant que c'est bien un point faible réel et pas un artefact du jeu de données initial.
+
+**2. Approche hybride pour la criticité (au lieu de confier cette tâche au LLM seul)**
+
+Plutôt que de chercher à améliorer le LLM sur la criticité (une tâche où il reste nettement moins fiable que la baseline), [`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py) a été réécrit pour combiner les deux méthodes selon leurs forces respectives : la **criticité finale du cas TheHive provient désormais de la baseline** (`rule.level`, écart mesuré 0.13, identique à la baseline pure), tandis que le **mapping MITRE, le résumé et la recommandation restent produits par le LLM** (~97 % de correspondance MITRE). Le LLM n'est donc plus jugé sur une tâche où il est faible ; il se concentre sur celle où il apporte une vraie valeur ajoutée.
+
+**3. Triage à deux niveaux pour la latence**
+
+Le coût de ~40 s/alerte du LLM sur ce matériel CPU-only reste réel et n'a pas été réduit techniquement (pas de GPU disponible), mais son impact a été réduit par la conception : `wazuh_ai_triage.py` filtre désormais les alertes par la baseline **avant** d'invoquer le LLM (variable `LLM_INVOCATION_THRESHOLD_LEVEL`, défaut `rule.level >= 5`). Les alertes de faible niveau (bruit) ne déclenchent plus jamais d'appel LLM — seul le sous-ensemble déjà remonté comme potentiellement significatif par la corrélation Wazuh native est soumis au modèle, ce qui correspond à une architecture réaliste de SOC à deux étages plutôt qu'à un correctif de contournement.
+
+**4. Variance mesurée sur plusieurs répétitions (pas un chiffre unique)**
+
+L'évaluation S5 a été rejouée **3 fois** sur le jeu de 38 alertes (mêmes données, température LLM non nulle à 0.1) :
+
+| Répétition | Correspondance MITRE (LLM) | Écart de criticité (LLM) | Temps moyen |
+|---|---|---|---|
+| 1 | 100.0 % | 0.58 | 40.0 s |
+| 2 | 94.7 % | 0.58 | 40.0 s |
+| 3 | 97.4 % | 0.63 | 40.7 s |
+| **Moyenne ± écart-type** | **97.4 % ± 2.2 %** | **0.60 ± 0.02** | **40.2 s ± 0.3 s** |
+
+La baseline, déterministe, reste strictement constante sur les 3 répétitions (écart 0.13, correspondance MITRE 73.7 %). Trois répétitions restent un échantillon minimal — ce n'est pas un intervalle de confiance statistiquement rigoureux — mais cela transforme un chiffre isolé, potentiellement trompeur, en une fourchette honnête qui montre que la performance du LLM est stable (variation de quelques points de pourcentage, pas de dizaines).
+
+**Bug supplémentaire découvert pendant cette passe** : après le redémarrage de la VM (passage à 4 vCPU), `wazuh-analysisd` restait démarré mais **totalement silencieux** (0 alerte générée, confirmé par un fichier `ossec-alerts-*.json` vide malgré une activité système réelle). La cause : la collecte des logs `journald` (mécanisme utilisé par l'agent Wazuh pour capturer les événements PAM/sudo/sshd sur cette distribution) ne reprenait pas automatiquement après le redémarrage du manager seul — il a fallu redémarrer explicitement le service `wazuh-agent` lui-même (confirmé par le message `Monitoring journal entries` dans `ossec.log`) pour que la collecte reprenne. Un second symptôme lié a été observé et documenté : sous forte contention CPU, la connexion agent↔manager (`127.0.0.1:1514`) se coupe et se rétablit de façon répétée (`Server unavailable` / `Agent is now online`), une instabilité propre à cette configuration mono-nœud sous charge, pas une panne définitive.
+
+Résultats bruts : [`docs/evaluation/evaluation_results_holdout.json`](docs/evaluation/evaluation_results_holdout.json), [`docs/evaluation/evaluation_results_rep1.json`](docs/evaluation/evaluation_results_rep1.json) à `rep3.json`.
+
 ## Enrichissement des observables (S6 — Cortex)
 
 [Cortex](https://github.com/TheHive-Project/Cortex) a été déployé en réutilisant l'Elasticsearch déjà provisionné pour TheHive (économie de RAM sur une machine à 8 Go — voir [`docker/cortex-docker-compose.yml`](docker/cortex-docker-compose.yml)), plutôt que de dupliquer un second cluster.

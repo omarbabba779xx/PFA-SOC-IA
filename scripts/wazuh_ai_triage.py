@@ -2,9 +2,19 @@
 """
 Pipeline de triage assiste par IA : Wazuh -> Ollama (Mistral 7B) -> TheHive
 
-Recupere les alertes recentes depuis l'indexeur Wazuh, les soumet a un LLM local
-pour classification/scoring/mapping MITRE ATT&CK, puis cree automatiquement un
-cas TheHive si la criticite estimee depasse un seuil.
+Recupere les alertes recentes depuis l'indexeur Wazuh, applique un triage a
+deux niveaux :
+  1. Baseline a regles (rule.level) : filtre immediat, sans LLM, qui ecarte
+     le bruit et fournit la criticite de reference.
+  2. LLM (Mistral 7B) : invoque UNIQUEMENT sur les alertes deja remontees
+     par la baseline (rule.level >= LLM_INVOCATION_THRESHOLD_LEVEL), pour
+     l'enrichissement (mapping MITRE, resume, recommandation).
+
+La criticite finale utilisee pour la creation du cas TheHive est celle de la
+baseline (hybride), le LLM ne fournissant que le mapping MITRE et le contexte
+narratif -- voir la section "Re-verification" du README pour la justification
+(le LLM seul est moins fiable que la baseline sur la seule tache de scoring
+de criticite, mais nettement meilleur sur le mapping MITRE).
 
 Variables d'environnement attendues :
   WAZUH_INDEXER_URL   (defaut: https://localhost:9200)
@@ -14,7 +24,8 @@ Variables d'environnement attendues :
   OLLAMA_MODEL        (defaut: mistral:7b-instruct-q4_0)
   THEHIVE_URL         (defaut: http://localhost:9000)
   THEHIVE_API_KEY
-  CRITICALITY_THRESHOLD (defaut: moyenne)
+  CRITICALITY_THRESHOLD (defaut: moyenne) -- seuil de creation de cas
+  LLM_INVOCATION_THRESHOLD_LEVEL (defaut: 5) -- rule.level minimum pour invoquer le LLM
 """
 
 import json
@@ -38,7 +49,14 @@ THEHIVE_URL = os.environ.get("THEHIVE_URL", "http://localhost:9000")
 THEHIVE_API_KEY = os.environ.get("THEHIVE_API_KEY", "")
 
 CRITICALITY_ORDER = ["basse", "moyenne", "haute", "critique"]
+CRITICALITY_NORMALIZE = {
+    "low": "basse", "basse": "basse", "faible": "basse",
+    "medium": "moyenne", "moyenne": "moyenne", "moyen": "moyenne",
+    "high": "haute", "haute": "haute", "eleve": "haute", "élevée": "haute",
+    "critical": "critique", "critique": "critique",
+}
 CRITICALITY_THRESHOLD = os.environ.get("CRITICALITY_THRESHOLD", "moyenne")
+LLM_INVOCATION_THRESHOLD_LEVEL = int(os.environ.get("LLM_INVOCATION_THRESHOLD_LEVEL", "5"))
 
 TRIAGE_PROMPT_TEMPLATE = """Tu es un assistant de triage SOC. Analyse l'alerte suivante et
 reponds UNIQUEMENT en JSON valide avec les champs : incident_type, criticite
@@ -73,6 +91,18 @@ def fetch_recent_alerts(minutes: int = 15, size: int = 20) -> list[dict]:
     return [hit["_source"] for hit in resp.json()["hits"]["hits"]]
 
 
+def baseline_criticality(alert: dict) -> str:
+    """Criticite baseline derivee de rule.level (meme logique que l'evaluation S5)."""
+    level = alert.get("rule", {}).get("level", 0)
+    if level >= 12:
+        return "critique"
+    if level >= 9:
+        return "haute"
+    if level >= 5:
+        return "moyenne"
+    return "basse"
+
+
 def triage_with_llm(alert: dict) -> dict:
     """Soumet une alerte au LLM local et parse la reponse JSON de triage."""
     prompt = TRIAGE_PROMPT_TEMPLATE.format(
@@ -84,7 +114,7 @@ def triage_with_llm(alert: dict) -> dict:
     )
     resp = requests.post(
         f"{OLLAMA_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "format": "json", "options": {"temperature": 0.1}},
         timeout=180,
     )
     resp.raise_for_status()
@@ -92,32 +122,29 @@ def triage_with_llm(alert: dict) -> dict:
     try:
         return json.loads(raw_response)
     except json.JSONDecodeError:
-        start, end = raw_response.find("{"), raw_response.rfind("}") + 1
-        return json.loads(raw_response[start:end])
+        try:
+            start, end = raw_response.find("{"), raw_response.rfind("}") + 1
+            return json.loads(raw_response[start:end])
+        except json.JSONDecodeError:
+            return {"incident_type": "erreur_parsing", "criticite": "basse", "mitre_tactic": "", "mitre_technique": "", "resume": raw_response[:200], "recommandation": ""}
 
 
-def create_thehive_case(alert: dict, triage: dict) -> str:
-    """Cree un cas TheHive a partir du resultat de triage IA. Retourne l'id du cas."""
-    criticite = triage.get("criticite", "moyenne").lower()
-    mitre_technique = triage.get("mitre_technique", "unknown")
-    if isinstance(mitre_technique, list):
-        mitre_technique = ", ".join(mitre_technique)
-    recommandation = triage.get("recommandation", triage.get("recommendation", "N/A"))
-
+def create_thehive_case(alert: dict, triage: dict, criticite: str) -> str:
+    """Cree un cas TheHive. La criticite (severity) provient de la baseline
+    (approche hybride) ; le LLM fournit uniquement le mapping MITRE et le
+    contexte narratif (resume, recommandation)."""
     payload = {
-        "title": f"[{criticite.upper()}] {triage['incident_type']}",
+        "title": f"[{criticite.upper()}] {triage.get('incident_type','')}",
         "description": (
-            f"{triage['resume']}\n\n"
-            f"**Tactique MITRE** : {triage['mitre_tactic']}\n"
-            f"**Technique MITRE** : {mitre_technique}\n"
-            f"**Recommandation IA** : {recommandation}\n\n"
+            f"{triage.get('resume','')}\n\n"
+            f"**Tactique MITRE** : {triage.get('mitre_tactic','')}\n"
+            f"**Technique MITRE** : {triage.get('mitre_technique','')}\n"
+            f"**Recommandation IA** : {triage.get('recommandation','')}\n\n"
             f"Genere automatiquement depuis l'alerte Wazuh (agent : "
             f"{alert.get('agent', {}).get('name', 'N/A')})."
         ),
-        "severity": {"basse": 1, "moyenne": 2, "haute": 3, "critique": 4}.get(
-            criticite, 2
-        ),
-        "tags": ["wazuh", "triage-ia", mitre_technique],
+        "severity": {"basse": 1, "moyenne": 2, "haute": 3, "critique": 4}.get(criticite, 2),
+        "tags": ["wazuh", "triage-ia", triage.get("mitre_technique", "unknown")],
         "source": "wazuh-ai-triage",
     }
     resp = requests.post(
@@ -135,16 +162,29 @@ def main() -> None:
     alerts = fetch_recent_alerts()
     print(f"[+] {len(alerts)} alerte(s) recuperee(s) depuis Wazuh")
 
+    llm_invoked, filtered_by_baseline = 0, 0
     for alert in alerts:
-        triage = triage_with_llm(alert)
-        criticite = triage.get("criticite", "basse").lower()
-        print(f"  - {triage.get('incident_type')} -> criticite={criticite}")
+        try:
+            level = alert.get("rule", {}).get("level", 0)
+            criticite = baseline_criticality(alert)
 
-        if criticite not in CRITICALITY_ORDER:
-            criticite = "basse"
-        if CRITICALITY_ORDER.index(criticite) >= threshold_idx:
-            case_id = create_thehive_case(alert, triage)
-            print(f"    -> cas TheHive cree : {case_id}")
+            if level < LLM_INVOCATION_THRESHOLD_LEVEL:
+                filtered_by_baseline += 1
+                print(f"  - rule.level={level} < seuil {LLM_INVOCATION_THRESHOLD_LEVEL} -> filtre par la baseline (LLM non invoque)")
+                continue
+
+            triage = triage_with_llm(alert)
+            llm_invoked += 1
+            print(f"  - {triage.get('incident_type')} -> criticite (hybride/baseline)={criticite}")
+
+            if CRITICALITY_ORDER.index(criticite) >= threshold_idx:
+                case_id = create_thehive_case(alert, triage, criticite)
+                print(f"    -> cas TheHive cree : {case_id}")
+        except Exception as e:
+            print(f"  - [ERREUR sur cette alerte, on continue] {e}")
+            continue
+
+    print(f"[+] Resume : {llm_invoked} alerte(s) soumise(s) au LLM, {filtered_by_baseline} filtree(s) par la baseline (bruit, rule.level < {LLM_INVOCATION_THRESHOLD_LEVEL})")
 
 
 if __name__ == "__main__":
