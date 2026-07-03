@@ -110,7 +110,7 @@ def triage_with_llm(alert: dict) -> dict:
         rule_level=alert.get("rule", {}).get("level", "N/A"),
         agent_name=alert.get("agent", {}).get("name", "N/A"),
         timestamp=alert.get("timestamp", "N/A"),
-        log_excerpt=str(alert.get("full_log", ""))[:500],
+        log_excerpt=__import__("re").sub(r"[\x00-\x1f]", " ", str(alert.get("full_log", "")))[:900],
     )
     resp = requests.post(
         f"{OLLAMA_URL}/api/generate",

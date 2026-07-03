@@ -1,22 +1,28 @@
 <group name="local,pfa_custom,">
 
-  <!-- Ingress tool transfer via curl/wget (used as the phishing/dropper-payload-retrieval proxy for this lab,
-       and as the anchor for the C2 beaconing frequency rule below). Detected via auditd execve monitoring
-       (audit.command), since this lab has no mail gateway or web proxy log source to detect phishing directly. -->
+  <!-- Anchored on Wazuh's own native command-audit mechanism (rule 80792, key "audit-wazuh-c" from the
+       official etc/lists/audit-keys CDB list) rather than a home-made field match on a raw audit key name.
+       This is the officially documented Wazuh/auditd integration path.
+
+       The audit source itself is pre-merged by a small local service (audit_merge.py, systemd unit
+       audit-merge.service) that concatenates the SYSCALL/EXECVE/CWD/PATH/PROCTITLE records sharing the
+       same audit(...) id into a single line, matching the format Wazuh's own auditd decoder documents
+       and expects (see /var/ossec/ruleset/decoders/0040-auditd_decoders.xml) but which the raw
+       /var/log/audit/audit.log never actually produces on its own (it writes one line per record type).
+       Without this merge, the EXECVE arguments (URL, encoded command) never reach full_log, and any
+       downstream consumer (rule engine, LLM, human analyst) is blind to the actual command content. -->
   <rule id="100099" level="8">
-    <if_sid>80700</if_sid>
+    <if_sid>80792</if_sid>
     <field name="audit.command">^curl$|^wget$</field>
-    <description>Network fetch tool executed (curl/wget) - possible payload retrieval (phishing/dropper proxy)</description>
+    <description>Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)</description>
     <mitre>
       <id>T1105</id>
     </mitre>
     <group>audit_command,pfa_phishing,</group>
   </rule>
 
-  <!-- Suspicious PowerShell-style execution, detected via auditd execve monitoring (audit.command).
-       PowerShell Core (pwsh) installed on the Linux lab agent since no Windows endpoint is available. -->
   <rule id="100101" level="12">
-    <if_sid>80700</if_sid>
+    <if_sid>80792</if_sid>
     <field name="audit.command">^pwsh$|^powershell$</field>
     <description>Suspicious PowerShell execution detected via auditd</description>
     <mitre>

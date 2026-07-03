@@ -90,7 +90,7 @@ def llm_classify(alert: dict) -> tuple[dict, float]:
         rule_description=rule.get("description", "N/A"),
         rule_level=rule.get("level", "N/A"),
         rule_groups=", ".join(rule.get("groups", [])),
-        full_log=str(alert.get("full_log", "N/A"))[:400],
+        full_log=__import__("re").sub(r"[\x00-\x1f]", " ", str(alert.get("full_log", "N/A")))[:900],
         agent_name=alert.get("agent", {}).get("name", "N/A"),
         timestamp=alert.get("timestamp", "N/A"),
     )
@@ -104,7 +104,7 @@ def llm_classify(alert: dict) -> tuple[dict, float]:
             "format": "json",  # force Ollama a contraindre la sortie a du JSON valide
             "options": {"temperature": 0.1},  # reduit la variabilite/derive du modele
         },
-        timeout=180,
+        timeout=300,
     )
     duration = time.monotonic() - start
     resp.raise_for_status()

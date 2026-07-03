@@ -358,33 +358,51 @@ Webhook (recoit alerte Wazuh) → Enrichissement Cortex (GET /api/status)
 
 ### Scénarios avancés — détection au niveau commande (auditd + règles personnalisées)
 
-Les quatre scénarios ci-dessus (hors brute force SSH) nécessitaient une capacité que le ruleset Wazuh par défaut n'a pas : l'inspection des **commandes exécutées** (quel programme, avec quels arguments). Le ruleset natif de Wazuh sur cette distribution ne couvre que PAM/sshd/sudo/su/useradd/crontab — aucune règle ne surveille l'exécution générique de programmes (`curl`, `wget`, `pwsh`).
+Les quatre scénarios ci-dessus (hors brute force SSH) nécessitaient une capacité que le ruleset Wazuh par défaut n'a pas : l'inspection des **commandes exécutées** (quel programme, avec quels arguments). Le ruleset natif de Wazuh sur cette distribution ne couvre que PAM/sshd/sudo/su/useradd/crontab.
 
 **Mise en place réelle (pas de simulation de façade) :**
-1. **`auditd`** installé sur la VM (absent jusqu'ici) avec une règle de surveillance `execve` (`auditctl -a always,exit -F arch=b64 -S execve -k cmd_exec`), et un `<localfile>` ajouté à `ossec.conf` de l'agent pour faire remonter `/var/log/audit/audit.log` à Wazuh.
+1. **`auditd`** installé sur la VM (absent jusqu'ici), avec la règle d'audit officielle de Wazuh (`auditctl -a always,exit -F arch=b64 -S execve -k audit-wazuh-c`, utilisant la clé `audit-wazuh-c` de la liste CDB `etc/lists/audit-keys` fournie par Wazuh — pas une clé inventée).
 2. **PowerShell Core (`pwsh`)** installé via snap, ce lab étant Linux uniquement (pas d'agent Windows disponible) — l'activité PowerShell est donc réellement exécutée, pas simulée par un texte de log fabriqué.
-3. **Quatre règles Wazuh personnalisées** ajoutées dans [`scripts/local_rules.xml`](scripts/local_rules.xml) (le ruleset par défaut ne matchait que la règle générique `80700 - Audit: Messages grouped` de niveau 0, sans alerte réelle) :
+3. Les règles s'appuient sur la règle **native** `80792` (*Audit: Command*) plutôt que sur un champ inventé, corrigeant une remarque justifiée : les premières versions de ce module utilisaient un nom de clé `auditd` arbitraire au lieu du mécanisme officiel documenté par Wazuh.
 
 | ID règle | Détection | Technique MITRE | Mécanisme |
 |---|---|---|---|
-| `100099` | Exécution de `curl`/`wget` (proxy retrait de payload / phishing) | T1105 | `audit.command` |
-| `100101` | Exécution de `pwsh`/`powershell` | T1059.001 | `audit.command` |
-| `100103` | `curl`/`wget` répétés (≥3 en 90s, même règle de base) | T1071 | corrélation par fréquence sur `100099` |
+| `100099` | Exécution de `curl`/`wget` (proxy retrait de payload / phishing) | T1105 | hérite de `80792` + `audit.command` |
+| `100101` | Exécution de `pwsh`/`powershell` | T1059.001 | hérite de `80792` + `audit.command` |
+| `100103` | `curl`/`wget` répétés (≥3 en 90s) | T1071 | corrélation par fréquence sur `100099` |
 | `100105` | Connexions SSH répétées + élévation sudo (≥3 en 120s) | T1021.004 | corrélation par fréquence sur la règle native `5715` |
 
-**Validation réelle** : chaque règle a été testée via `wazuh-logtest` avant déploiement, puis déclenchée par de vraies commandes sur l'agent et confirmée par une requête directe sur l'indexeur (pas juste une supposition). Les 18 alertes réelles collectées ont été rejouées dans le pipeline d'évaluation ([`docs/evaluation/evaluation_results_advanced.json`](docs/evaluation/evaluation_results_advanced.json)) :
+**Quatre bugs réels trouvés et corrigés, dans l'ordre où ils ont été découverts** (documentés ici en détail parce que chacun a produit un résultat trompeur avant d'être compris) :
+
+1. **Le décodeur `auditd` de Wazuh attend des enregistrements pré-fusionnés.** Le décodeur natif (`0040-auditd_decoders.xml`) documente lui-même un format où `SYSCALL`, `EXECVE`, `CWD`, `PATH` et `PROCTITLE` sont concaténés sur **une seule ligne** — mais `/var/log/audit/audit.log` écrit une ligne par type d'enregistrement. Résultat : le champ `EXECVE` (arguments réels — l'URL, la commande PowerShell encodée) n'était jamais rattaché à l'alerte `SYSCALL`, et `full_log` ne contenait que l'identité du processus (`comm="curl"`), jamais son contenu. Corrigé en écrivant [`scripts/audit_merge.py`](scripts/audit_merge.py), un petit service (`audit-merge.service`, tourne en continu) qui fusionne les enregistrements partageant le même identifiant `audit(...)` en une seule ligne, réécrite dans `/var/log/audit/audit-merged.log` — surveillé par Wazuh à la place du fichier brut. Vérifié via `wazuh-logtest` : les champs `audit.execve.a0/a1/a2/a3` se peuplent enfin avec le contenu réel.
+2. **Un bug de troncature masquait encore le contenu après la fusion.** Les scripts de consommation (`evaluate_llm_vs_baseline.py`, `wazuh_ai_triage.py`) tronquaient déjà `full_log` à 400-500 caractères — une limite raisonnable pour l'ancien format court, mais qui coupait désormais le log **avant** que la section `EXECVE` (qui commence maintenant plus loin, après tous les champs `SYSCALL`) n'apparaisse. Corrigé en portant la troncature à 900 caractères dans les deux scripts, avec vérification que le contenu `EXECVE` tombe bien dans cette fenêtre.
+3. **Des caractères de contrôle non imprimables corrompaient les requêtes JSON vers le LLM.** Une fois les deux bugs précédents corrigés, l'évaluation plantait de façon déterministe sur la même alerte à chaque tentative (5 fois de suite). Investigation : `auditd` insère lui-même un caractère `\x1d` (Group Separator) dans ses enregistrements enrichis, un caractère de contrôle brut qui cassait la requête HTTP/JSON envoyée à Ollama. Corrigé par une regex de nettoyage (`re.sub(r"[\x00-\x1f]", " ", ...)`) appliquée à `full_log` avant envoi au LLM, dans les deux scripts.
+4. **Une accumulation mémoire réelle chez Ollama provoquait un OOM systématique à la 3ᵉ requête.** Même après les trois corrections précédentes, l'évaluation plantait encore, toujours exactement à la même alerte — confirmé via `journalctl` comme un authentique `oom-kill` du noyau pendant la sauvegarde interne du cache de prompt d'Ollama. La marge RAM disponible (~4,7 Go) suffisait pour les deux premières requêtes mais pas pour la troisième une fois le cache cumulé. Résolu en arrêtant temporairement TheHive/Cassandra/Elasticsearch (non utilisés par ce script d'évaluation) pour disposer de ~7,2 Go de marge.
+
+**Résultats finaux, mesurés après correction complète des quatre bugs** ([`docs/evaluation/evaluation_results_advanced.json`](docs/evaluation/evaluation_results_advanced.json), 17 alertes réelles) :
 
 | Métrique | Baseline (règles) | LLM (Mistral 7B) |
 |---|---|---|
-| Écart moyen de criticité | 0.28 | 0.56 |
-| Taux de correspondance MITRE | 72.2 % | **0.0 %** |
-| Temps moyen de triage | instantané | 47.4 s |
+| Écart moyen de criticité | 0.47 | 0.82 |
+| Taux de correspondance MITRE | 64.7 % | **0.0 %** |
+| Temps moyen de triage | instantané | 68.7 s |
+| Erreurs de parsing JSON | N/A | 0 % |
 
-**Le 0 % du LLM n'est pas un échec de raisonnement du modèle — c'est une limite de télémétrie, identifiée en creusant plutôt qu'en acceptant le chiffre tel quel.** Le décodeur `auditd` de Wazuh traite l'enregistrement `SYSCALL` (identité du processus : `comm="curl"`) et l'enregistrement `EXECVE` (arguments réels : l'URL, la commande PowerShell encodée) comme **deux logs distincts non fusionnés**. Le champ `full_log` transmis au LLM (et à un analyste humain lisant l'alerte brute) ne contient que la ligne `SYSCALL` — jamais l'URL ni le contenu de la commande PowerShell. Le LLM devine donc à l'aveugle sans le contexte discriminant, et la baseline ne "gagne" ici que parce qu'elle hérite mécaniquement du code MITRE déjà codé en dur dans la règle Wazuh elle-même (72.2 % de correspondance, pas une vraie inférence). C'est une limite honnête de l'intégration `auditd`/Wazuh sur ce lab, pas une victoire de la baseline sur le LLM.
+**Cette fois, le 0 % est un résultat authentique, pas un artefact de bug — et c'est un résultat intéressant, pas un échec à cacher.** Une fois les quatre bugs corrigés, l'inspection des réponses brutes du LLM montre qu'il **voit bien** le contenu réel (son propre résumé mentionne correctement "exécution PowerShell" ou "outil de récupération réseau curl/wget"), mais il **persiste à mal classifier** le code MITRE : systématiquement `T1056` (Input Capture) au lieu de `T1059.001` (PowerShell) pour les alertes PowerShell, par exemple. Ce n'est plus un problème de télémétrie — c'est un vrai écart de généralisation. Les 9 scénarios originaux (S5, section précédente) faisaient partie des exemples few-shot injectés dans le prompt ; ces 4 nouveaux scénarios n'en faisaient jamais partie. Le LLM excelle en distribution (97,4 % de correspondance MITRE sur les scénarios connus) mais chute fortement hors distribution (0 % sur des catégories totalement inédites) — un phénomène classique et bien documenté en apprentissage automatique (déplacement de distribution train/test), qui mérite d'être présenté comme une limite honnête plutôt que dissimulé.
 
-**Note sur le scénario phishing** : sans passerelle mail dans ce lab, le scénario "phishing" est un proxy technique (récupération de payload via `curl`/`wget`), qui prouve réellement une capacité de détection d'*ingress tool transfer* (T1105) — mais ne peut pas, avec cette seule télémétrie, distinguer une intention de phishing d'un simple téléchargement. C'est documenté ici explicitement plutôt que présenté comme une détection de phishing à part entière.
+**Précision importante sur la baseline** : ses 64.7 % de correspondance MITRE ne reflètent pas une capacité de raisonnement — le code MITRE de chaque règle personnalisée (`100099`, `100101`, etc.) a été **codé en dur par nous-mêmes** dans `local_rules.xml`. La baseline "réussit" donc mécaniquement, par construction, sur les alertes qu'elle a elle-même générées. Ce n'est pas une comparaison à armes égales, et il serait malhonnête de présenter ce chiffre comme une preuve de supériorité de l'approche par règles.
 
-**Bug redécouvert pendant cette implémentation** : chaque redémarrage du manager Wazuh (nécessaire pour recharger `local_rules.xml`) casse à nouveau la collecte `journald` de l'agent (même bug que documenté plus haut) — un `sudo systemctl restart wazuh-agent` après chaque modification de règle a été nécessaire pour que les nouvelles alertes remontent.
+**Note sur le scénario phishing** : sans passerelle mail dans ce lab, le scénario "phishing" reste un proxy technique (récupération de payload via `curl`/`wget`), qui prouve une capacité de détection d'*ingress tool transfer* (T1105) — mais ne peut pas, avec cette seule télémétrie, distinguer une intention de phishing d'un simple téléchargement légitime.
+
+**Incident de sécurité découvert et corrigé pendant cette implémentation** : activer l'audit des commandes a eu un effet secondaire réel — nos propres appels `curl -u admin:MOTDEPASSE` (utilisés pour interroger l'indexeur Wazuh) ont été capturés **en clair** dans l'index d'alertes lui-même. Remédiation : les 17 documents exposés ont été purgés de l'index, le mot de passe administrateur de l'indexeur Wazuh a été régénéré via `securityadmin.sh`, et la variable `INDEXER_PASSWORD` de `docker-compose.yml` a été mise à jour en conséquence (Filebeat s'authentifie indépendamment et aurait sinon cessé de fonctionner — le même bug que documenté plus haut). Toutes les authentifications `curl` utilisent désormais `~/.netrc` plutôt que des arguments en ligne de commande.
+
+**Bug récurrent reconfirmé** : chaque redémarrage du manager Wazuh (nécessaire pour recharger `local_rules.xml`) casse à nouveau la collecte `journald` de l'agent — un `sudo systemctl restart wazuh-agent` après chaque modification reste nécessaire.
+
+## Limites d'infrastructure
+
+Cette maquette tourne sur une VM à **4 vCPU / 9,7 Go de RAM**. Sur cette configuration, faire tourner simultanément Wazuh (manager + indexeur + dashboard), TheHive (+ Cassandra + Elasticsearch), Cortex, MISP (+ MySQL + Redis), Shuffle et un LLM 7B n'est **pas viable** : cette session a observé un `load average` jusqu'à 90 (sur 4 cœurs) et des `oom-kill` répétés du noyau, y compris après avoir déjà réduit le nombre de services actifs. Une estimation réaliste pour faire tourner l'ensemble confortablement en continu est de **16 à 24 Go de RAM et 6 à 8 vCPU**.
+
+Le mode de travail qui s'est imposé au fil des sessions n'est donc pas un contournement ponctuel mais une méthode : arrêter les services non essentiels à la tâche du moment (par exemple MISP/Cortex/TheHive pendant un traitement LLM intensif), exécuter, puis les redémarrer. C'est documenté ici explicitement plutôt que présenté comme un fonctionnement continu sans friction, qui ne correspondrait pas à la réalité observée.
 
 ## Reproduire l'environnement
 
