@@ -62,9 +62,9 @@ Détection (Wazuh) → Indexation → Triage IA (Ollama/Mistral) → Évaluation
 
 ![Agent Wazuh](docs/screenshots/wazuh_agent.png)
 
-**TheHive — plateforme de gestion des incidents**
+**TheHive — liste des cas réels (35 cas au moment de la capture)**
 
-![TheHive](docs/screenshots/thehive_login.png)
+![Liste des cas TheHive](docs/screenshots/thehive_case_list.png)
 
 ### Test de bout en bout réalisé
 
@@ -89,11 +89,11 @@ Scénario **Brute force SSH (MITRE T1110)** exécuté sur l'agent de test :
 
 Ce résultat valide le concept central du projet : le LLM local produit une classification structurée, exploitable automatiquement (création de cas, scoring, mapping MITRE) sans dépendre d'une API externe payante.
 
-**Pipeline complet validé — cas créé automatiquement dans TheHive à partir du triage IA :**
+**Pipeline complet validé — détail d'un cas réel créé automatiquement dans TheHive à partir du triage IA hybride (criticité baseline + MITRE LLM) :**
 
-![Cas TheHive créé automatiquement](docs/screenshots/thehive_case_created.png)
+![Détail d'un cas TheHive](docs/screenshots/thehive_case_detail.png)
 
-Le cas `#1 - [HAUTE] alert - Brute force SSH (T1110)` a été créé par [`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py) sans intervention manuelle, avec sévérité, tags et mapping MITRE dérivés directement de la sortie du LLM.
+Ce cas (`#216 - [MOYENNE] sshd: Attempt to login using a non-existent user`) a été créé par [`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py) sans intervention manuelle : la criticité (`SEVERITY:MEDIUM`) provient de la baseline à règles Wazuh, tandis que la tactique/technique MITRE et le résumé narratif proviennent du LLM — l'approche hybride décrite dans la section "Renforcement de la rigueur méthodologique" plus bas.
 
 ### Leçon retenue — contrainte matérielle
 
@@ -266,6 +266,10 @@ Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés.
 | `FileInfo_8_0` | Fichiers (PE, PDF, OLE) | Aucune (local) | Extraction de métadonnées fonctionnelle |
 | `AbuseIPDB_2_0` | IP | Gratuite (inscription) | IP `8.8.8.8` → score d'abus **0/100**, "Content Delivery Network", 28 signalements historiques |
 | `VirusTotal_GetReport_3_1` | Fichier, hash, domaine, IP, URL | Gratuite (inscription) | Hash EICAR (fichier de test antivirus standard) → **66/74 moteurs antivirus** le détectent comme malveillant |
+
+**Historique réel des analyses exécutées (visible dans Cortex, pas seulement affirmé) :**
+
+![Historique des jobs Cortex](docs/screenshots/cortex_jobs_history.png)
 
 Les clés VirusTotal et AbuseIPDB utilisées sont des comptes personnels gratuits (quota limité, sans carte bancaire), ce qui reste cohérent avec le périmètre d'un laboratoire étudiant. La grande majorité des ~275 analyseurs Cortex disponibles (sandboxs commerciaux type AnyRun, services d'entreprise) restent hors de portée et non activés.
 
