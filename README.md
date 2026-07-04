@@ -432,6 +432,67 @@ Le gain est net et reproductible sur deux lots indépendants (11/11 sur le phish
 
 **Décision retenue** : `OLLAMA_MODEL=gemma2:9b-instruct-q4_0` est désormais le réglage recommandé pour la qualité de classification MITRE, avec le compromis de latence explicitement documenté plutôt que caché.
 
+### Preuve de bout en bout : la chaîne complète sur des alertes réelles (Gemma2 9B)
+
+Toutes les captures ci-dessous proviennent d'une seule session de test en direct : les 4 scénarios avancés ont été rejoués en temps réel sur la VM (avec le C2 beaconing désormais doté de jitter, voir plus bas), et chaque étape de la chaîne — détection Wazuh, triage par Gemma2 9B, création du cas TheHive — a été capturée sur les alertes réellement générées, sans montage ni simulation. L'objectif : prouver que les outils sont réellement reliés entre eux, pas seulement testés isolément par script.
+
+**1. Wazuh reçoit et corrèle les événements bruts (agent actif, volumétrie réelle du lab)**
+
+![Vue d'ensemble du dashboard Wazuh](docs/screenshots/01_wazuh_dashboard_overview.png)
+
+**2. Les alertes personnalisées (règles 100099-100103) apparaissent en direct après exécution du scénario**, avec les codes MITRE déjà associés par nos règles (`Ingress Tool Transfer`, `PowerShell`) :
+
+![Vue Threat Hunting avec répartition MITRE ATT&CK](docs/screenshots/02_threat_hunting_mitre_overview.png)
+
+Liste des événements filtrés sur `rule.groups: pfa_custom`, montrant les alertes 100099/100101/100103 générées à l'instant (timestamps concordants avec l'exécution du scénario) :
+
+![Liste des alertes sur les règles personnalisées](docs/screenshots/03_wazuh_alerts_custom_rules_list.png)
+
+**3. Le détail d'une alerte confirme que le contenu réel de la commande atteint bien Wazuh** — ici les arguments `EXECVE` bruts d'un beacon C2 avec jitter (`data.audit.execve.a3` contient l'URL avec un chemin et un timestamp variables, preuve que le jitter fonctionne) :
+
+![Détail d'alerte : champs audit.execve bruts](docs/screenshots/04_wazuh_alert_detail_audit_execve.png)
+
+Et les métadonnées de règle associées (`rule.description` corrigée sans le mot biaisant "phishing", `rule.id=100099`) :
+
+![Détail d'alerte : métadonnées de règle](docs/screenshots/05_wazuh_alert_detail_rule_metadata.png)
+
+**4. Vue MITRE ATT&CK dédiée**, agrégeant les techniques détectées sur la fenêtre de test (Command and Control très majoritaire, cohérent avec les scénarios phishing/C2 rejoués) :
+
+![Dashboard MITRE ATT&CK de Wazuh](docs/screenshots/06_wazuh_mitre_attack_dashboard.png)
+
+**5. Le script de production (`wazuh_ai_triage.py`) est exécuté réellement contre l'indexeur Wazuh**, avec Gemma2 9B comme modèle de triage. Sur ces mêmes alertes fraîches, les 3 classifications obtenues sont exactes :
+
+```
+rule.id= 100103 desc= Repeated network fetch commands executed in a short window (possible C2 beaconing)
+LLM -> {"mitre_technique": "T1071", "criticite": "haute", ...}
+
+rule.id= 100099 desc= Single network fetch via curl/wget - possible external tool/payload retrieval
+LLM -> {"mitre_technique": "T1105", "criticite": "haute", ...}
+
+rule.id= 100101 desc= Suspicious PowerShell execution detected via auditd
+LLM -> {"mitre_technique": "T1059.001", "criticite": "critique", ...}
+```
+
+(sortie brute conservée dans [`docs/evaluation/pipeline_demo_results.json`](docs/evaluation/pipeline_demo_results.json))
+
+**6. Les cas sont créés automatiquement dans TheHive**, avec le résumé et la recommandation générés par Gemma directement dans la description du cas — la boucle complète Wazuh → LLM → SOAR est bien fermée :
+
+![Liste des cas TheHive créés automatiquement](docs/screenshots/07_thehive_cases_list.png)
+
+Détail du cas PowerShell (sévérité critique, tag `T1059.001`, résumé et recommandation générés par le modèle) :
+
+![Détail du cas TheHive - PowerShell](docs/screenshots/08_thehive_case_detail_powershell.png)
+
+Détail du cas C2 beaconing (`T1071`) :
+
+![Détail du cas TheHive - C2 beaconing](docs/screenshots/09_thehive_case_detail_c2_beaconing.png)
+
+Détail du cas de récupération de payload (`T1105`) :
+
+![Détail du cas TheHive - phishing/dropper](docs/screenshots/10_thehive_case_detail_phishing_t1105.png)
+
+**Incident d'infrastructure rencontré pendant cette capture, documenté sans le cacher** : lancer Gemma2 9B en continu pendant que toute la stack TheHive (Cassandra + Elasticsearch) tournait a de nouveau saturé la RAM de la VM (OOM confirmé via `journalctl -u ollama`). Contournement appliqué : le triage LLM et la création des cas TheHive ont été séquencés en deux temps (TheHive arrêté pendant l'inférence Gemma, puis redémarré uniquement pour la création des cas) plutôt que les deux en simultané — cohérent avec le mode de travail déjà décrit dans la section "Limites d'infrastructure" ci-dessous. Une deuxième anomalie mineure a été observée : la bibliothèque Python `requests` recevait par intermittence un `401 Unauthorized` de TheHive juste après le redémarrage de Cassandra (probablement une latence de resynchronisation de la base), alors que les mêmes requêtes via `curl` aboutissaient systématiquement — contournée en utilisant `curl` en sous-processus pour la création de cas le temps que Cassandra se stabilise. Les deux incidents sont documentés ici comme des frictions d'infrastructure réelles, pas dissimulées.
+
 **Découverte d'infrastructure additionnelle** : les règles `auditd` (`execve` monitoring) ne survivent pas à un redémarrage de VM par défaut — `sudo auditctl -l` revenait vide après un reboot complet, cassant silencieusement toute la détection avancée. Corrigé de façon permanente en écrivant la règle dans `/etc/audit/rules.d/audit-wazuh.rules` et en la chargeant via `sudo augenrules --load`, qui la réapplique automatiquement à chaque démarrage.
 
 ## Limites d'infrastructure
