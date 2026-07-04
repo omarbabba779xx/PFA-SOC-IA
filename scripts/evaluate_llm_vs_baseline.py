@@ -20,7 +20,7 @@ import requests
 CRITICALITY_EN_TO_FR = {"low": "basse", "medium": "moyenne", "high": "haute", "critical": "critique"}
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral:7b-instruct-q4_0")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma2:9b-instruct-q4_0")
 
 DATASET_FILE = os.path.expanduser(os.environ.get("DATASET_FILE", "~/labeled_dataset_per_alert.json"))
 OUTPUT_FILE = os.path.expanduser(os.environ.get("OUTPUT_FILE", "~/evaluation_results_v3.json"))

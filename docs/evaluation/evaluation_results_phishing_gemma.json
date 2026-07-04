@@ -1,0 +1,182 @@
+[
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Une commande curl a \u00e9t\u00e9 ex\u00e9cut\u00e9e pour r\u00e9cup\u00e9rer un fichier depuis une URL suspect.",
+      "recommandation": "Investigate the downloaded file and the source URL for malicious activity."
+    },
+    "llm_duration_sec": 131.6,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Un processus a utilis\u00e9 curl pour t\u00e9l\u00e9charger un fichier depuis une URL suspecte.",
+      "recommandation": "Investigate the downloaded file and the source URL. Block any further communication with the malicious domain."
+    },
+    "llm_duration_sec": 116.2,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Une seule occurrence de curl a \u00e9t\u00e9 d\u00e9tect\u00e9e avec une URL en argument, sugg\u00e9rant un t\u00e9l\u00e9chargement potentiel d'un outil ou d'une charge utile externe.",
+      "recommandation": "Investigate the downloaded file and its origin. Block access to the malicious URL."
+    },
+    "llm_duration_sec": 122.2,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Une commande curl a \u00e9t\u00e9 ex\u00e9cut\u00e9e pour r\u00e9cup\u00e9rer un fichier depuis une URL suspect.",
+      "recommandation": "Investigate the downloaded file and the source URL. Block access to the malicious URL."
+    },
+    "llm_duration_sec": 115.5,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Une commande curl a ete executee pour recuperer un fichier depuis une URL suspecte.",
+      "recommandation": "Investigate the source of the request and analyze the downloaded file for malicious content."
+    },
+    "llm_duration_sec": 115.7,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Un processus curl a \u00e9t\u00e9 utilis\u00e9 pour t\u00e9l\u00e9charger un fichier depuis une URL suspect. ",
+      "recommandation": "Investigate the downloaded file and the source URL for malicious activity."
+    },
+    "llm_duration_sec": 113.1,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  }
+]

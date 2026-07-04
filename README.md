@@ -414,6 +414,24 @@ Le 0 % ci-dessus n'a pas été laissé tel quel. Il a été traité comme un vra
 
 **Bilan honnête, sans rien cacher** : sur les 4 scénarios avancés, 3 sont désormais fiables à 100 % (PowerShell, C2 beaconing, mouvement latéral). Le 4ᵉ (phishing/T1105) est passé de 0 % à un taux réel mais variable, entre 17 % et 40 % selon les lots testés — une amélioration nette par rapport au 0 % initial, mais pas une résolution complète. C'est documenté ici comme une limite authentique du modèle 7B quantifié sur cette distinction fine (occurrence unique vs répétée d'un même type de commande), et non comme un bug de code ou de configuration restant à corriger : plusieurs pistes (few-shot, biais de description, température) ont été essayées et mesurées, et la marge de progression restante tient désormais à la capacité du modèle lui-même.
 
+### Changement de modèle : Mistral 7B → Gemma2 9B, un vrai gain mesuré
+
+Face à la limite persistante du modèle 7B sur le scénario phishing (17-40 % de correspondance MITRE), le modèle sous-jacent a été remplacé par **Gemma2 9B instruct (quantifié q4_0)**, sans aucun autre changement (même prompt, mêmes exemples few-shot, même `temperature=0.1`).
+
+**Résultats mesurés (mêmes jeux de données, mêmes scripts, seule la variable `OLLAMA_MODEL` change)** :
+
+| Jeu de test | Mistral 7B | Gemma2 9B |
+|---|---|---|
+| Phishing, lot 1 (6 alertes) — [`evaluation_results_phishing_fresh2.json`](docs/evaluation/evaluation_results_phishing_fresh2.json) / [`..._gemma.json`](docs/evaluation/evaluation_results_phishing_gemma.json) | 16,7 % (1/6) | **100 % (6/6)** |
+| Phishing, lot 2 (5 alertes) — [`evaluation_results_phishing_fresh.json`](docs/evaluation/evaluation_results_phishing_fresh.json) / [`..._gemma2.json`](docs/evaluation/evaluation_results_phishing_gemma2.json) | 40 % (2/5) | **100 % (5/5)** |
+| 18 alertes combinées (phishing + PowerShell + C2 beaconing) — [`evaluation_results_advanced_gemma.json`](docs/evaluation/evaluation_results_advanced_gemma.json) | 66,7 % | **100 % (18/18)**, écart de criticité moyen 0,00 |
+
+Le gain est net et reproductible sur deux lots indépendants (11/11 sur le phishing à lui seul), pas un effet de hasard sur un seul run. L'hypothèse la plus probable : Gemma2, entraîné plus récemment (2024+) sur un corpus contenant vraisemblablement davantage de contenu technique/CTI à jour, et réputé plus fiable sur le suivi strict d'instructions et la sortie JSON structurée, généralise mieux sur un prompt few-shot dense que Mistral 7B (sorti fin 2023).
+
+**Contrepartie mesurée, pas dissimulée** : Gemma2 9B est environ **2 fois plus lent** (~119 s/alerte contre ~60 s pour Mistral) et pèse davantage en RAM (5,4 Go sur disque contre 4,1 Go). Sur la VM de test (4 vCPU/9,7 Go), faire tourner Gemma2 en continu **en plus** de toute la stack complète (Wazuh + TheHive + Cassandra/Elasticsearch + MISP + Cortex) a de nouveau provoqué une surcharge sévère (`load average` à 26+, RAM quasi saturée, SSH temporairement inaccessible) — la même limite d'infrastructure déjà documentée, simplement plus marquée avec un modèle plus gros. Le mode de travail (arrêter les services non essentiels pendant le triage LLM intensif) reste donc nécessaire, voire plus strict qu'avec Mistral.
+
+**Décision retenue** : `OLLAMA_MODEL=gemma2:9b-instruct-q4_0` est désormais le réglage recommandé pour la qualité de classification MITRE, avec le compromis de latence explicitement documenté plutôt que caché.
+
 **Découverte d'infrastructure additionnelle** : les règles `auditd` (`execve` monitoring) ne survivent pas à un redémarrage de VM par défaut — `sudo auditctl -l` revenait vide après un reboot complet, cassant silencieusement toute la détection avancée. Corrigé de façon permanente en écrivant la règle dans `/etc/audit/rules.d/audit-wazuh.rules` et en la chargeant via `sudo augenrules --load`, qui la réapplique automatiquement à chaque démarrage.
 
 ## Limites d'infrastructure

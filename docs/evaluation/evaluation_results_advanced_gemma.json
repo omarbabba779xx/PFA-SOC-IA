@@ -1,0 +1,542 @@
+[
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect_download",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Un processus a execute une commande curl pour telecharger un fichier depuis une adresse locale. Cela pourrait indiquer un dropper ou une livraison par phishing.",
+      "recommandation": "Investigate the downloaded file for malicious content. Monitor network traffic for further suspicious activity."
+    },
+    "llm_duration_sec": 123.0,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Recuperation d'un payload via curl depuis une URL locale.",
+      "recommandation": "Investigate the source of the downloaded payload and analyze its contents for malicious activity."
+    },
+    "llm_duration_sec": 113.6,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Recuperation d'un payload via curl depuis une URL locale.",
+      "recommandation": "Investigate the source of the request and analyze the downloaded content."
+    },
+    "llm_duration_sec": 112.1,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect_download",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Un processus curl a \u00e9t\u00e9 utilis\u00e9 pour t\u00e9l\u00e9charger un fichier depuis une adresse IP locale. Cela pourrait indiquer un t\u00e9l\u00e9chargement de payload.",
+      "recommandation": "Analyser le contenu du fichier t\u00e9l\u00e9charg\u00e9 et rechercher des signes d'activit\u00e9 malveillante."
+    },
+    "llm_duration_sec": 122.9,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Recuperation d'un payload via curl depuis une URL inconnue.",
+      "recommandation": "Investigate the source of the downloaded payload and analyze its contents for malicious activity."
+    },
+    "llm_duration_sec": 119.3,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "TEST anchor curl/wget",
+      "criticite": "basse",
+      "mitre_tactic": null,
+      "mitre_technique": null
+    },
+    "llm": {
+      "incident_type": "suspect",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105",
+      "resume": "Execution de curl avec une URL externe, possible recuperation d'outil ou payload.",
+      "recommandation": "Investigate the downloaded script (x.sh) for malicious activity."
+    },
+    "llm_duration_sec": 113.3,
+    "baseline_criticality_gap": 2,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": false,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "PowerShell",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Execution PowerShell suspecte avec argument -enc pour une commande encodee en base64.",
+      "recommandation": "Analyser le contenu de la commande PowerShell executee et bloquer l'execution si necessaire."
+    },
+    "llm_duration_sec": 119.7,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "PowerShell",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Execution PowerShell suspecte avec argument '-enc' pour une commande encodee en base64.",
+      "recommandation": "Analyser le contenu de la commande PowerShell executee et bloquer l'execution si necessaire."
+    },
+    "llm_duration_sec": 121.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "PowerShell",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Execution PowerShell suspecte avec argument -enc pour une commande encodee en base64.",
+      "recommandation": "Analyser le contenu de la commande PowerShell executee et bloquer l'execution si n\u00e9cessaire."
+    },
+    "llm_duration_sec": 119.9,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "PowerShell",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Execution PowerShell avec argument -enc, possible obfusquation du code.",
+      "recommandation": "Analyser le contenu du script PowerShell encod\u00e9 pour identifier la nature de l'action."
+    },
+    "llm_duration_sec": 116.9,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "PowerShell",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Execution PowerShell avec argument '-enc' sugg\u00e9rant un script encod\u00e9.",
+      "recommandation": "Analyser le contenu du script PowerShell encod\u00e9 pour identifier sa fonction et son potentiel impact."
+    },
+    "llm_duration_sec": 115.8,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "powershell_suspicious",
+    "reference": {
+      "incident_type": "Execution PowerShell encodee suspecte",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "baseline": {
+      "incident_type": "Suspicious PowerShell execution detected via auditd",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001"
+    },
+    "llm": {
+      "incident_type": "suspect_powershell",
+      "criticite": "critique",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Execution PowerShell suspecte avec argument '-enc' pour une commande encodee en base64.",
+      "recommandation": "Analyser le contenu de la commande PowerShell executee et bloquer l'execution si necessaire."
+    },
+    "llm_duration_sec": 122.6,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "C2 beaconing",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Plusieurs requetes curl vers la meme destination en peu de temps, possible balisage periodique.",
+      "recommandation": "Investigate the source of the repeated network requests and analyze the content received."
+    },
+    "llm_duration_sec": 118.0,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "C2",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Plusieurs requetes curl vers la meme destination en peu de temps, possible balisage periodique.",
+      "recommandation": "Investigate the source of these requests and analyze the content being fetched."
+    },
+    "llm_duration_sec": 123.1,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "C2",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Plusieurs requetes curl vers la meme destination en peu de temps, comportement suspect.",
+      "recommandation": "Investigate the source of the repeated network requests and analyze the downloaded content."
+    },
+    "llm_duration_sec": 114.9,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "C2 beaconing",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Plusieurs requetes curl vers la meme destination en peu de temps, possible balisage periodique.",
+      "recommandation": "Investigate the source of the repeated network requests and analyze the downloaded content for malicious activity."
+    },
+    "llm_duration_sec": 119.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "C2 beaconing",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Plusieurs requetes curl vers la meme destination en peu de temps, possible balisage periodique.",
+      "recommandation": "Investigate the source of the repeated network requests and analyze the content of the fetched data."
+    },
+    "llm_duration_sec": 119.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "c2_beaconing_simulated",
+    "reference": {
+      "incident_type": "Requetes repetees vers la meme destination (C2 beaconing simule)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "baseline": {
+      "incident_type": "Repeated network fetch commands executed in a short window (possible C2 beaconing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071"
+    },
+    "llm": {
+      "incident_type": "C2 beaconing",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Plusieurs requetes curl vers la meme destination en peu de temps, comportement suspect.",
+      "recommandation": "Investigate the source of the repeated network requests and analyze the content of the fetched data."
+    },
+    "llm_duration_sec": 117.3,
+    "baseline_criticality_gap": 0,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  }
+]

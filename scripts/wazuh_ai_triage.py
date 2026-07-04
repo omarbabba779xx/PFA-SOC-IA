@@ -21,7 +21,7 @@ Variables d'environnement attendues :
   WAZUH_INDEXER_USER  (defaut: admin)
   WAZUH_INDEXER_PASSWORD
   OLLAMA_URL          (defaut: http://localhost:11434)
-  OLLAMA_MODEL        (defaut: mistral:7b-instruct-q4_0)
+  OLLAMA_MODEL        (defaut: gemma2:9b-instruct-q4_0)
   THEHIVE_URL         (defaut: http://localhost:9000)
   THEHIVE_API_KEY
   CRITICALITY_THRESHOLD (defaut: moyenne) -- seuil de creation de cas
@@ -43,7 +43,7 @@ WAZUH_INDEXER_USER = os.environ.get("WAZUH_INDEXER_USER", "admin")
 WAZUH_INDEXER_PASSWORD = os.environ.get("WAZUH_INDEXER_PASSWORD", "")
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral:7b-instruct-q4_0")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma2:9b-instruct-q4_0")
 
 THEHIVE_URL = os.environ.get("THEHIVE_URL", "http://localhost:9000")
 THEHIVE_API_KEY = os.environ.get("THEHIVE_API_KEY", "")
