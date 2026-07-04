@@ -2,8 +2,28 @@
 
 **Projet de Fin d'Année (PFA) — 4ème année Informatique et Réseaux / Cybersécurité (4IIR)**
 **EMSI Tanger — 2025-2026**
+**Auteur : Omar Babba**
 
-Conception et déploiement d'une maquette de plateforme SOC (Security Operations Center) assistée par un LLM local, pour la détection, le triage assisté, l'enrichissement des alertes et l'orchestration de la réponse aux incidents.
+Conception et déploiement d'une maquette de plateforme SOC (Security Operations Center) assistée par un LLM local, couvrant la détection, le triage assisté par IA, l'enrichissement des observables, la gestion des incidents et l'orchestration automatisée de la réponse.
+
+---
+
+## Sommaire
+
+1. [Contexte et problématique](#contexte-et-problématique)
+2. [Architecture](#architecture)
+3. [Preuve de bout en bout — la chaîne complète sur des alertes réelles](#preuve-de-bout-en-bout--la-chaîne-complète-sur-des-alertes-réelles)
+4. [Parcours expérimental — évaluer le LLM face à une baseline à règles](#parcours-expérimental--évaluer-le-llm-face-à-une-baseline-à-règles)
+5. [Détection avancée au niveau commande (auditd)](#détection-avancée-au-niveau-commande-auditd)
+6. [Changement de modèle : Mistral 7B → Gemma2 9B](#changement-de-modèle--mistral-7b--gemma2-9b)
+7. [Enrichissement et Threat Intelligence (Cortex, MISP)](#enrichissement-et-threat-intelligence-cortex-misp)
+8. [Orchestration et réponse automatisée (Shuffle SOAR)](#orchestration-et-réponse-automatisée-shuffle-soar)
+9. [Dashboard SOC personnalisé](#dashboard-soc-personnalisé)
+10. [Bugs et incidents réels — récapitulatif complet](#bugs-et-incidents-réels--récapitulatif-complet)
+11. [Limites d'infrastructure](#limites-dinfrastructure)
+12. [Reproduire l'environnement](#reproduire-lenvironnement)
+13. [État d'avancement et planning](#état-davancement-et-planning)
+14. [Valeur professionnelle](#valeur-professionnelle)
 
 ---
 
@@ -15,452 +35,64 @@ Ce projet ne vise pas à remplacer l'analyste ni à construire un SOC de product
 
 > **Quelle est la valeur ajoutée d'un LLM local dans le triage des alertes SOC par rapport à une approche classique basée sur des règles de corrélation, en termes de temps de traitement, qualité de classification, mapping MITRE ATT&CK, réduction des faux positifs et aide à la décision ?**
 
+Toute la démarche de ce document suit un principe simple, répété à chaque étape : **mesurer, diagnostiquer les causes d'écart, corriger, re-mesurer** — et documenter honnêtement ce qui fonctionne, ce qui ne fonctionne pas encore, et ce qui a été cassé puis réparé en cours de route.
+
 ## Architecture
 
 | Couche | Outil | Rôle |
 |---|---|---|
-| Détection | Wazuh Agent + Manager | Collecte des logs, détection comportementale, génération d'alertes |
+| Détection | Wazuh Agent + Manager (+ `auditd`) | Collecte des logs, détection comportementale et au niveau commande, génération d'alertes |
 | Centralisation | Wazuh Indexer + Dashboard | Indexation, recherche, visualisation, métriques SOC |
+| Assistant IA | Ollama + **Gemma2 9B instruct (q4_0)** | Résumé, classification, scoring, mapping MITRE ATT&CK |
 | Gestion incidents | TheHive 5 | Création de cas, suivi des observables, clôture des incidents |
-| Assistant IA | Ollama + Mistral 7B | Résumé, classification, scoring, mapping MITRE ATT&CK |
 | Analyse observables | Cortex | Analyse automatique IP/URL/domaines/hash |
-| Threat Intelligence | MISP | Enrichissement IOC |
-| SOAR | Shuffle *(à venir)* | Playbooks de réponse automatisés |
-| Automatisation | Python | Scripts de liaison entre API |
+| Threat Intelligence | MISP | Partage et enrichissement d'IOC |
+| SOAR | Shuffle | Playbook d'enrichissement et de création de cas automatisé |
+| Automatisation | Python | Scripts de liaison entre API (Wazuh ↔ Ollama ↔ TheHive) |
 | Infrastructure | VirtualBox + Docker Compose | Déploiement reproductible, isolation de la maquette |
 
 ### Pipeline SOC
 
 ```
-Détection (Wazuh) → Indexation → Triage IA (Ollama/Mistral) → Évaluation (vs baseline)
-        → Création de cas (TheHive) → Enrichissement (Cortex/MISP) → Réponse (Shuffle) → Rapport PDF
+Détection (Wazuh + auditd) → Indexation → Triage IA (Ollama/Gemma2 9B) → Évaluation (vs baseline)
+        → Création de cas (TheHive) → Enrichissement (Cortex/MISP) → Réponse (Shuffle)
 ```
 
-## État d'avancement
+**Note sur le choix du modèle** : le projet a démarré avec Mistral 7B, puis est passé à Gemma2 9B après avoir mesuré un gain de précision net et reproductible sur le mapping MITRE (voir [section dédiée](#changement-de-modèle--mistral-7b--gemma2-9b)). Toutes les architectures et tous les scripts actuels utilisent Gemma2 9B par défaut.
 
-| Composant | Statut |
-|---|---|
-| Infrastructure (VM Ubuntu 22.04 + Docker) | ✅ Opérationnel |
-| Wazuh (Manager + Indexer + Dashboard) | ✅ Déployé, agent de test actif |
-| TheHive 5.4 | ✅ Déployé |
-| Ollama + Mistral 7B (quantifié Q4) | ✅ Déployé, triage testé avec succès |
-| Script Python Wazuh → LLM → TheHive | ✅ Premier jet fonctionnel ([`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)) |
-| Jeu de 38 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé ([voir résultats](#évaluation-expérimentale-s5)) |
-| Cortex (analyse d'observables) | ✅ Déployé, 3 analyseurs réels testés (FileInfo, AbuseIPDB, VirusTotal), connecteur TheHive ↔ Cortex lié et testé |
-| MISP (Threat Intelligence) | ✅ Déployé, événement + IOC de test créés, connecteur TheHive ↔ MISP lié et testé |
-| Dashboard SOC personnalisé (Wazuh/OpenSearch Dashboards) | ✅ 4 indicateurs : nb incidents, répartition par criticité, répartition par type d'alerte, techniques MITRE ATT&CK détectées |
-| Shuffle (SOAR) | ✅ Déployé, workflow de triage automatisé créé (webhook → action HTTP) |
-| Rapports PDF automatiques | ⏳ Prévu (noyau obligatoire, restant à faire) |
+## Preuve de bout en bout — la chaîne complète sur des alertes réelles
 
-### Captures d'écran
+Cette section rassemble des captures d'écran prises en direct pendant une session de test unique : les scénarios ont été rejoués en temps réel sur la VM et chaque étape de la chaîne a été capturée sur les alertes réellement générées, sans montage ni simulation. L'objectif : prouver que les outils sont réellement **reliés entre eux**, pas seulement testés isolément.
 
-**Dashboard Wazuh — alertes centralisées et mapping MITRE ATT&CK en temps réel**
+### 1. Wazuh détecte et corrèle
 
-![Dashboard Wazuh](docs/screenshots/wazuh_dashboard.png)
-
-**Agent Wazuh enregistré et actif**
-
-![Agent Wazuh](docs/screenshots/wazuh_agent.png)
-
-**TheHive — liste des cas réels (35 cas au moment de la capture)**
-
-![Liste des cas TheHive](docs/screenshots/thehive_case_list.png)
-
-### Test de bout en bout réalisé
-
-Scénario **Brute force SSH (MITRE T1110)** exécuté sur l'agent de test :
-
-1. 6 tentatives de connexion SSH avec utilisateurs invalides générées sur l'endpoint
-2. Détection par Wazuh (règle `sshd invalid user`), remontée dans le dashboard (823 alertes / 24h, dont 6 échecs d'authentification)
-3. Alerte soumise à Mistral 7B via l'API Ollama pour triage
-
-**Sortie JSON réelle du LLM :**
-
-```json
-{
-  "incident_type": "Connexion SSH",
-  "criticite": "Haute",
-  "mitre_tactic": "Initial Access",
-  "mitre_technique": "SSH",
-  "resume": "6 tentatives de connexion SSH avec des utilisateurs invalides depuis 127.0.0.1 en moins d'une seconde sur l'hôte soc-lab.",
-  "recommandation": "Investigate and block the failed login attempts immediately."
-}
-```
-
-Ce résultat valide le concept central du projet : le LLM local produit une classification structurée, exploitable automatiquement (création de cas, scoring, mapping MITRE) sans dépendre d'une API externe payante.
-
-**Pipeline complet validé — détail d'un cas réel créé automatiquement dans TheHive à partir du triage IA hybride (criticité baseline + MITRE LLM) :**
-
-![Détail d'un cas TheHive](docs/screenshots/thehive_case_detail.png)
-
-Ce cas (`#216 - [MOYENNE] sshd: Attempt to login using a non-existent user`) a été créé par [`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py) sans intervention manuelle : la criticité (`SEVERITY:MEDIUM`) provient de la baseline à règles Wazuh, tandis que la tactique/technique MITRE et le résumé narratif proviennent du LLM — l'approche hybride décrite dans la section "Renforcement de la rigueur méthodologique" plus bas.
-
-### Leçon retenue — contrainte matérielle
-
-Sur une configuration à 8 Go de RAM allouée à la VM, faire tourner Wazuh + TheHive + l'inférence Mistral 7B **simultanément** n'est pas viable : deux tentatives distinctes d'inférence ont provoqué un **OOM kill** du process `llama-server` (confirmé via `journalctl` : `A process of this unit has been killed by the OOM killer`). La stratégie finalement adoptée, conforme au plan de mitigation prévu dans le cadrage du projet, est une **exécution séquentielle** : arrêt temporaire de TheHive pendant le triage LLM, puis redémarrage de TheHive pour la création du cas une fois le résultat obtenu. Ce constat, vécu concrètement plutôt que supposé, conforte la nécessité d'un minimum de 16 Go de RAM (idéalement 24-32 Go) pour une exécution confortable et simultanée de la stack complète en production de laboratoire.
-
-## Évaluation expérimentale (S5)
-
-Conformément à la méthodologie prévue, un jeu de **38 alertes labellisées manuellement** a été constitué à partir de 9 scénarios distincts (brute force SSH, connexions valides répétées, sudo/su réussis et échoués, création/suppression de compte, tâche planifiée, commande obfusquée). Voir [`scripts/generate_test_dataset.sh`](scripts/generate_test_dataset.sh) et les artefacts dans [`docs/evaluation/`](docs/evaluation/).
-
-Chaque alerte a été classifiée par deux méthodes indépendantes et comparée à la référence manuelle :
-- **Baseline à règles** : mapping natif de Wazuh (`rule.level` → criticité, `rule.mitre` → tactique/technique), sans LLM.
-- **LLM** : Mistral 7B via Ollama, avec un prompt structuré demandant une sortie JSON stricte.
-
-### Résultats — itération 1 (prompt initial)
-
-| Métrique | Baseline (règles) | LLM (Mistral 7B) |
-|---|---|---|
-| Écart moyen de criticité (0 = parfait, 4 = max) | **0.76** | 1.55 |
-| Taux de correspondance MITRE (technique) | **28.9 %** | 2.6 % |
-| Erreurs de parsing JSON | N/A | 26.3 % des réponses |
-| Non-respect du vocabulaire de criticité demandé (ex. réponse en anglais `"high"` au lieu de `"haute"`) | N/A | 18.4 % des réponses |
-
-Sur ce premier essai, la baseline à règles surpassait nettement le LLM. En creusant les réponses brutes, deux causes techniques expliquaient l'essentiel de l'écart : un quart des réponses n'étaient pas du JSON valide, et le modèle dérivait parfois vers l'anglais ou du texte libre au lieu du code MITRE standard — deux problèmes de **format de sortie**, pas de capacité de raisonnement.
-
-### Résultats — itération 2 (prompt corrigé)
-
-Correctifs appliqués : sortie JSON forcée côté Ollama (`format: "json"`), ajout du log brut complet dans le contexte, consigne explicite sur le vocabulaire de criticité et le format du code MITRE (`Txxxx`), température réduite à 0.1.
-
-| Métrique | Baseline (règles) | LLM v1 (bugué) | **LLM v2 (corrigé)** |
-|---|---|---|---|
-| Écart moyen de criticité | 0.76 | 1.55 | **0.71** ✅ *(légèrement meilleur que la baseline)* |
-| Taux de correspondance MITRE | **28.9 %** | 2.6 % | 13.2 % |
-| Erreurs de parsing JSON | N/A | 26.3 % | **0 %** |
-| Dérive de vocabulaire/langue | N/A | 18.4 % | **0 %** |
-| Temps moyen de triage | instantané | 46.5 s | 52.0 s |
-
-Résultats bruts : [`docs/evaluation/evaluation_results.json`](docs/evaluation/evaluation_results.json) (itération 1) et [`docs/evaluation/evaluation_results_v2.json`](docs/evaluation/evaluation_results_v2.json) (itération 2).
-
-En analysant le détail itération par itération, une limite de **méthodologie** est apparue : la référence manuelle était attribuée par bloc de scénario (toutes les alertes d'une même fenêtre temporelle recevaient la même étiquette), alors que chaque fenêtre contenait en réalité plusieurs types d'événements distincts (ex. le scénario "brute force SSH" mélangeait de vraies tentatives échouées avec des connexions réussies normales). Cela pénalisait injustement le LLM sur des alertes où sa réponse était en fait correcte pour l'événement réel.
-
-### Résultats — itération 3 (référence par alerte + exemples MITRE dans le prompt)
-
-Corrections apportées : reference manuelle attribuée **alerte par alerte** selon le contenu réel du log (conforme à l'exigence du cahier des charges), et prompt enrichi d'exemples de classification couvrant les types d'événements du jeu de test (voir [`scripts/relabel_per_alert.py`](scripts/relabel_per_alert.py)).
-
-| Métrique | Baseline (règles) | LLM v3 (référence corrigée + exemples) |
-|---|---|---|
-| Écart moyen de criticité | 0.13 | 0.50 |
-| Taux de correspondance MITRE | 73.7 % | **100 %** ✅ |
-| Erreurs de parsing JSON | N/A | 0 % |
-| Temps moyen de triage | instantané | 51.2 s |
-
-Résultats bruts : [`docs/evaluation/evaluation_results_v3.json`](docs/evaluation/evaluation_results_v3.json). Référence par alerte : [`docs/evaluation/labeled_dataset_per_alert.json`](docs/evaluation/labeled_dataset_per_alert.json).
-
-### Interprétation
-
-Trois itérations ont été nécessaires pour obtenir une mesure fiable, ce qui illustre bien la démarche expérimentale attendue : **mesurer, diagnostiquer les causes d'écart, corriger, re-mesurer**.
-
-- **Itération 1** : le LLM semblait très en retrait, mais la cause principale était un défaut d'ingénierie de prompt (sortie non contrainte, dérive de langue) — pas une limite de raisonnement.
-- **Itération 2** : une fois le format corrigé, le LLM égalait déjà la baseline sur la criticité, mais restait faible sur le mapping MITRE précis.
-- **Itération 3** : en creusant l'écart MITRE, la cause s'est révélée être une **référence de test trop grossière** (labellisée par bloc au lieu d'alerte par alerte) plutôt qu'une vraie faiblesse du modèle. Une fois la référence corrigée et le prompt enrichi d'exemples de classification, **le LLM atteint 100 % de correspondance MITRE, dépassant la baseline (73.7 %)**.
-
-Sur la criticité, la baseline reste légèrement plus précise (0.13 contre 0.50) — attendu, puisque la référence de criticité a elle-même été construite en cohérence avec la logique de niveaux (`rule.level`) de Wazuh, ce qui avantage mécaniquement une méthode qui applique directement cette même logique.
-
-**Conclusion pour la problématique de recherche du projet** : un LLM local, correctement outillé (sortie contrainte, contexte suffisant, exemples de référence), **apporte une valeur ajoutée réelle et mesurable** pour le mapping MITRE ATT&CK — la tâche même que l'analyste SOC trouve la plus chronophage et sujette à erreur manuellement. Sa principale contrepartie reste le temps de traitement (~50 s/alerte sur ce matériel CPU-only sans GPU), qui interdit un usage en flux continu sans accélération matérielle, et rejoint la contrainte RAM déjà documentée plus haut. Ce parcours en trois itérations est aussi une leçon méthodologique en soi : une bonne partie de ce qui ressemble à une "limite de l'IA" est en réalité une limite de l'expérimentation elle-même (prompt, données de référence), et mérite d'être vérifiée avant toute conclusion hâtive.
-
-## Re-vérification complète du pipeline (session ultérieure)
-
-Après la mise en place initiale, une session de re-vérification a été menée pour s'assurer que l'ensemble de la chaîne fonctionnait encore réellement, plutôt que de supposer que l'état validé précédemment tenait toujours. Cette vérification a révélé et corrigé plusieurs problèmes réels, listés ici dans un souci de transparence :
-
-**1. Sous-dimensionnement CPU de la VM (2 vCPU → 4 vCPU)**
-
-La VM avait été provisionnée avec seulement 2 vCPU. Faire tourner Wazuh + TheHive + l'inférence Mistral 7B en parallèle provoquait une contention CPU extrême (`load average` observé jusqu'à 100+ sur 2 cœurs), bloquant de fait tout traitement. Diagnostiqué via `uptime`/`ps aux --sort=-%cpu`, corrigé en arrêtant proprement la VM (`VBoxManage modifyvm --cpus 4`) puis en la redémarrant.
-
-**2. Panne silencieuse de l'indexation Wazuh (Filebeat ↔ Indexer)**
-
-Un test `filebeat test output` a révélé une erreur `401 Unauthorized` : un reset antérieur du mot de passe administrateur Wazuh (via `securityadmin.sh`) n'avait jamais été répercuté sur les identifiants utilisés par Filebeat pour expédier les alertes vers l'indexeur. Résultat : plus aucune nouvelle alerte n'était indexée depuis ce reset, sans erreur visible côté dashboard. Une première tentative de correction directe du fichier de configuration généré a été automatiquement annulée par le script d'initialisation `s6` du conteneur à chaque redémarrage. Correction définitive : mise à jour de la variable `INDEXER_PASSWORD` dans `docker-compose.yml` puis recréation des conteneurs (`docker compose up -d`) pour que la nouvelle valeur soit réellement prise en compte. Vérifié via `filebeat test output` → `OK` et une reprise effective de l'indexation.
-
-**3. Quatre bugs réels dans le script de production `wazuh_ai_triage.py`**
-
-Le script n'avait jamais été ré-exécuté avec des données fraîches depuis sa validation initiale. En le relançant réellement (plutôt que de supposer qu'il fonctionnait toujours), quatre plantages distincts sont apparus et ont été corrigés :
-- Plantage sur la casse des chaînes de criticité renvoyées par le LLM (`'Haute' is not in list`) — corrigé par normalisation `.lower()`.
-- Plantage quand le LLM répond en anglais plutôt qu'en français (`'high' is not in list`) — corrigé par un dictionnaire de normalisation multilingue.
-- Plantage de parsing JSON (`Invalid \escape`) sur une sortie LLM malformée — corrigé en forçant `format: "json"` côté Ollama, en réduisant la température, et en ajoutant un repli défensif si le parsing échoue malgré tout.
-- Plantage par `KeyError` sur le champ `recommandation` (et d'autres) quand le LLM omettait ce champ — corrigé en remplaçant les accès directs `triage['champ']` par `triage.get('champ', '')` avec valeur par défaut.
-
-Chaque plantage isole désormais une alerte problématique sans interrompre le traitement du lot entier.
-
-**4. Crashs OOM récurrents d'Ollama par contention mémoire**
-
-Une fois les bugs logiciels corrigés, Ollama continuait à planter (`ollama.service: A process of this unit has been killed by the OOM killer`, confirmé via `journalctl`) au chargement du modèle 7B, la RAM de la VM étant presque entièrement consommée par MISP, `tenzir-node` et le dashboard Wazuh tournant simultanément. Mitigation appliquée : arrêt temporaire de ces trois services non essentiels au triage pendant l'exécution du lot LLM, puis redémarrage systématique une fois le traitement terminé. Cette contrainte confirme et élargit le constat déjà documenté plus haut (contrainte RAM sur une VM à 8-10 Go) : la stack complète (Wazuh + TheHive + MISP + Cortex + Shuffle + LLM) ne tient pas confortablement en simultané sur cette configuration.
-
-**Validation finale du pipeline** : après ces quatre corrections, le script a produit **26 cas réels** taggés `triage-ia` dans TheHive, vérifiés indépendamment via l'API `listCase` de TheHive (pas seulement via la sortie du script) — confirmant que la chaîne Wazuh → LLM → TheHive fonctionne réellement de bout en bout, pas seulement en apparence.
-
-**Re-mesure de l'évaluation S5** : l'évaluation baseline vs LLM a été rejouée intégralement sur les 38 alertes du jeu de test, avec des résultats cohérents avec l'itération 3 précédente :
-
-| Métrique | Baseline (règles) | LLM (Mistral 7B) |
-|---|---|---|
-| Écart moyen de criticité | 0.13 | 0.58 |
-| Taux de correspondance MITRE | 73.7 % | **97.4 %** |
-| Erreurs de parsing JSON | N/A | 0 % |
-| Dérive de vocabulaire/langue | N/A | 0 % |
-| Temps moyen de triage | instantané | 41.3 s |
-
-Le léger écart avec l'itération 3 (100 % au lieu de 97.4 % de correspondance MITRE, 0.50 au lieu de 0.58 sur la criticité) s'explique par la nature non strictement déterministe de l'inférence LLM (température 0.1, non nulle) : une seule alerte sur 38 a divergé sur le mapping MITRE lors de cette re-mesure. Cette variance, bien que faible, est documentée ici plutôt que dissimulée, et confirme que les résultats de l'itération 3 étaient reproductibles et non un artefact ponctuel.
-
-## Renforcement de la rigueur méthodologique
-
-Après une relecture critique honnête des résultats de l'évaluation S5, quatre limites méthodologiques réelles ont été identifiées et traitées, pas simplement discutées :
-
-**1. Jeu de test indépendant (généralisation, pas mémorisation)**
-
-Le jeu de 38 alertes servait à la fois à calibrer le prompt few-shot et à mesurer la performance — un même jeu ne peut pas remplir les deux rôles sans biais. Un second jeu de **36 alertes issues de 6 scénarios entièrement nouveaux** a été généré ([`scripts/generate_holdout_dataset.sh`](scripts/generate_holdout_dataset.sh)), jamais utilisé pour construire le prompt : échecs de frappe sudo suivis d'un succès légitime, onboarding de compte avec répertoire home, nettoyage de compte de service, tâche cron bénigne (`logrotate`), décodage base64 bénin, connexions SSH légitimes à fréquence inhabituelle.
-
-| Métrique | Baseline (règles) | LLM (Mistral 7B) |
-|---|---|---|
-| Écart moyen de criticité | 0.11 | 0.75 |
-| Taux de correspondance MITRE | **61.1 %** | **94.4 %** |
-
-Résultat notable et honnête : sur ce jeu jamais vu, la baseline à règles perd en précision MITRE (61.1 % contre 73.7 % sur le jeu d'entraînement), alors que le LLM reste stable (94.4 % contre 97.4 %). Cela renforce l'argument de généralisation du LLM plutôt que de l'affaiblir — mais l'écart de criticité du LLM se creuse également (0.75 contre ~0.60), confirmant que c'est bien un point faible réel et pas un artefact du jeu de données initial.
-
-**2. Approche hybride pour la criticité (au lieu de confier cette tâche au LLM seul)**
-
-Plutôt que de chercher à améliorer le LLM sur la criticité (une tâche où il reste nettement moins fiable que la baseline), [`scripts/wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py) a été réécrit pour combiner les deux méthodes selon leurs forces respectives : la **criticité finale du cas TheHive provient désormais de la baseline** (`rule.level`, écart mesuré 0.13, identique à la baseline pure), tandis que le **mapping MITRE, le résumé et la recommandation restent produits par le LLM** (~97 % de correspondance MITRE). Le LLM n'est donc plus jugé sur une tâche où il est faible ; il se concentre sur celle où il apporte une vraie valeur ajoutée.
-
-**3. Triage à deux niveaux pour la latence**
-
-Le coût de ~40 s/alerte du LLM sur ce matériel CPU-only reste réel et n'a pas été réduit techniquement (pas de GPU disponible), mais son impact a été réduit par la conception : `wazuh_ai_triage.py` filtre désormais les alertes par la baseline **avant** d'invoquer le LLM (variable `LLM_INVOCATION_THRESHOLD_LEVEL`, défaut `rule.level >= 5`). Les alertes de faible niveau (bruit) ne déclenchent plus jamais d'appel LLM — seul le sous-ensemble déjà remonté comme potentiellement significatif par la corrélation Wazuh native est soumis au modèle, ce qui correspond à une architecture réaliste de SOC à deux étages plutôt qu'à un correctif de contournement.
-
-**Vérification end-to-end du script réécrit (pas seulement une vérification de syntaxe)**
-
-Les points 2 et 3 ci-dessus modifient le script de **production** (`wazuh_ai_triage.py`), distinct du script d'évaluation. Pour éviter d'affirmer un comportement non testé, ce script réécrit a été réellement exécuté sur un lot d'alertes fraîches après la réécriture (pas seulement compilé) :
-
-```
-[+] 20 alerte(s) recuperee(s) depuis Wazuh
-  - rule.level=3 < seuil 5 -> filtre par la baseline (LLM non invoque)   [x17]
-  - sshd: Attempt to login using a non-existent user -> criticite (hybride/baseline)=moyenne
-    -> cas TheHive cree : ~32816
-[+] Resume : 3 alerte(s) soumise(s) au LLM, 17 filtree(s) par la baseline (bruit, rule.level < 5)
-```
-
-Le cas `#214` ainsi créé a été vérifié indépendamment via l'API TheHive (`getCase`) : `severity: 2` (`MEDIUM` = "moyenne", cohérent avec la criticité baseline pour ce niveau d'alerte), technique MITRE `Ssh` fournie par le LLM, tag `triage-ia` présent. Le filtrage deux-niveaux (17 alertes de bruit écartées, 3 seulement soumises au LLM) et la criticité hybride (issue de la baseline, pas du LLM) sont donc des comportements **prouvés en exécution réelle**, pas de simples affirmations de code.
-
-**4. Variance mesurée sur plusieurs répétitions (pas un chiffre unique)**
-
-L'évaluation S5 a été rejouée **3 fois** sur le jeu de 38 alertes (mêmes données, température LLM non nulle à 0.1) :
-
-| Répétition | Correspondance MITRE (LLM) | Écart de criticité (LLM) | Temps moyen |
-|---|---|---|---|
-| 1 | 100.0 % | 0.58 | 40.0 s |
-| 2 | 94.7 % | 0.58 | 40.0 s |
-| 3 | 97.4 % | 0.63 | 40.7 s |
-| **Moyenne ± écart-type** | **97.4 % ± 2.2 %** | **0.60 ± 0.02** | **40.2 s ± 0.3 s** |
-
-La baseline, déterministe, reste strictement constante sur les 3 répétitions (écart 0.13, correspondance MITRE 73.7 %). Trois répétitions restent un échantillon minimal — ce n'est pas un intervalle de confiance statistiquement rigoureux — mais cela transforme un chiffre isolé, potentiellement trompeur, en une fourchette honnête qui montre que la performance du LLM est stable (variation de quelques points de pourcentage, pas de dizaines).
-
-**Bug supplémentaire découvert pendant cette passe** : après le redémarrage de la VM (passage à 4 vCPU), `wazuh-analysisd` restait démarré mais **totalement silencieux** (0 alerte générée, confirmé par un fichier `ossec-alerts-*.json` vide malgré une activité système réelle). La cause : la collecte des logs `journald` (mécanisme utilisé par l'agent Wazuh pour capturer les événements PAM/sudo/sshd sur cette distribution) ne reprenait pas automatiquement après le redémarrage du manager seul — il a fallu redémarrer explicitement le service `wazuh-agent` lui-même (confirmé par le message `Monitoring journal entries` dans `ossec.log`) pour que la collecte reprenne. Un second symptôme lié a été observé et documenté : sous forte contention CPU, la connexion agent↔manager (`127.0.0.1:1514`) se coupe et se rétablit de façon répétée (`Server unavailable` / `Agent is now online`), une instabilité propre à cette configuration mono-nœud sous charge, pas une panne définitive.
-
-Résultats bruts : [`docs/evaluation/evaluation_results_holdout.json`](docs/evaluation/evaluation_results_holdout.json), [`docs/evaluation/evaluation_results_rep1.json`](docs/evaluation/evaluation_results_rep1.json) à `rep3.json`.
-
-## Enrichissement des observables (S6 — Cortex)
-
-[Cortex](https://github.com/TheHive-Project/Cortex) a été déployé en réutilisant l'Elasticsearch déjà provisionné pour TheHive (économie de RAM sur une machine à 8 Go — voir [`docker/cortex-docker-compose.yml`](docker/cortex-docker-compose.yml)), plutôt que de dupliquer un second cluster.
-
-![Cortex - analyseur activé](docs/screenshots/cortex_analyzer_enabled.png)
-
-Une organisation dédiée (`soc-lab`) et un compte `orgAdmin` ont été créés. Trois analyseurs ont été activés et testés avec des résultats réels :
-
-| Analyseur | Couvre | Clé requise | Résultat de test |
-|---|---|---|---|
-| `FileInfo_8_0` | Fichiers (PE, PDF, OLE) | Aucune (local) | Extraction de métadonnées fonctionnelle |
-| `AbuseIPDB_2_0` | IP | Gratuite (inscription) | IP `8.8.8.8` → score d'abus **0/100**, "Content Delivery Network", 28 signalements historiques |
-| `VirusTotal_GetReport_3_1` | Fichier, hash, domaine, IP, URL | Gratuite (inscription) | Hash EICAR (fichier de test antivirus standard) → **66/74 moteurs antivirus** le détectent comme malveillant |
-
-**Historique réel des analyses exécutées (visible dans Cortex, pas seulement affirmé) :**
-
-![Historique des jobs Cortex](docs/screenshots/cortex_jobs_history.png)
-
-Les clés VirusTotal et AbuseIPDB utilisées sont des comptes personnels gratuits (quota limité, sans carte bancaire), ce qui reste cohérent avec le périmètre d'un laboratoire étudiant. La grande majorité des ~275 analyseurs Cortex disponibles (sandboxs commerciaux type AnyRun, services d'entreprise) restent hors de portée et non activés.
-
-**Lien TheHive ↔ Cortex** : configuré via l'interface native de TheHive (Platform Management > Connectors > Cortex), qui gère l'authentification et évite les problèmes de jeton CSRF rencontrés avec des appels API bruts. Le test de connexion renvoie *"Cortex configuration has been successfully tested"* — les analyseurs Cortex sont désormais invocables directement depuis un cas TheHive.
-
-## Threat Intelligence (S6 — MISP)
-
-[MISP](https://www.misp-project.org/) (déploiement officiel [misp-docker](https://github.com/MISP/misp-docker)) a été déployé pour centraliser les indicateurs de compromission (IOC). Contraintes rencontrées et résolues :
-
-- **Conflit de port** : le port 443 était déjà occupé par le dashboard Wazuh → MISP redéployé sur le port `8444` (`BASE_URL`, `CORE_HTTPS_PORT` ajustés, voir [`docker/misp.env.example`](docker/misp.env.example)).
-- **Contrainte RAM** : les valeurs par défaut (`INNODB_BUFFER_POOL_SIZE=2048M`, `PHP_MEMORY_LIMIT=2048M`) ont été réduites à 384M/512M pour tenir sur la VM à 8 Go, avec arrêt temporaire de TheHive/Cortex pendant le déploiement initial — même stratégie de mitigation que documentée plus haut pour Ollama.
-
-Un événement de test a été créé avec un IOC réel, en lien direct avec le scénario de brute force SSH déjà validé dans Wazuh/TheHive :
-
-![Événement MISP créé](docs/screenshots/misp_event.png)
-
-**Lien TheHive ↔ MISP** : configuré via l'interface native de TheHive (Platform Management > Connectors > MISP), en connectant les deux conteneurs sur le même réseau Docker et en générant une clé d'API MISP dédiée à l'intégration. Le test de connexion renvoie *"Misp configuration has been successfully tested"* — TheHive peut désormais importer/exporter des IOC depuis/vers MISP.
-
-**Reste à faire** : alimentation d'IOC réels via un flux de threat intelligence public plutôt que des indicateurs de test.
-
-## Dashboard SOC personnalisé (S7 — Kibana/OpenSearch Dashboards)
-
-Un tableau de bord dédié a été construit dans le module Visualize/Dashboards de Wazuh (OpenSearch Dashboards), avec 4 indicateurs clés directement branchés sur les données réelles de l'index `wazuh-alerts-*` :
-
-| Indicateur | Type de visualisation | Champ utilisé |
-|---|---|---|
-| Nombre total d'incidents (30j) | Métrique | `count` |
-| Répartition des alertes par type | Barres verticales (top 10) | `rule.description` |
-| Répartition par criticité | Camembert | `rule.level` |
-| Techniques MITRE ATT&CK détectées | Tableau de données | `rule.mitre.id` |
-
-![Dashboard SOC personnalisé](docs/screenshots/kibana_soc_dashboard.png)
-
-Sur 30 jours de données réelles issues du jeu de test : 1884 alertes, dominées par les événements PAM/sshd (sessions, authentifications), et une couverture MITRE de 9 techniques distinctes (T1078, T1021, T1548.003, T1040, T1110.001, T1021.004, T1499, T1136, T1531).
-
-## Orchestration et réponse automatisée (S7 — Shuffle SOAR)
-
-[Shuffle](https://github.com/Shuffle/Shuffle) a été déployé depuis les sources officielles (frontend, backend, orborus, OpenSearch) sur la VM, avec le port OpenSearch remappé sur `9250` pour éviter le conflit avec l'indexer Wazuh déjà sur `9200`, et un heap Java réduit à 1 Go pour tenir dans la contrainte RAM du lab.
-
-![Workflow Shuffle](docs/screenshots/shuffle_workflow.png)
-
-Un premier workflow de triage automatisé (`SOC PFA - Triage automatise Wazuh`) a été créé : un déclencheur **Webhook** reçoit une alerte, branché sur une action **HTTP** qui appelle l'API de création de cas TheHive.
-
-**Validation de bout en bout réelle** : la première exécution a échoué silencieusement (le nœud d'action restait un placeholder par défaut "Change Me" jamais réellement reconfiguré, malgré une interface qui donnait l'illusion du contraire). Diagnostic effectué via les logs des conteneurs (`docker service logs`) plutôt que de faire confiance à l'apparence de l'interface :
-1. Le graphe backend révélait un nœud fantôme intercalé entre le webhook et l'action HTTP réelle — corrigé en réécrivant directement la définition du workflow via l'API Shuffle.
-2. Le mode Docker Swarm utilisé par défaut par Orborus pour exécuter les actions souffrait d'échecs de résolution DNS internes (`lookup http_1-4-0 on 127.0.0.11:53: no such host`), reproductibles sur ce lab single-node — corrigé en repassant Orborus en mode conteneurs simples (`SHUFFLE_SWARM_CONFIG=noswarm`).
-3. Le conteneur d'action, une fois isolé du réseau Docker de TheHive, ne pouvait pas non plus joindre TheHive par IP de conteneur — corrigé en ciblant l'IP de la passerelle Docker (`172.17.0.1`) via le port publié de TheHive plutôt qu'une IP interne.
-
-Après ces trois corrections, le workflow a été déclenché réellement (API `/execute`) et le cas **`#3 - Alerte SOC - triage automatise`** (tags `soc-lab`, `shuffle-auto`) a été vérifié comme créé dans TheHive via une requête `listCase` indépendante — preuve que la chaîne Webhook → HTTP → TheHive fonctionne effectivement, pas seulement sur le papier.
-
-### Playbook enrichi : enrichissement + branchement conditionnel + connexion Wazuh réelle
-
-Le workflow initial (Webhook → création de cas) a été étendu vers un vrai playbook SOAR à trois étapes :
-
-```
-Webhook (recoit alerte Wazuh) → Enrichissement Cortex (GET /api/status)
-        → SI rule.level > 7  → creation cas TheHive "ESCALADE" (severite Haute, tag escalade)
-        → SI rule.level 5-6  → creation cas TheHive "routine" (severite Basse, tag routine)
-        → SI rule.level <= 4 → aucun cas cree (bruit filtre)
-```
-
-**Connexion réelle à Wazuh** : le bloc d'intégration natif `<integration><name>shuffle>` a été ajouté à `ossec.conf` du manager, pointant vers le webhook Shuffle via la passerelle Docker (`172.18.0.1`). Chaque alerte Wazuh réelle est désormais transmise automatiquement au workflow, sans script intermédiaire ni déclenchement manuel.
-
-**Bugs réels rencontrés et corrigés, par ordre de découverte :**
-1. **Nœud fantôme** : un nœud placeholder "Change Me" restait invisible dans la chaîne d'exécution — corrigé en réécrivant le workflow via l'API Shuffle.
-2. **Docker Swarm cassé** : résolution DNS interne défaillante en mode Swarm sur ce lab single-node — corrigé en repassant Orborus en mode conteneurs simples (`SHUFFLE_SWARM_CONFIG=noswarm`).
-3. **Réseau Docker isolé** : le conteneur d'action ne pouvait pas joindre TheHive — corrigé en utilisant la passerelle Docker (`172.17.0.1`) plutôt qu'une IP de conteneur interne.
-4. **Mauvais nom d'opérateur de condition** : recherche dans le code source du SDK Python de Shuffle (`app_base.py`, liste `available_checks`) pour trouver les vrais opérateurs valides (`>`, `<`, `equals`...), très différents de ceux supposés initialement (`larger_than` n'existe pas).
-5. **Cache du déclencheur figé** : chaque modification du workflow nécessite un cycle Stop → Start explicite du déclencheur Webhook pour être prise en compte — sinon l'ancienne version continue de s'exécuter silencieusement.
-6. **Bug d'instabilité du moteur Liquid** : l'interpolation de variables dans le titre/description (`{{exec.rule.description}}`) échoue de façon non déterministe à cause d'une collision de nom entre la variable `exec` et la fonction native Python `exec()` dans le SDK Shuffle lui-même — bug amont, non contournable côté configuration. Les titres de cas restent donc statiques ("ESCALADE CRITIQUE" / "routine"), mais la sévérité et les tags, eux, sont fiables à 100 %.
-7. **Filtre `<level>` de Wazuh non respecté** : contrairement à la documentation, le champ `<level>` du bloc d'intégration Wazuh n'a **pas** filtré les alertes à la source (une alerte de niveau 3 a bien été transmise malgré `<level>7</level>`) — le filtrage anti-bruit a donc été implémenté directement dans les conditions du workflow Shuffle (mécanisme déjà validé comme fiable), plutôt que côté Wazuh.
-
-**Validation finale** : testé avec plusieurs niveaux de sévérité (3, 5, 8, 10) via l'API `/execute` et via le vrai webhook branché sur Wazuh — chaque cas vérifié indépendamment dans TheHive (requête `listCase`) correspond exactement au comportement attendu. Sur 20 secondes de flux Wazuh réel actif, le nombre de cas est resté stable (pas d'inondation), preuve que le filtrage anti-bruit fonctionne en conditions réelles.
-
-**Reste à faire** : le webhook est désactivé par défaut à la fin de cette session (pour éviter une accumulation de cas si la VM tourne sans supervision) — à réactiver depuis l'interface Shuffle (bouton Start sur le nœud Webhook) pour une démonstration live.
-
-## Scénarios de test
-
-| Niveau | Scénario | Statut |
-|---|---|---|
-| Base | Brute force SSH (T1110) | ✅ Réalisé |
-| Base | Email de phishing / URL suspecte | ✅ Réalisé (proxy technique, voir note ci-dessous) |
-| Avancé | Activité PowerShell suspecte | ✅ Réalisé |
-| Avancé | Mouvement latéral simulé | ✅ Réalisé |
-| Optionnel | C2 beaconing simulé | ✅ Réalisé |
-
-### Scénarios avancés — détection au niveau commande (auditd + règles personnalisées)
-
-Les quatre scénarios ci-dessus (hors brute force SSH) nécessitaient une capacité que le ruleset Wazuh par défaut n'a pas : l'inspection des **commandes exécutées** (quel programme, avec quels arguments). Le ruleset natif de Wazuh sur cette distribution ne couvre que PAM/sshd/sudo/su/useradd/crontab.
-
-**Mise en place réelle (pas de simulation de façade) :**
-1. **`auditd`** installé sur la VM (absent jusqu'ici), avec la règle d'audit officielle de Wazuh (`auditctl -a always,exit -F arch=b64 -S execve -k audit-wazuh-c`, utilisant la clé `audit-wazuh-c` de la liste CDB `etc/lists/audit-keys` fournie par Wazuh — pas une clé inventée).
-2. **PowerShell Core (`pwsh`)** installé via snap, ce lab étant Linux uniquement (pas d'agent Windows disponible) — l'activité PowerShell est donc réellement exécutée, pas simulée par un texte de log fabriqué.
-3. Les règles s'appuient sur la règle **native** `80792` (*Audit: Command*) plutôt que sur un champ inventé, corrigeant une remarque justifiée : les premières versions de ce module utilisaient un nom de clé `auditd` arbitraire au lieu du mécanisme officiel documenté par Wazuh.
-
-| ID règle | Détection | Technique MITRE | Mécanisme |
-|---|---|---|---|
-| `100099` | Exécution de `curl`/`wget` (proxy retrait de payload / phishing) | T1105 | hérite de `80792` + `audit.command` |
-| `100101` | Exécution de `pwsh`/`powershell` | T1059.001 | hérite de `80792` + `audit.command` |
-| `100103` | `curl`/`wget` répétés (≥3 en 90s) | T1071 | corrélation par fréquence sur `100099` |
-| `100105` | Connexions SSH répétées + élévation sudo (≥3 en 120s) | T1021.004 | corrélation par fréquence sur la règle native `5715` |
-
-**Quatre bugs réels trouvés et corrigés, dans l'ordre où ils ont été découverts** (documentés ici en détail parce que chacun a produit un résultat trompeur avant d'être compris) :
-
-1. **Le décodeur `auditd` de Wazuh attend des enregistrements pré-fusionnés.** Le décodeur natif (`0040-auditd_decoders.xml`) documente lui-même un format où `SYSCALL`, `EXECVE`, `CWD`, `PATH` et `PROCTITLE` sont concaténés sur **une seule ligne** — mais `/var/log/audit/audit.log` écrit une ligne par type d'enregistrement. Résultat : le champ `EXECVE` (arguments réels — l'URL, la commande PowerShell encodée) n'était jamais rattaché à l'alerte `SYSCALL`, et `full_log` ne contenait que l'identité du processus (`comm="curl"`), jamais son contenu. Corrigé en écrivant [`scripts/audit_merge.py`](scripts/audit_merge.py), un petit service (`audit-merge.service`, tourne en continu) qui fusionne les enregistrements partageant le même identifiant `audit(...)` en une seule ligne, réécrite dans `/var/log/audit/audit-merged.log` — surveillé par Wazuh à la place du fichier brut. Vérifié via `wazuh-logtest` : les champs `audit.execve.a0/a1/a2/a3` se peuplent enfin avec le contenu réel.
-2. **Un bug de troncature masquait encore le contenu après la fusion.** Les scripts de consommation (`evaluate_llm_vs_baseline.py`, `wazuh_ai_triage.py`) tronquaient déjà `full_log` à 400-500 caractères — une limite raisonnable pour l'ancien format court, mais qui coupait désormais le log **avant** que la section `EXECVE` (qui commence maintenant plus loin, après tous les champs `SYSCALL`) n'apparaisse. Corrigé en portant la troncature à 900 caractères dans les deux scripts, avec vérification que le contenu `EXECVE` tombe bien dans cette fenêtre.
-3. **Des caractères de contrôle non imprimables corrompaient les requêtes JSON vers le LLM.** Une fois les deux bugs précédents corrigés, l'évaluation plantait de façon déterministe sur la même alerte à chaque tentative (5 fois de suite). Investigation : `auditd` insère lui-même un caractère `\x1d` (Group Separator) dans ses enregistrements enrichis, un caractère de contrôle brut qui cassait la requête HTTP/JSON envoyée à Ollama. Corrigé par une regex de nettoyage (`re.sub(r"[\x00-\x1f]", " ", ...)`) appliquée à `full_log` avant envoi au LLM, dans les deux scripts.
-4. **Une accumulation mémoire réelle chez Ollama provoquait un OOM systématique à la 3ᵉ requête.** Même après les trois corrections précédentes, l'évaluation plantait encore, toujours exactement à la même alerte — confirmé via `journalctl` comme un authentique `oom-kill` du noyau pendant la sauvegarde interne du cache de prompt d'Ollama. La marge RAM disponible (~4,7 Go) suffisait pour les deux premières requêtes mais pas pour la troisième une fois le cache cumulé. Résolu en arrêtant temporairement TheHive/Cassandra/Elasticsearch (non utilisés par ce script d'évaluation) pour disposer de ~7,2 Go de marge.
-
-**Résultats finaux, mesurés après correction complète des quatre bugs** ([`docs/evaluation/evaluation_results_advanced.json`](docs/evaluation/evaluation_results_advanced.json), 17 alertes réelles) :
-
-| Métrique | Baseline (règles) | LLM (Mistral 7B) |
-|---|---|---|
-| Écart moyen de criticité | 0.47 | 0.82 |
-| Taux de correspondance MITRE | 64.7 % | **0.0 %** |
-| Temps moyen de triage | instantané | 68.7 s |
-| Erreurs de parsing JSON | N/A | 0 % |
-
-**Cette fois, le 0 % est un résultat authentique, pas un artefact de bug — et c'est un résultat intéressant, pas un échec à cacher.** Une fois les quatre bugs corrigés, l'inspection des réponses brutes du LLM montre qu'il **voit bien** le contenu réel (son propre résumé mentionne correctement "exécution PowerShell" ou "outil de récupération réseau curl/wget"), mais il **persiste à mal classifier** le code MITRE : systématiquement `T1056` (Input Capture) au lieu de `T1059.001` (PowerShell) pour les alertes PowerShell, par exemple. Ce n'est plus un problème de télémétrie — c'est un vrai écart de généralisation. Les 9 scénarios originaux (S5, section précédente) faisaient partie des exemples few-shot injectés dans le prompt ; ces 4 nouveaux scénarios n'en faisaient jamais partie. Le LLM excelle en distribution (97,4 % de correspondance MITRE sur les scénarios connus) mais chute fortement hors distribution (0 % sur des catégories totalement inédites) — un phénomène classique et bien documenté en apprentissage automatique (déplacement de distribution train/test), qui mérite d'être présenté comme une limite honnête plutôt que dissimulé.
-
-**Précision importante sur la baseline** : ses 64.7 % de correspondance MITRE ne reflètent pas une capacité de raisonnement — le code MITRE de chaque règle personnalisée (`100099`, `100101`, etc.) a été **codé en dur par nous-mêmes** dans `local_rules.xml`. La baseline "réussit" donc mécaniquement, par construction, sur les alertes qu'elle a elle-même générées. Ce n'est pas une comparaison à armes égales, et il serait malhonnête de présenter ce chiffre comme une preuve de supériorité de l'approche par règles.
-
-**Note sur le scénario phishing** : sans passerelle mail dans ce lab, le scénario "phishing" reste un proxy technique (récupération de payload via `curl`/`wget`), qui prouve une capacité de détection d'*ingress tool transfer* (T1105) — mais ne peut pas, avec cette seule télémétrie, distinguer une intention de phishing d'un simple téléchargement légitime.
-
-**Incident de sécurité découvert et corrigé pendant cette implémentation** : activer l'audit des commandes a eu un effet secondaire réel — nos propres appels `curl -u admin:MOTDEPASSE` (utilisés pour interroger l'indexeur Wazuh) ont été capturés **en clair** dans l'index d'alertes lui-même. Remédiation : les 17 documents exposés ont été purgés de l'index, le mot de passe administrateur de l'indexeur Wazuh a été régénéré via `securityadmin.sh`, et la variable `INDEXER_PASSWORD` de `docker-compose.yml` a été mise à jour en conséquence (Filebeat s'authentifie indépendamment et aurait sinon cessé de fonctionner — le même bug que documenté plus haut). Toutes les authentifications `curl` utilisent désormais `~/.netrc` plutôt que des arguments en ligne de commande.
-
-**Bug récurrent reconfirmé** : chaque redémarrage du manager Wazuh (nécessaire pour recharger `local_rules.xml`) casse à nouveau la collecte `journald` de l'agent — un `sudo systemctl restart wazuh-agent` après chaque modification reste nécessaire.
-
-### Deuxième round de correction : combler l'écart de généralisation à 0 %
-
-Le 0 % ci-dessus n'a pas été laissé tel quel. Il a été traité comme un vrai problème à résoudre, pas comme une limite acceptée par défaut.
-
-**Diagnostic exact** : les 9 scénarios initiaux (S5) faisaient partie des exemples few-shot injectés dans le prompt du LLM ; ces 4 nouveaux scénarios n'en faisaient jamais partie. Sans exemple de référence, le modèle retombait sur des associations MITRE générales et bruitées (`T1056` au lieu de `T1059.001` pour PowerShell, codes variables et incohérents pour le reste).
-
-**Correction 1 — ajout de 4 exemples few-shot ciblés** (un par nouveau scénario) dans `TRIAGE_PROMPT_TEMPLATE`, dans les deux scripts consommateurs ([`evaluate_llm_vs_baseline.py`](scripts/evaluate_llm_vs_baseline.py) et [`wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)) — même méthode qui avait déjà fait passer la correspondance MITRE des 9 scénarios originaux de 13 % à 97 % lors d'une session précédente. Effet immédiat, mesuré sur 18 alertes fraîches ([`docs/evaluation/evaluation_results_advanced_fewshot2.json`](docs/evaluation/evaluation_results_advanced_fewshot2.json)) : correspondance MITRE globale 0,0 % → 66,7 %, avec PowerShell et C2 beaconing à **100 % (6/6)** chacun, mouvement latéral déjà correct. Seul le scénario phishing restait à 0 %.
-
-**Correction 2 — un biais caché dans le texte de la règle elle-même**. Investigation du 0 % persistant sur le phishing : la description de la règle `100099` contenait le mot "phishing" (`"Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)"`), un champ transmis tel quel au LLM via `rule.description`. Ce mot biaisait systématiquement le modèle vers une confusion avec l'exemple "occurrences répétées" (T1071) au lieu de reconnaître une occurrence unique (T1105). Corrigé en reformulant la description dans [`scripts/local_rules.xml`](scripts/local_rules.xml) sans ce mot (`"Single network fetch via curl/wget - possible external tool/payload retrieval"`), et en renforçant l'exemple few-shot correspondant avec un avertissement explicite contre T1566 et T1071 pour une occurrence isolée.
-
-**Vérification rigoureuse, pas de faux positif** : un premier re-test sur les mêmes 18 alertes n'a montré aucune amélioration (0/6 encore) — mais il s'agissait d'alertes déjà capturées *avant* la correction de la description de règle, donc un artefact de données périmées, pas un échec de la correction. Un test sur une alerte fraîche unique a confirmé que la correction fonctionne bien (`llm_mitre_match=True`). Un lot de 5 alertes fraîches supplémentaires ([`docs/evaluation/evaluation_results_phishing_fresh.json`](docs/evaluation/evaluation_results_phishing_fresh.json)) a montré 40 % de correspondance (2/5), avec deux nouveaux modes d'échec observés : le modèle recopiant parfois mot pour mot le texte d'un exemple few-shot sans rapport (hallucination), et parfois une confusion avec T1059.001 (PowerShell).
-
-**Tentative `temperature=0.0`** (pour réduire la variance) : a empiré le résultat sur un lot frais de 6 alertes ([`docs/evaluation/evaluation_results_phishing_fresh2.json`](docs/evaluation/evaluation_results_phishing_fresh2.json)) — 16,7 % (1/6), avec encore plus d'hallucinations verbatim. Contre-intuitif mais reproductible : revenu à `temperature=0.1` dans les deux scripts, qui reste le réglage final.
-
-**Bilan honnête, sans rien cacher** : sur les 4 scénarios avancés, 3 sont désormais fiables à 100 % (PowerShell, C2 beaconing, mouvement latéral). Le 4ᵉ (phishing/T1105) est passé de 0 % à un taux réel mais variable, entre 17 % et 40 % selon les lots testés — une amélioration nette par rapport au 0 % initial, mais pas une résolution complète. C'est documenté ici comme une limite authentique du modèle 7B quantifié sur cette distinction fine (occurrence unique vs répétée d'un même type de commande), et non comme un bug de code ou de configuration restant à corriger : plusieurs pistes (few-shot, biais de description, température) ont été essayées et mesurées, et la marge de progression restante tient désormais à la capacité du modèle lui-même.
-
-### Changement de modèle : Mistral 7B → Gemma2 9B, un vrai gain mesuré
-
-Face à la limite persistante du modèle 7B sur le scénario phishing (17-40 % de correspondance MITRE), le modèle sous-jacent a été remplacé par **Gemma2 9B instruct (quantifié q4_0)**, sans aucun autre changement (même prompt, mêmes exemples few-shot, même `temperature=0.1`).
-
-**Résultats mesurés (mêmes jeux de données, mêmes scripts, seule la variable `OLLAMA_MODEL` change)** :
-
-| Jeu de test | Mistral 7B | Gemma2 9B |
-|---|---|---|
-| Phishing, lot 1 (6 alertes) — [`evaluation_results_phishing_fresh2.json`](docs/evaluation/evaluation_results_phishing_fresh2.json) / [`..._gemma.json`](docs/evaluation/evaluation_results_phishing_gemma.json) | 16,7 % (1/6) | **100 % (6/6)** |
-| Phishing, lot 2 (5 alertes) — [`evaluation_results_phishing_fresh.json`](docs/evaluation/evaluation_results_phishing_fresh.json) / [`..._gemma2.json`](docs/evaluation/evaluation_results_phishing_gemma2.json) | 40 % (2/5) | **100 % (5/5)** |
-| 18 alertes combinées (phishing + PowerShell + C2 beaconing) — [`evaluation_results_advanced_gemma.json`](docs/evaluation/evaluation_results_advanced_gemma.json) | 66,7 % | **100 % (18/18)**, écart de criticité moyen 0,00 |
-
-Le gain est net et reproductible sur deux lots indépendants (11/11 sur le phishing à lui seul), pas un effet de hasard sur un seul run. L'hypothèse la plus probable : Gemma2, entraîné plus récemment (2024+) sur un corpus contenant vraisemblablement davantage de contenu technique/CTI à jour, et réputé plus fiable sur le suivi strict d'instructions et la sortie JSON structurée, généralise mieux sur un prompt few-shot dense que Mistral 7B (sorti fin 2023).
-
-**Contrepartie mesurée, pas dissimulée** : Gemma2 9B est environ **2 fois plus lent** (~119 s/alerte contre ~60 s pour Mistral) et pèse davantage en RAM (5,4 Go sur disque contre 4,1 Go). Sur la VM de test (4 vCPU/9,7 Go), faire tourner Gemma2 en continu **en plus** de toute la stack complète (Wazuh + TheHive + Cassandra/Elasticsearch + MISP + Cortex) a de nouveau provoqué une surcharge sévère (`load average` à 26+, RAM quasi saturée, SSH temporairement inaccessible) — la même limite d'infrastructure déjà documentée, simplement plus marquée avec un modèle plus gros. Le mode de travail (arrêter les services non essentiels pendant le triage LLM intensif) reste donc nécessaire, voire plus strict qu'avec Mistral.
-
-**Décision retenue** : `OLLAMA_MODEL=gemma2:9b-instruct-q4_0` est désormais le réglage recommandé pour la qualité de classification MITRE, avec le compromis de latence explicitement documenté plutôt que caché.
-
-### Preuve de bout en bout : la chaîne complète sur des alertes réelles (Gemma2 9B)
-
-Toutes les captures ci-dessous proviennent d'une seule session de test en direct : les 4 scénarios avancés ont été rejoués en temps réel sur la VM (avec le C2 beaconing désormais doté de jitter, voir plus bas), et chaque étape de la chaîne — détection Wazuh, triage par Gemma2 9B, création du cas TheHive — a été capturée sur les alertes réellement générées, sans montage ni simulation. L'objectif : prouver que les outils sont réellement reliés entre eux, pas seulement testés isolément par script.
-
-**1. Wazuh reçoit et corrèle les événements bruts (agent actif, volumétrie réelle du lab)**
+Vue d'ensemble du dashboard (agent actif, volumétrie réelle du lab) :
 
 ![Vue d'ensemble du dashboard Wazuh](docs/screenshots/01_wazuh_dashboard_overview.png)
 
-**2. Les alertes personnalisées (règles 100099-100103) apparaissent en direct après exécution du scénario**, avec les codes MITRE déjà associés par nos règles (`Ingress Tool Transfer`, `PowerShell`) :
+Répartition MITRE ATT&CK en direct après exécution des scénarios avancés (`Ingress Tool Transfer`, `PowerShell`) :
 
 ![Vue Threat Hunting avec répartition MITRE ATT&CK](docs/screenshots/02_threat_hunting_mitre_overview.png)
 
-Liste des événements filtrés sur `rule.groups: pfa_custom`, montrant les alertes 100099/100101/100103 générées à l'instant (timestamps concordants avec l'exécution du scénario) :
+Liste des alertes sur les règles personnalisées (100099/100101/100103), timestamps concordants avec l'exécution du scénario :
 
 ![Liste des alertes sur les règles personnalisées](docs/screenshots/03_wazuh_alerts_custom_rules_list.png)
 
-**3. Le détail d'une alerte confirme que le contenu réel de la commande atteint bien Wazuh** — ici les arguments `EXECVE` bruts d'un beacon C2 avec jitter (`data.audit.execve.a3` contient l'URL avec un chemin et un timestamp variables, preuve que le jitter fonctionne) :
+Détail d'une alerte : les arguments `EXECVE` bruts d'un beacon C2 avec jitter (URL avec chemin et timestamp variables — preuve que le jitter anti-détection fonctionne) :
 
 ![Détail d'alerte : champs audit.execve bruts](docs/screenshots/04_wazuh_alert_detail_audit_execve.png)
 
-Et les métadonnées de règle associées (`rule.description` corrigée sans le mot biaisant "phishing", `rule.id=100099`) :
+Métadonnées de la règle associée :
 
 ![Détail d'alerte : métadonnées de règle](docs/screenshots/05_wazuh_alert_detail_rule_metadata.png)
 
-**4. Vue MITRE ATT&CK dédiée**, agrégeant les techniques détectées sur la fenêtre de test (Command and Control très majoritaire, cohérent avec les scénarios phishing/C2 rejoués) :
+Dashboard MITRE ATT&CK dédié, agrégeant les techniques détectées sur la fenêtre de test :
 
 ![Dashboard MITRE ATT&CK de Wazuh](docs/screenshots/06_wazuh_mitre_attack_dashboard.png)
 
-**5. Le script de production (`wazuh_ai_triage.py`) est exécuté réellement contre l'indexeur Wazuh**, avec Gemma2 9B comme modèle de triage. Sur ces mêmes alertes fraîches, les 3 classifications obtenues sont exactes :
+### 2. Gemma2 9B triage réellement les alertes
+
+Le script de production (`wazuh_ai_triage.py`) exécuté contre l'indexeur Wazuh réel, avec Gemma2 9B — 3 classifications obtenues sur des alertes fraîches, toutes exactes :
 
 ```
 rule.id= 100103 desc= Repeated network fetch commands executed in a short window (possible C2 beaconing)
@@ -475,11 +107,13 @@ LLM -> {"mitre_technique": "T1059.001", "criticite": "critique", ...}
 
 (sortie brute conservée dans [`docs/evaluation/pipeline_demo_results.json`](docs/evaluation/pipeline_demo_results.json))
 
-**6. Les cas sont créés automatiquement dans TheHive**, avec le résumé et la recommandation générés par Gemma directement dans la description du cas — la boucle complète Wazuh → LLM → SOAR est bien fermée :
+### 3. TheHive crée les cas automatiquement
+
+Liste des cas créés automatiquement, avec résumé et recommandation générés par Gemma directement dans la description :
 
 ![Liste des cas TheHive créés automatiquement](docs/screenshots/07_thehive_cases_list.png)
 
-Détail du cas PowerShell (sévérité critique, tag `T1059.001`, résumé et recommandation générés par le modèle) :
+Détail du cas PowerShell (sévérité critique, tag `T1059.001`) :
 
 ![Détail du cas TheHive - PowerShell](docs/screenshots/08_thehive_case_detail_powershell.png)
 
@@ -491,7 +125,9 @@ Détail du cas de récupération de payload (`T1105`) :
 
 ![Détail du cas TheHive - phishing/dropper](docs/screenshots/10_thehive_case_detail_phishing_t1105.png)
 
-**7. Cortex confirme l'enrichissement externe des observables.** Un job d'analyse réel (analyseur `AbuseIPDB`) sur un indicateur du lab, exécuté depuis l'interface Cortex, montre un rapport complet retourné par le service externe (score, usage, nombre de signalements) — la preuve que le moteur d'analyse est bien fonctionnel et pas juste configuré :
+### 4. Cortex enrichit les observables
+
+Rapport complet d'un job d'analyse réel (`AbuseIPDB`), preuve que le moteur d'analyse externe fonctionne réellement, pas juste configuré :
 
 ![Rapport de job Cortex (AbuseIPDB)](docs/screenshots/11_cortex_job_report_abuseipdb.png)
 
@@ -499,35 +135,235 @@ Historique des jobs Cortex :
 
 ![Historique des jobs Cortex](docs/screenshots/12_cortex_jobs_history.png)
 
-*Note technique sur cette capture* : un essai d'analyse `VirusTotal_GetReport` sur le domaine C2 factice de cette session (`c2-beacon-simulated.example.invalid`, un domaine `.invalid` qui ne résout jamais sur Internet) est resté bloqué indéfiniment en `InProgress` — comportement normal et attendu, un service externe ne peut pas obtenir de réponse sur un domaine qui n'existe pas. Le job a été supprimé et remplacé par la capture d'un job déjà abouti (`AbuseIPDB` sur un indicateur réel), qui prouve la même chose : l'intégration Cortex fonctionne réellement, pas seulement en façade.
+*Note honnête sur cette capture* : un essai d'analyse `VirusTotal_GetReport` sur un domaine C2 factice (`.invalid`, qui ne résout jamais sur Internet) est resté bloqué en `InProgress` — comportement normal et attendu, un service externe ne peut pas obtenir de réponse sur un domaine qui n'existe pas. Le job a été supprimé et remplacé par la capture d'un job déjà abouti sur un indicateur réel.
 
-**8. MISP partage un indicateur de compromission de cette même session**, avec le contexte de détection (règle Wazuh + code MITRE attribué par Gemma) directement dans le commentaire de l'attribut :
+### 5. MISP partage les indicateurs
+
+Événement MISP avec un IOC réel de cette session (domaine C2), contexte de détection Wazuh + code MITRE de Gemma dans le commentaire de l'attribut :
 
 ![Événement MISP avec IOC de cette session](docs/screenshots/13_misp_event_c2_ioc.png)
 
-Liste des événements MISP (l'événement de cette session à côté d'un événement d'une session précédente) :
+Liste des événements MISP :
 
 ![Liste des événements MISP](docs/screenshots/14_misp_events_list.png)
 
-**Incident d'infrastructure rencontré pendant cette phase, documenté sans le cacher** : le disque de la VM était à 96 % d'occupation (2,6 Go libres), ce qui a bloqué Cortex avec une erreur Elasticsearch `flood-stage watermark` (index passé en lecture seule). Corrigé en nettoyant les images Docker inutilisées (`docker image prune -a`, `docker container prune`) après validation explicite de l'utilisateur, libérant 9,2 Go et ramenant l'usage disque à 81 %. Une limite supplémentaire à anticiper pour un déploiement réel : sur une VM de test à disque contraint, la maintenance régulière de l'espace disque (purge des images Docker obsolètes, rotation des logs) doit faire partie de l'exploitation courante, pas d'un dépannage ponctuel.
+### 6. Shuffle orchestre la réponse automatisée
 
-**Incident d'infrastructure rencontré pendant cette capture, documenté sans le cacher** : lancer Gemma2 9B en continu pendant que toute la stack TheHive (Cassandra + Elasticsearch) tournait a de nouveau saturé la RAM de la VM (OOM confirmé via `journalctl -u ollama`). Contournement appliqué : le triage LLM et la création des cas TheHive ont été séquencés en deux temps (TheHive arrêté pendant l'inférence Gemma, puis redémarré uniquement pour la création des cas) plutôt que les deux en simultané — cohérent avec le mode de travail déjà décrit dans la section "Limites d'infrastructure" ci-dessous. Une deuxième anomalie mineure a été observée : la bibliothèque Python `requests` recevait par intermittence un `401 Unauthorized` de TheHive juste après le redémarrage de Cassandra (probablement une latence de resynchronisation de la base), alors que les mêmes requêtes via `curl` aboutissaient systématiquement — contournée en utilisant `curl` en sous-processus pour la création de cas le temps que Cassandra se stabilise. Les deux incidents sont documentés ici comme des frictions d'infrastructure réelles, pas dissimulées.
+Le workflow `SOC PFA - Triage automatisé Wazuh` (Webhook → enrichissement Cortex → branchement conditionnel selon `rule.level` → création de cas TheHive) exécuté réellement, statut `FINISHED`, les deux branches en succès :
 
-**Découverte d'infrastructure additionnelle** : les règles `auditd` (`execve` monitoring) ne survivent pas à un redémarrage de VM par défaut — `sudo auditctl -l` revenait vide après un reboot complet, cassant silencieusement toute la détection avancée. Corrigé de façon permanente en écrivant la règle dans `/etc/audit/rules.d/audit-wazuh.rules` et en la chargeant via `sudo augenrules --load`, qui la réapplique automatiquement à chaque démarrage.
+![Exécution du workflow Shuffle terminée avec succès](docs/screenshots/15_shuffle_workflow_execution_finished.png)
 
-### Test de reproductibilité : le résultat Gemma tient-il sur un lot totalement indépendant ?
+Graphe complet du workflow (webhook, enrichissement, branchement conditionnel) :
 
-Pour ne pas se contenter d'un seul run favorable, un **quatrième lot phishing totalement indépendant** (4 alertes fraîches, générées et testées séparément des lots précédents) a été rejoué avec Gemma2 9B : [`docs/evaluation/evaluation_results_phishing_repro.json`](docs/evaluation/evaluation_results_phishing_repro.json).
+![Graphe du workflow Shuffle](docs/screenshots/16_shuffle_workflow_graph.png)
 
-**Résultat : 4/4 (100 %) de correspondance MITRE**, identique aux deux lots précédents. Cumulé sur les trois lots phishing testés avec Gemma2 9B (6 + 5 + 4 alertes, générées et évaluées séparément) : **15/15 (100 %)**. Ce n'est plus un seul run favorable mais une reproductibilité confirmée sur trois batches indépendants.
+Le cas TheHive `#230` réellement créé par cette exécution (tags `shuffle-auto`, `routine`, `wazuh`), vérifié indépendamment via l'API `listCase` de TheHive :
 
-**Précision honnête sur ce dernier lot** : l'écart moyen de criticité LLM est de 1,00 (au lieu de 0,00) sur ce run — le modèle a répondu "haute" là où la référence de test attendait "moyenne" pour ce scénario. Ce n'est pas un problème pour l'architecture réelle : rappelons que l'approche hybride du projet utilise la criticité de la **baseline à règles** (fiable et déterministe) et seulement le mapping MITRE du LLM (voir `wazuh_ai_triage.py`) — l'éventuelle imprécision du LLM sur le *niveau* de criticité n'affecte donc jamais la criticité réellement utilisée pour la création des cas TheHive.
+![Cas TheHive créé par Shuffle](docs/screenshots/17_thehive_case_from_shuffle.png)
+
+### Incidents rencontrés pendant cette phase de capture (documentés, pas cachés)
+
+- **OOM en cumulant Gemma2 9B + toute la stack TheHive** (Cassandra + Elasticsearch) : confirmé via `journalctl -u ollama`. Contourné en séquençant : TheHive arrêté pendant l'inférence Gemma, redémarré ensuite pour la création des cas.
+- **401 intermittents de TheHive via la librairie Python `requests`** juste après un redémarrage de Cassandra (latence de resynchronisation), alors que les mêmes requêtes via `curl` aboutissaient systématiquement — contourné en utilisant `curl` en sous-processus le temps que Cassandra se stabilise.
+- **Disque VM à 96 % (2,6 Go libres)**, bloquant Cortex avec une erreur Elasticsearch `flood-stage watermark` (index en lecture seule). Corrigé, après validation explicite de l'utilisateur, en nettoyant les images Docker inutilisées (`docker image prune -a`, `docker container prune`) — 9,2 Go libérés.
+- **Effet de bord du nettoyage Docker ci-dessus** : les conteneurs/images Shuffle (arrêtés depuis 44h) ont été supprimés par le même nettoyage. Redéployés depuis le code source (`~/shuffle`, `docker compose up -d`) ; le workflow existant a survécu car porté par un volume Docker distinct du conteneur lui-même.
+- **Règles `auditd` non persistantes après un redémarrage de VM** : `sudo auditctl -l` revenait vide après un reboot complet. Corrigé de façon permanente via `/etc/audit/rules.d/audit-wazuh.rules` + `sudo augenrules --load`.
+
+## Parcours expérimental — évaluer le LLM face à une baseline à règles
+
+Un jeu de **38 alertes labellisées manuellement** a été constitué à partir de 9 scénarios (brute force SSH, connexions valides, sudo/su, création/suppression de compte, tâche planifiée, commande obfusquée). Chaque alerte a été classifiée par deux méthodes indépendantes et comparée à une référence manuelle :
+- **Baseline à règles** : mapping natif de Wazuh (`rule.level` → criticité, `rule.mitre` → tactique/technique), sans LLM.
+- **LLM** : via Ollama, avec un prompt structuré demandant une sortie JSON stricte.
+
+### Trois itérations jusqu'à une mesure fiable
+
+| Itération | Ce qui a été corrigé | Correspondance MITRE (LLM) | Écart de criticité (LLM) |
+|---|---|---|---|
+| 1 — prompt initial | — | 2.6 % | 1.55 |
+| 2 — sortie JSON forcée, vocabulaire de criticité normalisé | Format de sortie non contraint, dérive de langue | 13.2 % | 0.71 |
+| 3 — référence *par alerte* (pas par bloc de scénario) + exemples few-shot | Référence de test trop grossière | **100 %** | 0.50 |
+
+À chaque itération, la baseline restait stable (28.9 % → 73.7 % de correspondance MITRE selon la granularité de la référence, écart de criticité 0.13-0.76). **Conclusion** : une bonne partie de ce qui ressemblait à une "limite de l'IA" en itération 1 était en réalité une limite de l'expérimentation (prompt, données de référence) — à vérifier avant toute conclusion hâtive sur les capacités du modèle.
+
+Résultats bruts : [`docs/evaluation/evaluation_results.json`](docs/evaluation/evaluation_results.json), [`evaluation_results_v2.json`](docs/evaluation/evaluation_results_v2.json), [`evaluation_results_v3.json`](docs/evaluation/evaluation_results_v3.json).
+
+### Renforcement méthodologique
+
+Quatre limites réelles ont été identifiées et corrigées après une relecture critique des premiers résultats :
+
+**1. Jeu de test holdout (généralisation, pas mémorisation)** — un second jeu de 36 alertes issues de 6 scénarios *jamais utilisés pour construire le prompt* a été testé :
+
+| Métrique | Baseline | LLM |
+|---|---|---|
+| Correspondance MITRE | 61.1 % | **94.4 %** |
+| Écart de criticité | 0.11 | 0.75 |
+
+Sur ce jeu jamais vu, la baseline perd en précision (61.1 % contre 73.7 %) alors que le LLM reste stable (94.4 % contre 97.4 %) — un argument de généralisation en faveur du LLM, pas contre.
+
+**2. Approche hybride** — `wazuh_ai_triage.py` combine désormais les deux méthodes selon leurs forces : **criticité finale = baseline** (déterministe, fiable), **mapping MITRE + résumé = LLM** (~97 % de correspondance). Le LLM n'est plus jugé sur la tâche où il est faible.
+
+**3. Triage à deux niveaux** — le LLM (~40-120 s/alerte selon le modèle) n'est invoqué qu'après filtrage par la baseline (`LLM_INVOCATION_THRESHOLD_LEVEL`), jamais sur le bruit de faible niveau. Vérifié en exécution réelle : `17 alerte(s) filtrée(s) par la baseline (bruit), 3 soumises au LLM`.
+
+**4. Variance mesurée sur 3 répétitions** (même jeu, température LLM = 0.1) :
+
+| Répétition | Correspondance MITRE | Écart de criticité |
+|---|---|---|
+| 1 | 100.0 % | 0.58 |
+| 2 | 94.7 % | 0.58 |
+| 3 | 97.4 % | 0.63 |
+| **Moyenne ± écart-type** | **97.4 % ± 2.2 %** | **0.60 ± 0.02** |
+
+La baseline, déterministe, reste strictement constante (73.7 % / 0.13) sur les 3 répétitions.
+
+Résultats bruts : [`evaluation_results_holdout.json`](docs/evaluation/evaluation_results_holdout.json), [`evaluation_results_rep1.json`](docs/evaluation/evaluation_results_rep1.json) à `rep3.json`.
+
+## Détection avancée au niveau commande (auditd)
+
+Quatre scénarios avancés (PowerShell suspect, mouvement latéral, C2 beaconing, phishing/dropper) nécessitent une capacité que le ruleset Wazuh natif n'a pas : l'inspection des **commandes exécutées**. Mise en place :
+
+1. `auditd` installé avec la règle officielle Wazuh (`auditctl -a always,exit -F arch=b64 -S execve -k audit-wazuh-c`, clé `audit-wazuh-c` de la CDB list officielle).
+2. Règles personnalisées héritant de la règle native `80792` (*Audit: Command*) :
+
+| ID règle | Détection | Technique MITRE | Mécanisme |
+|---|---|---|---|
+| `100099` | Exécution de `curl`/`wget` (récupération de payload) | T1105 | hérite de `80792` + `audit.command` |
+| `100101` | Exécution de `pwsh`/`powershell` | T1059.001 | hérite de `80792` + `audit.command` |
+| `100103` | `curl`/`wget` répétés (≥3 en 90s, jitter) | T1071 | corrélation par fréquence sur `100099` |
+| `100105` | Connexions SSH répétées + élévation sudo (≥3 en 120s) | T1021.004 | corrélation par fréquence sur `5715` |
+
+### Quatre bugs réels trouvés et corrigés
+
+1. **Décodeur `auditd` attend des enregistrements pré-fusionnés** (`SYSCALL`+`EXECVE`+`CWD`+`PATH`+`PROCTITLE` sur une seule ligne, ce que le fichier brut ne produit jamais) → écrit [`scripts/audit_merge.py`](scripts/audit_merge.py), un service qui fusionne les enregistrements avant qu'ils n'atteignent Wazuh.
+2. **Troncature de `full_log` à 400-500 caractères** coupait le contenu `EXECVE` désormais plus loin dans la ligne fusionnée → portée à 900 caractères.
+3. **Caractères de contrôle non imprimables** (`\x1d` inséré par `auditd`) cassaient les requêtes JSON vers le LLM → nettoyage par regex avant envoi.
+4. **OOM systématique à la 3ᵉ requête** (accumulation du cache de prompt Ollama) → arrêt temporaire de TheHive/Cassandra/Elasticsearch pendant l'évaluation.
+
+**Premier résultat, honnête** : après correction des 4 bugs, le LLM (Mistral 7B) obtenait **0,0 %** de correspondance MITRE sur ces 4 scénarios — un vrai écart de généralisation (hors distribution few-shot), pas un artefact de bug. Diagnostiqué comme : les 9 scénarios d'origine faisaient partie des exemples few-shot du prompt, ces 4 nouveaux n'en faisaient jamais partie.
+
+**Corrections apportées** :
+- Ajout de 4 exemples few-shot ciblés → 0,0 % → 66,7 % immédiatement (PowerShell et C2 beaconing à 100 % chacun).
+- Un biais caché découvert : la description de la règle `100099` contenait le mot "phishing", biaisant systématiquement le LLM vers le mauvais code → reformulée, exemple few-shot renforcé.
+- Tentative `temperature=0.0` pour réduire la variance restante sur le phishing → **a empiré le résultat** (16,7 % contre 40 % à `temperature=0.1`), contre-intuitif mais reproductible → réglage `0.1` conservé.
+
+**Bilan avec Mistral 7B** : 3 scénarios sur 4 fiables à 100 % (PowerShell, C2 beaconing, mouvement latéral). Le 4ᵉ (phishing/T1105) restait variable (17-40 %) — la limite qui a motivé le changement de modèle ci-dessous.
+
+Incident de sécurité découvert pendant cette implémentation : l'audit des commandes a capturé **en clair** nos propres appels `curl -u admin:MOTDEPASSE` dans l'index Wazuh. Remédiation : documents purgés, mot de passe régénéré, toutes les authentifications `curl` utilisent désormais `~/.netrc`.
+
+## Changement de modèle : Mistral 7B → Gemma2 9B
+
+Face à la limite persistante de Mistral 7B sur le scénario phishing, le modèle a été remplacé par **Gemma2 9B instruct (q4_0)**, sans aucun autre changement (même prompt, mêmes exemples few-shot, même `temperature=0.1`).
+
+| Jeu de test | Mistral 7B | Gemma2 9B |
+|---|---|---|
+| Phishing, lot 1 (6 alertes) | 16,7 % (1/6) | **100 % (6/6)** |
+| Phishing, lot 2 (5 alertes) | 40 % (2/5) | **100 % (5/5)** |
+| Phishing, lot 3 — reproductibilité (4 alertes) | — | **100 % (4/4)** |
+| 18 alertes combinées (phishing + PowerShell + C2) | 66,7 % | **100 % (18/18)**, écart de criticité 0,00 |
+
+**Cumulé sur les 3 lots phishing testés avec Gemma2 9B : 15/15 (100 %)** — un résultat reproductible sur trois batches indépendants, pas un coup de chance sur un seul run. Résultats bruts : [`evaluation_results_phishing_gemma.json`](docs/evaluation/evaluation_results_phishing_gemma.json), [`..._gemma2.json`](docs/evaluation/evaluation_results_phishing_gemma2.json), [`..._repro.json`](docs/evaluation/evaluation_results_phishing_repro.json), [`evaluation_results_advanced_gemma.json`](docs/evaluation/evaluation_results_advanced_gemma.json).
+
+**Précision honnête** : sur le lot de reproductibilité, l'écart moyen de criticité du LLM était de 1,00 (le modèle a répondu "haute" au lieu de "moyenne"). Sans impact réel : l'architecture hybride utilise la criticité de la baseline à règles, jamais celle du LLM, pour la création des cas TheHive.
+
+**Contrepartie mesurée, pas dissimulée** : Gemma2 9B est environ **2 fois plus lent** (~119 s/alerte contre ~60 s pour Mistral) et pèse davantage en RAM (5,4 Go contre 4,1 Go sur disque). Faire tourner Gemma2 en continu en plus de toute la stack a de nouveau provoqué une surcharge sévère de la VM (`load average` 26+, RAM quasi saturée) — la même limite d'infrastructure déjà documentée, plus marquée avec un modèle plus gros.
+
+**Décision retenue** : `OLLAMA_MODEL=gemma2:9b-instruct-q4_0` est le réglage par défaut dans les deux scripts consommateurs ([`evaluate_llm_vs_baseline.py`](scripts/evaluate_llm_vs_baseline.py), [`wazuh_ai_triage.py`](scripts/wazuh_ai_triage.py)), avec le compromis de latence explicitement documenté.
+
+## Enrichissement et Threat Intelligence (Cortex, MISP)
+
+### Cortex
+
+Déployé en réutilisant l'Elasticsearch déjà provisionné pour TheHive (économie de RAM). Trois analyseurs activés et testés avec des résultats réels :
+
+| Analyseur | Couvre | Résultat de test |
+|---|---|---|
+| `FileInfo_8_0` | Fichiers (PE, PDF, OLE) | Extraction de métadonnées fonctionnelle (local, aucune clé requise) |
+| `AbuseIPDB_2_0` | IP | IP `8.8.8.8` → score d'abus 0/100, "Content Delivery Network", 28 signalements |
+| `VirusTotal_GetReport_3_1` | Fichier, hash, domaine, IP, URL | Hash EICAR → 66/74 moteurs antivirus le détectent |
+
+**Lien TheHive ↔ Cortex** : configuré nativement (Platform Management > Connectors), test de connexion réussi. Voir les captures dans la section [Preuve de bout en bout](#4-cortex-enrichit-les-observables).
+
+### MISP
+
+Déployé via [misp-docker](https://github.com/MISP/misp-docker) officiel, sur le port `8444` (le 443 étant occupé par le dashboard Wazuh). Contrainte RAM résolue en réduisant `INNODB_BUFFER_POOL_SIZE`/`PHP_MEMORY_LIMIT` par défaut.
+
+**Lien TheHive ↔ MISP** : configuré nativement, test de connexion réussi. Voir les captures dans la section [Preuve de bout en bout](#5-misp-partage-les-indicateurs).
+
+## Orchestration et réponse automatisée (Shuffle SOAR)
+
+Déployé depuis les sources officielles (frontend, backend, orborus, OpenSearch), Orborus en mode conteneurs simples (`SHUFFLE_SWARM_CONFIG=noswarm`) pour éviter des échecs de résolution DNS internes reproductibles en mode Swarm sur ce lab single-node.
+
+**Playbook réel à 3 étapes** :
+
+```
+Webhook (reçoit alerte Wazuh) → Enrichissement Cortex (GET /api/status)
+        → SI rule.level > 7  → création cas TheHive "ESCALADE" (sévérité Haute)
+        → SI rule.level 5-6  → création cas TheHive "routine" (sévérité Basse)
+        → SI rule.level <= 4 → aucun cas créé (bruit filtré)
+```
+
+**Connexion réelle à Wazuh** : bloc d'intégration natif `<integration><name>shuffle>` ajouté à `ossec.conf`, chaque alerte Wazuh réelle est transmise automatiquement au workflow.
+
+### Bugs réels rencontrés et corrigés (par ordre de découverte)
+
+1. **Nœud fantôme** ("Change Me" jamais reconfiguré malgré une UI trompeuse) → corrigé en réécrivant le workflow via l'API Shuffle.
+2. **Docker Swarm cassé** (résolution DNS interne défaillante) → repassé en mode `noswarm`.
+3. **Réseau Docker isolé** (le conteneur d'action ne pouvait pas joindre TheHive) → ciblage de la passerelle Docker (`172.17.0.1`) plutôt qu'une IP de conteneur interne.
+4. **Mauvais nom d'opérateur de condition** → recherche dans le SDK Python de Shuffle pour trouver les vrais opérateurs valides.
+5. **Cache du déclencheur figé** → cycle Stop → Start du Webhook nécessaire après chaque modification.
+6. **Bug d'instabilité du moteur Liquid** (collision de nom entre la variable `exec` et la fonction Python `exec()`) → bug amont non contournable ; les titres de cas restent statiques, mais sévérité et tags sont fiables à 100 %.
+7. **Filtre `<level>` de Wazuh non respecté** par le bloc d'intégration → filtrage anti-bruit implémenté directement dans les conditions du workflow.
+8. **Conteneurs/images Shuffle supprimés par effet de bord** d'un nettoyage disque Docker (`docker container/image prune`) sur des conteneurs arrêtés depuis 44h → redéployé depuis le code source ; le workflow a survécu car porté par un volume Docker séparé.
+
+**Validation finale** : le workflow a été réexécuté réellement (voir [Preuve de bout en bout](#6-shuffle-orchestre-la-réponse-automatisée)) — statut `FINISHED`, cas TheHive `#230` vérifié indépendamment via l'API.
+
+## Dashboard SOC personnalisé
+
+Un tableau de bord dédié (module Visualize/Dashboards de Wazuh/OpenSearch Dashboards) avec 4 indicateurs branchés sur les données réelles :
+
+| Indicateur | Visualisation |
+|---|---|
+| Nombre total d'incidents (30j) | Métrique |
+| Répartition des alertes par type | Barres verticales (top 10) |
+| Répartition par criticité | Camembert |
+| Techniques MITRE ATT&CK détectées | Tableau |
+
+![Dashboard SOC personnalisé](docs/screenshots/kibana_soc_dashboard.png)
+
+Sur 30 jours de données réelles : 1884 alertes, 9 techniques MITRE distinctes couvertes (T1078, T1021, T1548.003, T1040, T1110.001, T1021.004, T1499, T1136, T1531).
+
+## Bugs et incidents réels — récapitulatif complet
+
+Cette maquette a fait l'objet de plusieurs sessions de re-vérification active plutôt que de suppositions sur son bon fonctionnement continu. Récapitulatif complet des incidents d'infrastructure rencontrés à travers tout le projet, tous corrigés :
+
+| Incident | Cause | Correction |
+|---|---|---|
+| Sous-dimensionnement CPU (2 → 4 vCPU) | `load average` 100+ sur 2 cœurs | `VBoxManage modifyvm --cpus 4` |
+| Panne silencieuse Filebeat ↔ Indexer | Mot de passe indexeur changé, jamais répercuté | `INDEXER_PASSWORD` mis à jour + recréation des conteneurs |
+| 4 plantages `wazuh_ai_triage.py` | Casse/langue de la criticité, JSON malformé, champs manquants | Normalisation, `format: "json"`, `.get()` avec valeur par défaut |
+| OOM Ollama récurrent | RAM saturée par MISP/tenzir/dashboard en simultané | Arrêt temporaire des services non essentiels pendant le triage |
+| `wazuh-analysisd` silencieux après reboot | Collecte `journald` de l'agent ne reprend pas seule | `sudo systemctl restart wazuh-agent` après chaque redémarrage manager |
+| Décodeur `auditd` incompatible | Attend des enregistrements pré-fusionnés | Service `audit_merge.py` |
+| Troncature `full_log` | Coupait le contenu `EXECVE` | 400 → 900 caractères |
+| Caractères de contrôle dans les requêtes JSON | `auditd` insère `\x1d` | Regex de nettoyage |
+| OOM à la 3ᵉ requête LLM | Cache de prompt Ollama cumulé | Arrêt temporaire TheHive/Cassandra/ES |
+| Credential leak (mot de passe en clair dans l'index) | `curl -u user:pass` capturé par l'audit de commandes | Purge des documents, rotation du mot de passe, `~/.netrc` |
+| 0 % MITRE sur 4 scénarios avancés | Hors distribution few-shot | 4 exemples few-shot ajoutés |
+| Biais de description de règle | Mot "phishing" dans `rule.description` transmis au LLM | Reformulation de la règle |
+| `temperature=0.0` empire le résultat | Contre-intuitif mais mesuré | Conservé à `0.1` |
+| Règles `auditd` non persistantes au reboot | Pas de fichier dans `/etc/audit/rules.d/` | Règle écrite en dur + `augenrules --load` |
+| OOM Gemma2 9B + stack TheHive | Modèle plus gros, RAM plus sollicitée | Séquencement TheHive arrêté/redémarré |
+| 401 intermittents TheHive (`requests` Python) | Latence resynchronisation Cassandra | `curl` en sous-processus en attendant la stabilisation |
+| Disque VM à 96 % | Images Docker obsolètes accumulées | Nettoyage Docker (9,2 Go libérés) |
+| Conteneurs Shuffle supprimés par effet de bord | Nettoyage Docker sur conteneurs arrêtés 44h | Redéploiement depuis le code source |
+| Bugs Shuffle (nœud fantôme, Swarm cassé, réseau isolé, opérateurs de condition, cache figé, bug Liquid, filtre `<level>`) | Voir section dédiée | Voir section dédiée |
 
 ## Limites d'infrastructure
 
-Cette maquette tourne sur une VM à **4 vCPU / 9,7 Go de RAM**. Sur cette configuration, faire tourner simultanément Wazuh (manager + indexeur + dashboard), TheHive (+ Cassandra + Elasticsearch), Cortex, MISP (+ MySQL + Redis), Shuffle et un LLM 7B n'est **pas viable** : cette session a observé un `load average` jusqu'à 90 (sur 4 cœurs) et des `oom-kill` répétés du noyau, y compris après avoir déjà réduit le nombre de services actifs. Une estimation réaliste pour faire tourner l'ensemble confortablement en continu est de **16 à 24 Go de RAM et 6 à 8 vCPU**.
+Cette maquette tourne sur une VM à **4 vCPU / 9,7 Go de RAM**. Sur cette configuration, faire tourner simultanément Wazuh (manager + indexeur + dashboard), TheHive (+ Cassandra + Elasticsearch), Cortex, MISP (+ MySQL + Redis), Shuffle et un LLM 9B n'est **pas viable** : `load average` observé jusqu'à 90 (sur 4 cœurs), `oom-kill` répétés, disque saturé à 96 % à un moment. Une estimation réaliste pour un fonctionnement confortable et continu est de **16 à 24 Go de RAM et 6 à 8 vCPU**, avec un espace disque surveillé activement (purge régulière des images Docker obsolètes).
 
-Le mode de travail qui s'est imposé au fil des sessions n'est donc pas un contournement ponctuel mais une méthode : arrêter les services non essentiels à la tâche du moment (par exemple MISP/Cortex/TheHive pendant un traitement LLM intensif), exécuter, puis les redémarrer. C'est documenté ici explicitement plutôt que présenté comme un fonctionnement continu sans friction, qui ne correspondrait pas à la réalité observée.
+Le mode de travail qui s'est imposé au fil des sessions n'est donc pas un contournement ponctuel mais une méthode : arrêter les services non essentiels à la tâche du moment, exécuter, puis les redémarrer. Documenté ici explicitement plutôt que présenté comme un fonctionnement continu sans friction, qui ne correspondrait pas à la réalité observée.
+
+**Sur le temps de traitement du LLM** : ~119 s/alerte avec Gemma2 9B sur cette VM de test contrainte (RAM/CPU partagés avec toute la stack). Ce chiffre est honnêtement rapporté tel quel plutôt que minimisé. En entreprise, avec une infrastructure dédiée (plus de vCPU sans contention, RAM plus rapide, potentiellement un GPU), ce temps diminuerait significativement — d'autant que l'architecture à deux niveaux ([voir plus haut](#renforcement-méthodologique)) garantit que le LLM n'est de toute façon jamais invoqué sur le flux brut complet, seulement sur les alertes déjà remontées comme significatives par la baseline.
 
 ## Reproduire l'environnement
 
@@ -544,31 +380,46 @@ docker compose up -d
 # 3. TheHive
 docker compose -f docker/thehive-docker-compose.yml up -d
 
-# 4. Ollama + Mistral 7B
+# 4. Ollama + Gemma2 9B
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull mistral:7b-instruct-q4_0
+ollama pull gemma2:9b-instruct-q4_0
 
 # 5. Script d'intégration
 pip install -r scripts/requirements.txt
 python scripts/wazuh_ai_triage.py
 ```
 
-## Planning prévisionnel (2 mois)
+## État d'avancement et planning
+
+| Composant | Statut |
+|---|---|
+| Infrastructure (VM Ubuntu 22.04 + Docker) | ✅ Opérationnel |
+| Wazuh (Manager + Indexer + Dashboard + auditd) | ✅ Déployé, testé de bout en bout |
+| TheHive 5.4 | ✅ Déployé, cas créés automatiquement |
+| Ollama + Gemma2 9B (quantifié q4_0) | ✅ Déployé, triage testé et validé (100 % MITRE sur tous les scénarios avancés) |
+| Script Python Wazuh → LLM → TheHive | ✅ Fonctionnel, réexécuté et vérifié en conditions réelles |
+| Jeu de 38+36 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé, répété 3 fois pour mesurer la variance |
+| Cortex (analyse d'observables) | ✅ Déployé, 3 analyseurs réels testés, connecteur TheHive lié et testé |
+| MISP (Threat Intelligence) | ✅ Déployé, événement + IOC réels créés, connecteur TheHive lié et testé |
+| Shuffle (SOAR) | ✅ Déployé, playbook à 3 étapes testé de bout en bout (webhook réel → cas TheHive vérifié) |
+| Dashboard SOC personnalisé | ✅ 4 indicateurs opérationnels |
+| Rapports PDF automatiques | ⏳ Prévu, restant à faire |
 
 | Semaine | Phase | Statut |
 |---|---|---|
 | S1 | Cadrage, architecture, choix du périmètre | ✅ |
 | S2 | SIEM (Wazuh + collecte logs) | ✅ |
 | S3 | Gestion incidents (TheHive) | ✅ |
-| S4 | Assistant IA (Ollama + Mistral) | ✅ |
-| S5 | Évaluation IA (jeu de 30-50 alertes, baseline, métriques) | ✅ |
+| S4 | Assistant IA (Ollama + LLM) | ✅ |
+| S5 | Évaluation IA (baseline, métriques, itérations) | ✅ |
 | S6 | Enrichissement (Cortex, MISP) | ✅ |
-| S7 | Automatisation (Shuffle, dashboard, rapports PDF) | ✅ (rapport PDF restant) |
-| S8 | Validation finale, rapport, soutenance | ⏳ |
+| S7 | Automatisation (Shuffle, dashboard) | ✅ |
+| S8 | Scénarios avancés (auditd, changement de modèle, preuve de bout en bout) | ✅ |
+| S9 | Validation finale, rapport, soutenance | ⏳ |
 
 ## Valeur professionnelle
 
-Ce projet couvre les compétences SOC Analyst Tier 1/2 (triage, mapping MITRE, corrélation), Détection Engineering, Automatisation SOC (Python, APIs, SOAR) et IA appliquée (évaluation mesurable d'un LLM comme assistant de triage), le tout sur une infrastructure Docker Compose reproductible.
+Ce projet couvre les compétences SOC Analyst Tier 1/2 (triage, mapping MITRE, corrélation), Détection Engineering (règles personnalisées, `auditd`), Automatisation SOC (Python, APIs, SOAR), et IA appliquée (évaluation mesurable et rigoureuse d'un LLM comme assistant de triage, avec comparaison de modèles), le tout sur une infrastructure Docker Compose reproductible et honnêtement documentée — y compris ses limites.
 
 ---
 
