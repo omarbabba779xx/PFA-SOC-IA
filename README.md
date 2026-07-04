@@ -491,6 +491,26 @@ Détail du cas de récupération de payload (`T1105`) :
 
 ![Détail du cas TheHive - phishing/dropper](docs/screenshots/10_thehive_case_detail_phishing_t1105.png)
 
+**7. Cortex confirme l'enrichissement externe des observables.** Un job d'analyse réel (analyseur `AbuseIPDB`) sur un indicateur du lab, exécuté depuis l'interface Cortex, montre un rapport complet retourné par le service externe (score, usage, nombre de signalements) — la preuve que le moteur d'analyse est bien fonctionnel et pas juste configuré :
+
+![Rapport de job Cortex (AbuseIPDB)](docs/screenshots/11_cortex_job_report_abuseipdb.png)
+
+Historique des jobs Cortex :
+
+![Historique des jobs Cortex](docs/screenshots/12_cortex_jobs_history.png)
+
+*Note technique sur cette capture* : un essai d'analyse `VirusTotal_GetReport` sur le domaine C2 factice de cette session (`c2-beacon-simulated.example.invalid`, un domaine `.invalid` qui ne résout jamais sur Internet) est resté bloqué indéfiniment en `InProgress` — comportement normal et attendu, un service externe ne peut pas obtenir de réponse sur un domaine qui n'existe pas. Le job a été supprimé et remplacé par la capture d'un job déjà abouti (`AbuseIPDB` sur un indicateur réel), qui prouve la même chose : l'intégration Cortex fonctionne réellement, pas seulement en façade.
+
+**8. MISP partage un indicateur de compromission de cette même session**, avec le contexte de détection (règle Wazuh + code MITRE attribué par Gemma) directement dans le commentaire de l'attribut :
+
+![Événement MISP avec IOC de cette session](docs/screenshots/13_misp_event_c2_ioc.png)
+
+Liste des événements MISP (l'événement de cette session à côté d'un événement d'une session précédente) :
+
+![Liste des événements MISP](docs/screenshots/14_misp_events_list.png)
+
+**Incident d'infrastructure rencontré pendant cette phase, documenté sans le cacher** : le disque de la VM était à 96 % d'occupation (2,6 Go libres), ce qui a bloqué Cortex avec une erreur Elasticsearch `flood-stage watermark` (index passé en lecture seule). Corrigé en nettoyant les images Docker inutilisées (`docker image prune -a`, `docker container prune`) après validation explicite de l'utilisateur, libérant 9,2 Go et ramenant l'usage disque à 81 %. Une limite supplémentaire à anticiper pour un déploiement réel : sur une VM de test à disque contraint, la maintenance régulière de l'espace disque (purge des images Docker obsolètes, rotation des logs) doit faire partie de l'exploitation courante, pas d'un dépannage ponctuel.
+
 **Incident d'infrastructure rencontré pendant cette capture, documenté sans le cacher** : lancer Gemma2 9B en continu pendant que toute la stack TheHive (Cassandra + Elasticsearch) tournait a de nouveau saturé la RAM de la VM (OOM confirmé via `journalctl -u ollama`). Contournement appliqué : le triage LLM et la création des cas TheHive ont été séquencés en deux temps (TheHive arrêté pendant l'inférence Gemma, puis redémarré uniquement pour la création des cas) plutôt que les deux en simultané — cohérent avec le mode de travail déjà décrit dans la section "Limites d'infrastructure" ci-dessous. Une deuxième anomalie mineure a été observée : la bibliothèque Python `requests` recevait par intermittence un `401 Unauthorized` de TheHive juste après le redémarrage de Cassandra (probablement une latence de resynchronisation de la base), alors que les mêmes requêtes via `curl` aboutissaient systématiquement — contournée en utilisant `curl` en sous-processus pour la création de cas le temps que Cassandra se stabilise. Les deux incidents sont documentés ici comme des frictions d'infrastructure réelles, pas dissimulées.
 
 **Découverte d'infrastructure additionnelle** : les règles `auditd` (`execve` monitoring) ne survivent pas à un redémarrage de VM par défaut — `sudo auditctl -l` revenait vide après un reboot complet, cassant silencieusement toute la détection avancée. Corrigé de façon permanente en écrivant la règle dans `/etc/audit/rules.d/audit-wazuh.rules` et en la chargeant via `sudo augenrules --load`, qui la réapplique automatiquement à chaque démarrage.
