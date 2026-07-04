@@ -125,27 +125,21 @@ Détail du cas de récupération de payload (`T1105`) :
 
 ![Détail du cas TheHive - phishing/dropper](docs/screenshots/10_thehive_case_detail_phishing_t1105.png)
 
-### 4. Cortex enrichit les observables
+### 4. Cortex et MISP enrichissent le même cas — la chaîne reste traçable de bout en bout
 
-Rapport complet d'un job d'analyse réel (`AbuseIPDB`), preuve que le moteur d'analyse externe fonctionne réellement, pas juste configuré :
+Pour prouver que Cortex et MISP ne sont pas de simples démonstrations isolées, l'enrichissement a été effectué sur un **indicateur explicitement rattaché au cas TheHive `#222`** (le cas C2 beaconing créé à l'étape précédente) : une adresse IP réelle a été ajoutée comme observable de ce cas, avec une description renvoyant explicitement au numéro de cas, à la règle Wazuh et au code MITRE :
 
-![Rapport de job Cortex (AbuseIPDB)](docs/screenshots/11_cortex_job_report_abuseipdb.png)
+![Observable IOC lié explicitement au cas #222](docs/screenshots/19_thehive_observable_ioc_linked.png)
 
-Historique des jobs Cortex :
+Cortex analyse ensuite ce même indicateur (VirusTotal + AbuseIPDB), avec un rapport complet retourné en quelques secondes :
 
-![Historique des jobs Cortex](docs/screenshots/12_cortex_jobs_history.png)
+![Rapport de job Cortex (VirusTotal) sur l'indicateur du cas #222](docs/screenshots/18_cortex_job_report_virustotal_case222.png)
 
-*Note honnête sur cette capture* : un essai d'analyse `VirusTotal_GetReport` sur un domaine C2 factice (`.invalid`, qui ne résout jamais sur Internet) est resté bloqué en `InProgress` — comportement normal et attendu, un service externe ne peut pas obtenir de réponse sur un domaine qui n'existe pas. Le job a été supprimé et remplacé par la capture d'un job déjà abouti sur un indicateur réel.
+Le verdict Cortex (0/91 détections malveillantes) est ensuite reporté dans MISP, sur un attribut qui référence explicitement le même numéro de cas TheHive et le même résultat d'analyse — MISP devient ainsi le point de capitalisation final de la même chaîne, pas un événement déconnecté :
 
-### 5. MISP partage les indicateurs
+![Événement MISP référençant le cas #222 et le verdict Cortex](docs/screenshots/20_misp_event_linked_to_case222.png)
 
-Événement MISP avec un IOC réel de cette session (domaine C2), contexte de détection Wazuh + code MITRE de Gemma dans le commentaire de l'attribut :
-
-![Événement MISP avec IOC de cette session](docs/screenshots/13_misp_event_c2_ioc.png)
-
-Liste des événements MISP :
-
-![Liste des événements MISP](docs/screenshots/14_misp_events_list.png)
+Cette traçabilité (même numéro de cas, même indicateur, même code MITRE visible dans les trois outils) est la preuve que Wazuh, Gemma, TheHive, Cortex et MISP fonctionnent bien **en chaîne sur un seul et même incident**, et pas comme cinq démonstrations indépendantes assemblées après coup.
 
 ### 6. Shuffle orchestre la réponse automatisée
 
@@ -160,6 +154,8 @@ Graphe complet du workflow (webhook, enrichissement, branchement conditionnel) :
 Le cas TheHive `#230` réellement créé par cette exécution (tags `shuffle-auto`, `routine`, `wazuh`), vérifié indépendamment via l'API `listCase` de TheHive :
 
 ![Cas TheHive créé par Shuffle](docs/screenshots/17_thehive_case_from_shuffle.png)
+
+**Précision sur l'articulation entre les deux chemins d'automatisation** : le script Python (`wazuh_ai_triage.py`, qui invoque Gemma) et le workflow Shuffle sont deux chemins d'entrée distincts vers la **même infrastructure partagée** (même TheHive, même Cortex, même MISP) : le premier pour un triage qualitatif avec IA sur les alertes significatives, le second pour un routage instantané et déterministe sans latence LLM sur les alertes déjà bien caractérisées par `rule.level`. Les deux aboutissent au même écosystème de cas, mais ne sont pas chaînés l'un à l'autre dans une seule exécution — ce point est documenté explicitement pour ne pas laisser croire à une chaîne unique à six outils en un seul clic là où il s'agit de deux voies d'automatisation complémentaires vers le même SOC.
 
 ### Incidents rencontrés pendant cette phase de capture (documentés, pas cachés)
 

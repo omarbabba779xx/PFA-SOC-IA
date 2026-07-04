@@ -164,29 +164,29 @@ Le script combine la criticité de la baseline Wazuh (fiable) avec le mapping MI
 
 ![Détail du cas TheHive - phishing/dropper](screenshots/10_thehive_case_detail_phishing_t1105.png)
 
-### Étape 5 — Cortex enrichit un indicateur (à la demande)
+### Étape 5 — Cortex et MISP enrichissent le même cas, de façon traçable
 
-Si l'analyste (ou un workflow Shuffle) veut en savoir plus sur un indicateur présent dans un cas, Cortex peut interroger des bases externes.
+Pour que la chaîne reste vérifiable de bout en bout, l'enrichissement a été fait sur un **indicateur explicitement rattaché au cas TheHive #222** (celui du C2 beaconing), plutôt que sur un indicateur générique isolé : une adresse IP réelle a été ajoutée comme observable de ce cas précis, avec une description mentionnant le numéro de cas, la règle Wazuh et le code MITRE.
 
-**Preuve — rapport réel de l'analyseur AbuseIPDB** :
+**Preuve — l'observable dans le cas TheHive, avec sa description de traçabilité** :
 
-![Rapport de job Cortex (AbuseIPDB)](screenshots/11_cortex_job_report_abuseipdb.png)
+![Observable IOC lié explicitement au cas #222](screenshots/19_thehive_observable_ioc_linked.png)
 
-*Explication* : pour l'IP `8.8.8.8`, AbuseIPDB répond : `Whitelisted: True`, `Usage: Content Delivery Network`, `Score: 0`, `Reports: 28`. C'est un vrai appel réseau vers un service tiers (AbuseIPDB.com), pas une simulation — la clé API utilisée est un compte gratuit personnel.
+*Explication* : le champ "Description" contient littéralement "reference case #222, regle Wazuh 100103, technique T1071" — n'importe qui consultant cet observable peut remonter jusqu'à l'alerte d'origine.
 
-**Preuve — historique des jobs Cortex** :
+**Preuve — rapport Cortex (VirusTotal) sur ce même indicateur** :
 
-![Historique des jobs Cortex](screenshots/12_cortex_jobs_history.png)
+![Rapport de job Cortex (VirusTotal) sur l'indicateur du cas #222](screenshots/18_cortex_job_report_virustotal_case222.png)
 
-### Étape 6 — MISP centralise l'indicateur
+*Explication* : un vrai appel réseau vers VirusTotal, exécuté quelques secondes après l'ajout de l'observable — `last_analysis_stats` montre 0 détection malveillante sur 91 moteurs, cohérent avec le fait qu'il s'agit d'une IP publique légitime utilisée ici comme indicateur de démonstration.
 
-**Preuve — événement MISP avec l'IOC réel du scénario C2** :
+### Étape 6 — MISP capitalise le même indicateur, avec le verdict Cortex
 
-![Événement MISP avec IOC de cette session](screenshots/13_misp_event_c2_ioc.png)
+**Preuve — événement MISP avec le verdict Cortex et la référence au cas #222** :
 
-*Explication* : l'attribut `domain: c2-beacon-simulated.example.invalid` porte un commentaire reliant explicitement la détection Wazuh (règle 100103) et la classification Gemma (T1071) — MISP devient ainsi la mémoire centralisée qui relie les deux bouts de la chaîne.
+![Événement MISP référençant le cas #222 et le verdict Cortex](screenshots/20_misp_event_linked_to_case222.png)
 
-![Liste des événements MISP](screenshots/14_misp_events_list.png)
+*Explication* : l'attribut `ip-src: 8.8.8.8` porte un commentaire qui dit explicitement *"IOC lie au cas TheHive #222 [...] Analyse Cortex [...] : 0/91 detections malveillantes"* — MISP devient ainsi le point final d'une chaîne où le **même numéro de cas et le même indicateur** sont visibles dans Wazuh (à l'origine), TheHive (le cas), Cortex (l'analyse) et MISP (le partage), et non quatre démonstrations juxtaposées sans lien entre elles.
 
 ### Étape 7 — Shuffle orchestre tout automatiquement (chemin alternatif au script Python)
 
