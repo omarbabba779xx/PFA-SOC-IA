@@ -495,6 +495,14 @@ Détail du cas de récupération de payload (`T1105`) :
 
 **Découverte d'infrastructure additionnelle** : les règles `auditd` (`execve` monitoring) ne survivent pas à un redémarrage de VM par défaut — `sudo auditctl -l` revenait vide après un reboot complet, cassant silencieusement toute la détection avancée. Corrigé de façon permanente en écrivant la règle dans `/etc/audit/rules.d/audit-wazuh.rules` et en la chargeant via `sudo augenrules --load`, qui la réapplique automatiquement à chaque démarrage.
 
+### Test de reproductibilité : le résultat Gemma tient-il sur un lot totalement indépendant ?
+
+Pour ne pas se contenter d'un seul run favorable, un **quatrième lot phishing totalement indépendant** (4 alertes fraîches, générées et testées séparément des lots précédents) a été rejoué avec Gemma2 9B : [`docs/evaluation/evaluation_results_phishing_repro.json`](docs/evaluation/evaluation_results_phishing_repro.json).
+
+**Résultat : 4/4 (100 %) de correspondance MITRE**, identique aux deux lots précédents. Cumulé sur les trois lots phishing testés avec Gemma2 9B (6 + 5 + 4 alertes, générées et évaluées séparément) : **15/15 (100 %)**. Ce n'est plus un seul run favorable mais une reproductibilité confirmée sur trois batches indépendants.
+
+**Précision honnête sur ce dernier lot** : l'écart moyen de criticité LLM est de 1,00 (au lieu de 0,00) sur ce run — le modèle a répondu "haute" là où la référence de test attendait "moyenne" pour ce scénario. Ce n'est pas un problème pour l'architecture réelle : rappelons que l'approche hybride du projet utilise la criticité de la **baseline à règles** (fiable et déterministe) et seulement le mapping MITRE du LLM (voir `wazuh_ai_triage.py`) — l'éventuelle imprécision du LLM sur le *niveau* de criticité n'affecte donc jamais la criticité réellement utilisée pour la création des cas TheHive.
+
 ## Limites d'infrastructure
 
 Cette maquette tourne sur une VM à **4 vCPU / 9,7 Go de RAM**. Sur cette configuration, faire tourner simultanément Wazuh (manager + indexeur + dashboard), TheHive (+ Cassandra + Elasticsearch), Cortex, MISP (+ MySQL + Redis), Shuffle et un LLM 7B n'est **pas viable** : cette session a observé un `load average` jusqu'à 90 (sur 4 cœurs) et des `oom-kill` répétés du noyau, y compris après avoir déjà réduit le nombre de services actifs. Une estimation réaliste pour faire tourner l'ensemble confortablement en continu est de **16 à 24 Go de RAM et 6 à 8 vCPU**.
