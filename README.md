@@ -157,6 +157,8 @@ Le cas TheHive `#230` réellement créé par cette exécution (tags `shuffle-aut
 
 **Précision sur l'articulation entre les deux chemins d'automatisation** : le script Python (`wazuh_ai_triage.py`, qui invoque Gemma) et le workflow Shuffle sont deux chemins d'entrée distincts vers la **même infrastructure partagée** (même TheHive, même Cortex, même MISP) : le premier pour un triage qualitatif avec IA sur les alertes significatives, le second pour un routage instantané et déterministe sans latence LLM sur les alertes déjà bien caractérisées par `rule.level`. Les deux aboutissent au même écosystème de cas, mais ne sont pas chaînés l'un à l'autre dans une seule exécution — ce point est documenté explicitement pour ne pas laisser croire à une chaîne unique à six outils en un seul clic là où il s'agit de deux voies d'automatisation complémentaires vers le même SOC.
 
+**Tentative d'intégration Shuffle → MISP directe, et limite honnête rencontrée** : pour rapprocher encore les deux chemins d'automatisation, une tentative a été faite de pousser automatiquement l'IOC du cas vers MISP (nouvelle clé API MISP dédiée, appel direct à l'API `/events`). L'investigation a été poussée jusque dans le code source PHP de MISP (`AppController::__loginByAuthKey`) pour diagnostiquer un rejet systématique (`403 Authentication failed`) : les permissions du rôle (`Auth key access`) et le paramètre `Security.advanced_authkeys` ont été vérifiés corrects, mais la vérification de la clé en base continue d'échouer quelle que soit la méthode utilisée (interface web, CLI `cake authkey`, appel direct). Conclusion : il s'agit d'un dysfonctionnement réel de cette instance MISP (image Docker officielle), indépendant de la clé ou de la méthode d'appel, qui n'a pas pu être résolu dans un délai raisonnable sans risquer de perturber le reste de la stack. Documenté ici comme une limite honnête plutôt que masqué — l'automatisation TheHive → MISP reste donc manuelle (via le bouton natif "Export to MISP" de TheHive) ou via saisie directe dans MISP, toutes deux fonctionnelles et déjà démontrées plus haut sur le même cas `#222`.
+
 ### Incidents rencontrés pendant cette phase de capture (documentés, pas cachés)
 
 - **OOM en cumulant Gemma2 9B + toute la stack TheHive** (Cassandra + Elasticsearch) : confirmé via `journalctl -u ollama`. Contourné en séquençant : TheHive arrêté pendant l'inférence Gemma, redémarré ensuite pour la création des cas.
@@ -352,6 +354,8 @@ Cette maquette a fait l'objet de plusieurs sessions de re-vérification active p
 | Disque VM à 96 % | Images Docker obsolètes accumulées | Nettoyage Docker (9,2 Go libérés) |
 | Conteneurs Shuffle supprimés par effet de bord | Nettoyage Docker sur conteneurs arrêtés 44h | Redéploiement depuis le code source |
 | Bugs Shuffle (nœud fantôme, Swarm cassé, réseau isolé, opérateurs de condition, cache figé, bug Liquid, filtre `<level>`) | Voir section dédiée | Voir section dédiée |
+| VM complètement gelée (~46 min, aucune réponse réseau) | RAM épuisée sans swap configuré, thrashing noyau | Redémarrage forcé (`VBoxManage poweroff` + `startvm`), tous les conteneurs configurés en restart automatique |
+| Push automatique TheHive → MISP impossible (403 persistant) | Dysfonctionnement de l'authentification par clé API de cette instance MISP (cause non résolue malgré investigation dans le code source) | Non résolu — solution de repli : export MISP manuel natif de TheHive, fonctionnel |
 
 ## Limites d'infrastructure
 
