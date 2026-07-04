@@ -14,7 +14,7 @@
   <rule id="100099" level="8">
     <if_sid>80792</if_sid>
     <field name="audit.command">^curl$|^wget$</field>
-    <description>Suspicious payload retrieval via curl/wget (possible phishing delivery / dropper)</description>
+    <description>Single network fetch via curl/wget - possible external tool/payload retrieval</description>
     <mitre>
       <id>T1105</id>
     </mitre>

@@ -1,0 +1,182 @@
+[
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "Log",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1071",
+      "resume": "Single network fetch via curl/wget - possible external tool/payload retrieval (niveau 8)",
+      "recommandation": "Investigate the source of the malicious script and block its execution."
+    },
+    "llm_duration_sec": 55.5,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "Command and Control",
+      "criticite": "haute",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Alerte sur un r\u00e9seau de fetch via curl/wget possible d'outil ou de charge malicieuse externe.",
+      "recommandation": "Investigate the source of the command and block any external connections."
+    },
+    "llm_duration_sec": 58.4,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "devinette de mot de passe",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Log 'sshd: Attempt to login using a non-existent user'",
+      "recommandation": "Bloquer l'IP de l'utilisateur et mettre en place des contr\u00f4les d'acc\u00e8s pour emp\u00eacher d'autres tentatives."
+    },
+    "llm_duration_sec": 62.4,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "devinette de mot de passe",
+      "criticite": "haute",
+      "mitre_tactic": "Credential Access",
+      "mitre_technique": "T1110",
+      "resume": "Log 'sshd: Attempt to login using a non-existent user'",
+      "recommandation": "Bloquer l'IP de l'utilisateur et mettre en place des contr\u00f4les d'acc\u00e8s pour emp\u00eacher d'autres tentatives."
+    },
+    "llm_duration_sec": 63.4,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "Command and Control",
+      "criticite": "haute",
+      "mitre_tactic": "T1105",
+      "mitre_technique": "T1105",
+      "resume": "Recuperation d'un outil ou payload externe sur le systeme",
+      "recommandation": "Isolateur le compte et bloquer l'acc\u00e8s au curl/wget pour emp\u00eacher la r\u00e9cup\u00e9ration de l'outil ou du payload."
+    },
+    "llm_duration_sec": 61.4,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": true,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "baseline": {
+      "incident_type": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+      "criticite": "moyenne",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    },
+    "llm": {
+      "incident_type": "Command and Control",
+      "criticite": "haute",
+      "mitre_tactic": "Execution",
+      "mitre_technique": "T1059.001",
+      "resume": "Recuperation d'un outil ou payload externe sur le systeme via curl/wget",
+      "recommandation": "Isolateur le systeme et bloquer les connexions externes pour emp\u00eacher la propagation du malware."
+    },
+    "llm_duration_sec": 60.1,
+    "baseline_criticality_gap": 1,
+    "llm_criticality_gap": 0,
+    "baseline_mitre_match": true,
+    "llm_mitre_match": false,
+    "llm_parse_error": false,
+    "llm_criticality_normalized": false
+  }
+]

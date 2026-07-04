@@ -62,6 +62,21 @@ TRIAGE_PROMPT_TEMPLATE = """Tu es un assistant de triage SOC. Analyse l'alerte s
 reponds UNIQUEMENT en JSON valide avec les champs : incident_type, criticite
 (basse/moyenne/haute/critique), mitre_tactic, mitre_technique, resume, recommandation.
 
+Voici des exemples de classification correcte pour des alertes similaires (memorise le code MITRE exact associe a chaque type d'evenement) :
+
+1. Log "sshd: Attempt to login using a non-existent user" -> brute force / devinette de mot de passe -> criticite "haute", tactique "Credential Access", technique "T1110"
+2. Log "sshd: authentication success." ou "PAM: Login session opened." -> usage normal d'un compte valide -> criticite "basse", tactique "Initial Access", technique "T1078"
+3. Log "Successful sudo to ROOT executed." ou "User missed the password to change UID" -> abus/tentative d'elevation de privileges via sudo/su -> criticite "basse" si succes attendu, "moyenne" si echec -> tactique "Privilege Escalation", technique "T1548"
+4. Log "New user added to the system." -> creation de compte, technique de persistance -> criticite "haute", tactique "Persistence", technique "T1136"
+5. Log "Group (or user) deleted from the system." -> suppression de compte -> criticite "moyenne", tactique "Impact", technique "T1531"
+6. Log "Crontab entry changed." -> tache planifiee, technique de persistance -> criticite "moyenne", tactique "Persistence", technique "T1053"
+7. Log audit contenant comm="curl" ou comm="wget" (une SEULE occurrence isolee, PAS repetee) suivi d'une URL en argument -> recuperation d'un outil ou payload externe -> criticite "haute", tactique "Command and Control", technique "T1105" (Ingress Tool Transfer). ATTENTION : jamais "T1566" (Phishing, impossible a prouver sans passerelle mail) ni "T1071" (reserve aux occurrences REPETEES, voir exemple 9) -- une occurrence unique est TOUJOURS T1105.
+8. Log audit contenant comm="pwsh" ou comm="powershell" avec un argument "-enc" ou "-EncodedCommand" -> execution PowerShell suspecte/obfusquee -> criticite "critique", tactique "Execution", technique "T1059.001" (PAS T1056, qui concerne la capture de saisie clavier)
+9. Alerte "Repeated network fetch commands executed in a short window" -> requetes repetees vers la meme destination -> balisage periodique -> criticite "haute", tactique "Command and Control", technique "T1071"
+10. Alerte "Multiple successive SSH sessions followed by privilege escalation" -> connexions SSH repetees avec elevation -> deplacement entre sessions -> criticite "haute", tactique "Lateral Movement", technique "T1021.004"
+
+Applique le meme niveau de precision pour l'alerte ci-dessous. Si le log correspond a l'un des exemples ci-dessus, reutilise EXACTEMENT le meme code MITRE.
+
 Alerte Wazuh :
 - Regle : {rule_description} (niveau {rule_level})
 - Agent : {agent_name}

