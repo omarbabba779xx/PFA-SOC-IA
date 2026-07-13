@@ -11,6 +11,7 @@ Ce document explique, étape par étape, **chaque outil utilisé**, **son rôle 
 3. [Étape par étape : le trajet complet d'une alerte, avec preuves](#3-étape-par-étape--le-trajet-complet-dune-alerte-avec-preuves)
 4. [Comment le triage IA fonctionne exactement](#4-comment-le-triage-ia-fonctionne-exactement)
 5. [Comment l'orchestration Shuffle fonctionne exactement](#5-comment-lorchestration-shuffle-fonctionne-exactement)
+6. [Routage automatique par criticité — preuve sur un incident unique](#6-routage-automatique-par-criticité--preuve-sur-un-incident-unique)
 
 ---
 
@@ -231,3 +232,43 @@ Gemma génère sa réponse par inférence statistique, en s'appuyant sur les exe
 5. Chaque branche appelle l'API TheHive (`POST /api/v1/case`) directement en HTTP, sans script Python.
 
 C'est un chemin **entièrement différent** du script `wazuh_ai_triage.py` (qui, lui, invoque le LLM) — Shuffle démontre qu'on peut aussi automatiser la création de cas de façon purement événementielle et déclarative, sans dépendre de Gemma pour les cas simples.
+
+## 6. Routage automatique par criticité — preuve sur un incident unique
+
+Pour prouver que le seuil de routage (`LLM_INVOCATION_THRESHOLD_LEVEL=8` côté script Python, condition `rule.level` 5-7 côté Shuffle) fonctionne réellement et de façon complémentaire — pas seulement en théorie — un incident simulé unique a été rejoué avec deux actions distinctes issues de la même source, à quelques secondes d'intervalle :
+
+1. **Reconnaissance** : `nc -z -w2 1.1.1.1 80` (sondage de port, technique T1046) → règle personnalisée `100107`, niveau 6 → tombe dans la plage gérée par **Shuffle**.
+2. **Récupération d'outil externe** : `curl http://1.1.1.1` (technique T1105) → règle `100099`, niveau 8 → dépasse le seuil et est géré par **Gemma / `wazuh_ai_triage.py`**.
+
+### Étape 1 — Détection Wazuh
+
+Les deux alertes apparaissent dans l'indexeur au même timestamp (`16:56:55`), confirmant qu'elles proviennent bien du même incident simulé :
+
+![Alertes Wazuh niveau 6 et niveau 8 sur la même cible 1.1.1.1](screenshots/21_wazuh_events_1_1_1_1_incident.png)
+
+Le détail de l'alerte de reconnaissance expose les arguments bruts de la commande (`audit.execve.a0`=`nc`, `a1`=`-z`, `a2`=`-w2`, `a3`=`1.1.1.1`, `a4`=`80`) — la preuve que l'IP cible correspond bien au scénario, pas une supposition :
+
+![Détail de l'alerte 100107 avec l'IP cible dans les champs audit.execve](screenshots/22_wazuh_alert_100107_detail_1_1_1_1.png)
+
+### Étape 2 — Le chemin Shuffle (niveau 5-7) traite l'alerte automatiquement
+
+Le webhook Wazuh → Shuffle déclenche l'exécution du workflow sans aucune intervention manuelle. La capture de l'historique d'exécution montre des runs `FINISHED` toutes les 1 à 2 secondes, résultat du flux d'alertes réel généré en continu par la VM (pas seulement l'alerte du scénario) :
+
+![Historique d'exécution en direct du workflow Shuffle](screenshots/23_shuffle_workflow_execution_live.png)
+
+Quelques secondes plus tard, un nouveau cas TheHive apparaît, créé par le compte de service `SOC Automation` (c'est-à-dire Shuffle lui-même via son intégration API), avec les tags attendus (`soc-lab`, `shuffle-auto`, `routine`, `wazuh`) :
+
+![Cas TheHive routine créé automatiquement par Shuffle](screenshots/24_thehive_routine_case_shuffle_live.png)
+
+### Étape 3 — Le chemin Gemma (niveau ≥ 8) : ce qui a fonctionné et sa limite honnête
+
+Le script `wazuh_ai_triage.py`, exécuté manuellement pour ce test, a correctement identifié l'alerte `100099` (niveau 8) associée au même incident via la requête filtrée côté serveur — confirmant que la logique de routage par seuil est correcte et fonctionne en amont de l'appel au LLM.
+
+En revanche, l'inférence Gemma2 9B elle-même n'a pas pu être menée à terme dans un délai raisonnable lors de cette session de test précise. Cause identifiée : sur une VM à 9,7 Go de RAM faisant tourner simultanément l'intégralité de la stack (Wazuh × 3 conteneurs, TheHive + Cassandra + Elasticsearch, Cortex, MISP + MySQL + Redis, Shuffle × 4 conteneurs), le chargement du modèle Gemma2 9B (empreinte mémoire d'environ 5,9 Go) doit s'appuyer massivement sur le swap disque plutôt que sur la RAM physique, ce qui a fait dépasser 8 à 28 minutes selon les tentatives — plusieurs ordres de grandeur au-dessus des ~119 secondes/alerte déjà mesurées et documentées dans le README dans des conditions de charge plus favorables. Cette limite est documentée ici sans être minimisée : elle illustre concrètement pourquoi le chemin Shuffle (déterministe, sans LLM) reste indispensable pour le traitement à faible latence des alertes déjà bien caractérisées par leur `rule.level`, et pourquoi le chemin Gemma est réservé aux alertes significatives où la latence est acceptable en échange d'un enrichissement qualitatif (mapping MITRE, résumé, recommandation).
+
+### Bugs supplémentaires rencontrés en préparant cette preuve
+
+- **Volume de bruit `auditd` extrême** (~14 000 alertes/15 min, provenant des propres processus internes de Docker) : corrigé en restreignant la règle `auditd` aux sessions utilisateur réelles (`-F auid>=1000 -F auid!=4294967295`).
+- **Bug de filtrage côté client** dans `fetch_recent_alerts()` : le filtrage par `rule.level` après récupération des N alertes les plus récentes faisait disparaître les alertes significatives sous le volume de bruit résiduel. Corrigé en déplaçant le filtre dans la requête Elasticsearch elle-même.
+- **Disque VM saturé à 100 %**, ayant arrêté silencieusement `auditd` pendant plus de 12 heures sans alerte explicite dans les tableaux de bord habituels. Corrigé par nettoyage Docker, purge des journaux systemd, puis agrandissement définitif du disque virtuel (59 → 80 Go).
+- **Corruption de commit logs Cassandra** et **corruption de shards sur l'indexeur Wazuh**, toutes deux causées par des arrêts brutaux répétés de la VM pendant la session — corrigées respectivement par mise en quarantaine des commit logs corrompus et suppression de l'index quotidien corrompu (sans réplica sur ce cluster single-node, aucune récupération possible ; perte limitée à quelques centaines d'alertes de bruit déjà indexées).

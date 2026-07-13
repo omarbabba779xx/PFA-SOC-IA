@@ -25,7 +25,8 @@ Variables d'environnement attendues :
   THEHIVE_URL         (defaut: http://localhost:9000)
   THEHIVE_API_KEY
   CRITICALITY_THRESHOLD (defaut: moyenne) -- seuil de creation de cas
-  LLM_INVOCATION_THRESHOLD_LEVEL (defaut: 5) -- rule.level minimum pour invoquer le LLM
+  LLM_INVOCATION_THRESHOLD_LEVEL (defaut: 8) -- rule.level minimum pour invoquer le LLM
+                                  (complementaire de Shuffle, qui gere le niveau 5-7 -- voir README)
 """
 
 import json
@@ -56,7 +57,7 @@ CRITICALITY_NORMALIZE = {
     "critical": "critique", "critique": "critique",
 }
 CRITICALITY_THRESHOLD = os.environ.get("CRITICALITY_THRESHOLD", "moyenne")
-LLM_INVOCATION_THRESHOLD_LEVEL = int(os.environ.get("LLM_INVOCATION_THRESHOLD_LEVEL", "5"))
+LLM_INVOCATION_THRESHOLD_LEVEL = int(os.environ.get("LLM_INVOCATION_THRESHOLD_LEVEL", "8"))
 
 TRIAGE_PROMPT_TEMPLATE = """Tu es un assistant de triage SOC. Analyse l'alerte suivante et
 reponds UNIQUEMENT en JSON valide avec les champs : incident_type, criticite
@@ -87,20 +88,31 @@ Reponds uniquement avec le JSON, sans texte autour.
 """
 
 
-def fetch_recent_alerts(minutes: int = 15, size: int = 20) -> list[dict]:
-    """Recupere les alertes Wazuh des N dernieres minutes depuis l'indexeur."""
+def fetch_recent_alerts(minutes: int = 15, size: int = 300, min_level: int | None = None) -> list[dict]:
+    """Recupere les alertes Wazuh des N dernieres minutes depuis l'indexeur.
+
+    Filtre par rule.level cote serveur (min_level) plutot que de recuperer
+    les N alertes les plus recentes puis filtrer localement : sur une VM au
+    volume de bruit eleve, un filtrage client-side peut faire disparaitre les
+    alertes significatives (mais peu frequentes) hors de la fenetre avant
+    meme d'atteindre le script -- bug reel decouvert et corrige en session
+    (voir README, "Decouverte : volume de bruit auditd").
+    """
     since = (datetime.utcnow() - timedelta(minutes=minutes)).isoformat() + "Z"
+    must = [{"range": {"timestamp": {"gte": since}}}]
+    if min_level is not None:
+        must.append({"range": {"rule.level": {"gte": min_level}}})
     query = {
         "size": size,
         "sort": [{"timestamp": {"order": "desc"}}],
-        "query": {"range": {"timestamp": {"gte": since}}},
+        "query": {"bool": {"filter": must}},
     }
     resp = requests.get(
         f"{WAZUH_INDEXER_URL}/wazuh-alerts-4.x-*/_search",
         auth=(WAZUH_INDEXER_USER, WAZUH_INDEXER_PASSWORD),
         json=query,
         verify=False,
-        timeout=15,
+        timeout=60,
     )
     resp.raise_for_status()
     return [hit["_source"] for hit in resp.json()["hits"]["hits"]]
@@ -129,8 +141,15 @@ def triage_with_llm(alert: dict) -> dict:
     )
     resp = requests.post(
         f"{OLLAMA_URL}/api/generate",
-        json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "format": "json", "options": {"temperature": 0.1}},
-        timeout=180,
+        json={
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.1},
+            "keep_alive": "30m",
+        },
+        timeout=600,
     )
     resp.raise_for_status()
     raw_response = resp.json()["response"]
@@ -174,7 +193,7 @@ def create_thehive_case(alert: dict, triage: dict, criticite: str) -> str:
 
 def main() -> None:
     threshold_idx = CRITICALITY_ORDER.index(CRITICALITY_THRESHOLD)
-    alerts = fetch_recent_alerts()
+    alerts = fetch_recent_alerts(min_level=LLM_INVOCATION_THRESHOLD_LEVEL)
     print(f"[+] {len(alerts)} alerte(s) recuperee(s) depuis Wazuh")
 
     llm_invoked, filtered_by_baseline = 0, 0

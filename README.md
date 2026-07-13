@@ -18,12 +18,13 @@ Conception et déploiement d'une maquette de plateforme SOC (Security Operations
 6. [Changement de modèle : Mistral 7B → Gemma2 9B](#changement-de-modèle--mistral-7b--gemma2-9b)
 7. [Enrichissement et Threat Intelligence (Cortex, MISP)](#enrichissement-et-threat-intelligence-cortex-misp)
 8. [Orchestration et réponse automatisée (Shuffle SOAR)](#orchestration-et-réponse-automatisée-shuffle-soar)
-9. [Dashboard SOC personnalisé](#dashboard-soc-personnalisé)
-10. [Bugs et incidents réels — récapitulatif complet](#bugs-et-incidents-réels--récapitulatif-complet)
-11. [Limites d'infrastructure](#limites-dinfrastructure)
-12. [Reproduire l'environnement](#reproduire-lenvironnement)
-13. [État d'avancement et planning](#état-davancement-et-planning)
-14. [Valeur professionnelle](#valeur-professionnelle)
+9. [Routage automatique par criticité — preuve sur un incident unique](#routage-automatique-par-criticité--preuve-sur-un-incident-unique)
+10. [Dashboard SOC personnalisé](#dashboard-soc-personnalisé)
+11. [Bugs et incidents réels — récapitulatif complet](#bugs-et-incidents-réels--récapitulatif-complet)
+12. [Limites d'infrastructure](#limites-dinfrastructure)
+13. [Reproduire l'environnement](#reproduire-lenvironnement)
+14. [État d'avancement et planning](#état-davancement-et-planning)
+15. [Valeur professionnelle](#valeur-professionnelle)
 
 ---
 
@@ -314,6 +315,37 @@ Webhook (reçoit alerte Wazuh) → Enrichissement Cortex (GET /api/status)
 
 **Validation finale** : le workflow a été réexécuté réellement (voir [Preuve de bout en bout](#6-shuffle-orchestre-la-réponse-automatisée)) — statut `FINISHED`, cas TheHive `#230` vérifié indépendamment via l'API.
 
+## Routage automatique par criticité — preuve sur un incident unique
+
+Les deux chemins d'automatisation décrits plus haut (Shuffle pour le routage instantané, `wazuh_ai_triage.py`/Gemma pour le triage qualitatif) ont été rejoués **sur un seul et même incident simulé**, pour éliminer tout doute sur leur cohérence : une source unique (`1.1.1.1`) déclenche d'abord une action de reconnaissance (sondage de port via `nc`, règle `100107`, niveau 6 → chemin Shuffle), puis une récupération d'outil externe (`curl`, règle `100099`, niveau 8 → chemin Gemma). Le seuil d'invocation du LLM (`LLM_INVOCATION_THRESHOLD_LEVEL=8`) et la condition Shuffle (`rule.level` entre 5 et 7) sont donc bien complémentaires et non redondants sur ce cas concret.
+
+Les deux alertes générées par ce scénario, visibles côte à côte dans Wazuh avec le même timestamp (`16:56:55`) :
+
+![Alertes Wazuh niveau 6 (reconnaissance) et niveau 8 (récupération d'outil) sur la même cible](docs/screenshots/21_wazuh_events_1_1_1_1_incident.png)
+
+Détail de l'alerte de reconnaissance (règle `100107`) : les champs `audit.execve` bruts montrent explicitement la commande exécutée (`nc -z -w2 1.1.1.1 80`), preuve que l'IP cible est bien celle du scénario :
+
+![Détail de l'alerte 100107 avec l'IP cible visible dans audit.execve](docs/screenshots/22_wazuh_alert_100107_detail_1_1_1_1.png)
+
+Le workflow Shuffle traite cette alerte de niveau 6 **automatiquement, sans intervention manuelle** — capture de l'historique d'exécution en direct (`Status: FINISHED`, exécutions successives visibles toutes les 1-2 secondes sous l'effet du flux d'alertes réel de la VM) :
+
+![Historique d'exécution en direct du workflow Shuffle](docs/screenshots/23_shuffle_workflow_execution_live.png)
+
+Le cas TheHive résultant, créé automatiquement par `SOC Automation` (compte de service Shuffle) quelques secondes après l'alerte, avec les tags `soc-lab`, `shuffle-auto`, `routine`, `wazuh` et une description qui référence explicitement le webhook Shuffle et l'enrichissement Cortex :
+
+![Cas TheHive routine créé automatiquement par Shuffle](docs/screenshots/24_thehive_routine_case_shuffle_live.png)
+
+**Sur le chemin Gemma (niveau ≥ 8) pour cet incident précis** : le script `wazuh_ai_triage.py` a bien détecté et récupéré l'alerte `100099` (niveau 8) associée au même incident via la requête serveur filtrée (voir bug corrigé ci-dessous), confirmant que le routage par seuil fonctionne correctement en amont. L'inférence Gemma2 9B elle-même, en revanche, n'a pas pu être menée à son terme dans un délai raisonnable lors de cette session précise : sur une VM à 9,7 Go de RAM faisant tourner simultanément Wazuh (3 conteneurs), TheHive (+ Cassandra + Elasticsearch), Cortex, MISP (+ MySQL + Redis) et Shuffle (4 conteneurs), le chargement du modèle (5,9 Go) doit être en grande partie servi depuis le swap disque, ce qui a fait dépasser 8 à 28 minutes selon les tentatives — largement au-delà de ce qui est acceptable pour un cas d'usage SOC réel. Ce comportement est cohérent avec la latence de ~119 s/alerte déjà mesurée et documentée plus haut dans des conditions de charge plus favorables (voir [Limites d'infrastructure](#limites-dinfrastructure)) ; il est rapporté ici tel quel, sans minimisation, comme la limite concrète qui empêche de présenter le chemin Gemma comme aussi réactif que le chemin Shuffle sur cette infrastructure de test.
+
+### Bugs supplémentaires trouvés et corrigés en préparant cette preuve
+
+1. **Volume de bruit `auditd` extrême** (jusqu'à ~14 000 alertes/15 min) : la règle `auditd` de base auditait tous les processus, y compris les appels internes de Docker (`runc`, `containerd`, `coreutils`) déclenchés en continu par les conteneurs eux-mêmes. Diagnostiqué via une agrégation `_count` sur `rule.description` dans l'indexeur. Corrigé en restreignant la règle aux sessions utilisateur réelles : `-F auid>=1000 -F auid!=4294967295`, réduisant le bruit d'un facteur ~10.
+2. **Bug de filtrage côté client dans `fetch_recent_alerts()`** : la fonction récupérait les *N* alertes les plus récentes puis filtrait par `rule.level` en mémoire — sur une VM à fort volume de bruit résiduel, les alertes significatives mais peu fréquentes sortaient de la fenêtre avant même d'atteindre le filtre. Corrigé en déplaçant le filtre `rule.level` directement dans la requête Elasticsearch/OpenSearch (`bool.filter` côté serveur), vérifié en conditions réelles (`27 alerte(s) recuperee(s)` contre `0` auparavant sur le même jeu de données).
+3. **Disque VM saturé à 100 %, arrêtant silencieusement `auditd` pendant plus de 12 heures** : aucune nouvelle alerte de sécurité n'était générée sans qu'aucune erreur ne remonte explicitement dans les tableaux de bord habituels. Diagnostiqué en comparant l'horodatage courant à celui de la dernière ligne du fichier `/var/log/audit/audit.log` brut. Corrigé en trois temps : nettoyage Docker (conteneurs arrêtés et images inutilisées), purge des journaux systemd de plus de 24h, puis agrandissement définitif du disque virtuel VirtualBox (`VBoxManage modifymedium disk --resize`, 59 → 80 Go), suivi de l'extension de la table GPT, de la partition (`growpart`) et du système de fichiers (`resize2fs`).
+4. **Corruption de commit logs Cassandra** (backend de TheHive) après plusieurs arrêts brutaux de VM survenus pendant la session : `CommitLogReadHandler$CommitLogReadException` empêchait Cassandra de démarrer. Les commits logs corrompus ont été identifiés et mis en quarantaine (déplacés, pas supprimés) ; les données déjà persistées en SSTable (cas TheHive existants) n'ont pas été affectées.
+5. **Corruption de shards sur l'indexeur Wazuh** (même cause racine — arrêts brutaux répétés) : `CorruptIndexException: codec footer mismatch` sur 2 des 3 shards primaires de l'index du jour, cluster passé en état `RED`, bloquant toute nouvelle ingestion (Filebeat en échec `temporary bulk send failure` en boucle). Sans réplica configuré sur ce cluster à un seul nœud, ces shards n'étaient pas récupérables : l'index corrompu du jour a été supprimé (perte de quelques centaines d'alertes de bruit déjà indexées, aucune donnée de valeur), débloquant immédiatement l'ingestion (cluster repassé `GREEN`, nouvelles alertes indexées en quelques secondes).
+6. **Intégration Shuffle disparue de `ossec.conf` après un redémarrage de VM** (bug déjà rencontré et documenté plus haut, réapparu identiquement) — ré-ajoutée, avec une vigilance supplémentaire : le premier correctif appliqué avait par erreur dupliqué le bloc `<integration>` dans les deux sections `<ossec_config>` du fichier (ce fichier Wazuh en contient légitimement deux) ; corrigé en ne conservant l'intégration que dans la section principale.
+
 ## Dashboard SOC personnalisé
 
 Un tableau de bord dédié (module Visualize/Dashboards de Wazuh/OpenSearch Dashboards) avec 4 indicateurs branchés sur les données réelles :
@@ -356,6 +388,12 @@ Cette maquette a fait l'objet de plusieurs sessions de re-vérification active p
 | Bugs Shuffle (nœud fantôme, Swarm cassé, réseau isolé, opérateurs de condition, cache figé, bug Liquid, filtre `<level>`) | Voir section dédiée | Voir section dédiée |
 | VM complètement gelée (~46 min, aucune réponse réseau) | RAM épuisée sans swap configuré, thrashing noyau | Redémarrage forcé (`VBoxManage poweroff` + `startvm`), tous les conteneurs configurés en restart automatique |
 | Push automatique TheHive → MISP impossible (403 persistant) | Dysfonctionnement de l'authentification par clé API de cette instance MISP (cause non résolue malgré investigation dans le code source) | Non résolu — solution de repli : export MISP manuel natif de TheHive, fonctionnel |
+| Volume de bruit `auditd` extrême (~14 000 alertes/15 min) | Règle `auditd` auditant aussi les process internes Docker (`runc`, `containerd`) | Filtrage par UID réel : `-F auid>=1000 -F auid!=4294967295` |
+| Alertes significatives perdues sous le bruit dans `wazuh_ai_triage.py` | Filtrage par `rule.level` effectué côté client après récupération des N alertes les plus récentes | Filtre déplacé dans la requête Elasticsearch (`bool.filter` côté serveur) |
+| `auditd` arrêté silencieusement pendant 12h+ | Disque VM saturé à 100 % | Nettoyage Docker + purge journaux + agrandissement disque VirtualBox 59→80 Go |
+| Cassandra (TheHive) refuse de démarrer | Commit logs corrompus après arrêts brutaux répétés de la VM | Commit logs corrompus mis en quarantaine ; données SSTable déjà persistées non affectées |
+| Indexeur Wazuh en état `RED`, ingestion bloquée | Shards corrompus (`codec footer mismatch`) après arrêts brutaux, aucun réplica sur ce cluster single-node | Suppression de l'index quotidien corrompu, recréation automatique par Wazuh |
+| Intégration Shuffle disparue de `ossec.conf` (réapparition) | Perdue à nouveau après un redémarrage de VM | Ré-ajoutée ; vigilance sur le fichier `ossec.conf` qui contient légitimement 2 blocs `<ossec_config>` |
 
 ## Limites d'infrastructure
 
