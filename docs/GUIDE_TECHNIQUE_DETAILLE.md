@@ -260,6 +260,18 @@ Quelques secondes plus tard, un nouveau cas TheHive apparaît, créé par le com
 
 ![Cas TheHive routine créé automatiquement par Shuffle](screenshots/24_thehive_routine_case_shuffle_live.png)
 
+### Étape 2bis — Cortex et MISP enrichissent le même incident
+
+L'IP `1.1.1.1` a été ajoutée manuellement comme observable au cas TheHive `#1344` créé à l'étape précédente, avec une description renvoyant explicitement au cas et aux deux règles Wazuh. Une analyse `AbuseIPDB_2_0` a été lancée sur cet indicateur depuis Cortex :
+
+![Rapport d'analyse Cortex AbuseIPDB sur 1.1.1.1](screenshots/25_cortex_analysis_1_1_1_1.png)
+
+Le résultat (score `0/100`, indicateur *whitelisted*, usage *Content Delivery Network*, 37 rapports) a ensuite été reporté dans un événement MISP référençant explicitement le numéro de cas TheHive et les deux règles Wazuh d'origine :
+
+![Événement MISP référençant le cas #1344 et le verdict Cortex](screenshots/26_misp_event_1_1_1_1.png)
+
+Les cinq outils actifs de la chaîne (Wazuh, Shuffle, TheHive, Cortex, MISP) tracent ainsi le même incident unique de bout en bout.
+
 ### Étape 3 — Le chemin Gemma (niveau ≥ 8) : ce qui a fonctionné et sa limite honnête
 
 Le script `wazuh_ai_triage.py`, exécuté manuellement pour ce test, a correctement identifié l'alerte `100099` (niveau 8) associée au même incident via la requête filtrée côté serveur — confirmant que la logique de routage par seuil est correcte et fonctionne en amont de l'appel au LLM.
@@ -272,3 +284,4 @@ En revanche, l'inférence Gemma2 9B elle-même n'a pas pu être menée à terme 
 - **Bug de filtrage côté client** dans `fetch_recent_alerts()` : le filtrage par `rule.level` après récupération des N alertes les plus récentes faisait disparaître les alertes significatives sous le volume de bruit résiduel. Corrigé en déplaçant le filtre dans la requête Elasticsearch elle-même.
 - **Disque VM saturé à 100 %**, ayant arrêté silencieusement `auditd` pendant plus de 12 heures sans alerte explicite dans les tableaux de bord habituels. Corrigé par nettoyage Docker, purge des journaux systemd, puis agrandissement définitif du disque virtuel (59 → 80 Go).
 - **Corruption de commit logs Cassandra** et **corruption de shards sur l'indexeur Wazuh**, toutes deux causées par des arrêts brutaux répétés de la VM pendant la session — corrigées respectivement par mise en quarantaine des commit logs corrompus et suppression de l'index quotidien corrompu (sans réplica sur ce cluster single-node, aucune récupération possible ; perte limitée à quelques centaines d'alertes de bruit déjà indexées).
+- **Image Docker de l'analyseur Cortex `AbuseIPDB` introuvable** (`Image not found: ghcr.io/thehive-project/abuseipdb:2`) lors de la première tentative d'analyse sur `1.1.1.1`, alors qu'une analyse identique avait réussi 9 jours plus tôt sur un autre indicateur — effet de bord probable d'un nettoyage Docker effectué plus tôt dans la session. Corrigé par un simple `docker pull` de l'image manquante.

@@ -335,6 +335,16 @@ Le cas TheHive résultant, créé automatiquement par `SOC Automation` (compte d
 
 ![Cas TheHive routine créé automatiquement par Shuffle](docs/screenshots/24_thehive_routine_case_shuffle_live.png)
 
+**Cortex analyse le même indicateur, sur le même cas** : l'IP `1.1.1.1` a été ajoutée comme observable au cas TheHive `#1344` (celui créé par Shuffle ci-dessus), avec une description renvoyant explicitement au cas et aux deux règles Wazuh (`100107`, `100099`). Une analyse `AbuseIPDB_2_0` a ensuite été lancée sur cet indicateur :
+
+![Rapport d'analyse Cortex AbuseIPDB sur l'IP 1.1.1.1 du cas #1344](docs/screenshots/25_cortex_analysis_1_1_1_1.png)
+
+**MISP capitalise le verdict, toujours sur le même incident** : un événement MISP a été créé en référençant explicitement le numéro de cas TheHive (`#1344`), les deux règles Wazuh à l'origine de l'alerte, et le verdict Cortex complet (score `0/100`, indicateur *whitelisted*, usage *Content Delivery Network*, 37 rapports) dans le commentaire de l'attribut `ip-src` :
+
+![Événement MISP référençant le cas #1344 et le verdict Cortex](docs/screenshots/26_misp_event_1_1_1_1.png)
+
+Avec ces deux captures, les **cinq outils actifs de la chaîne** (Wazuh, Shuffle, TheHive, Cortex, MISP) tracent désormais le **même incident unique**, du premier signal de reconnaissance jusqu'à la capitalisation de threat intelligence — pas cinq démonstrations juxtaposées après coup.
+
 **Sur le chemin Gemma (niveau ≥ 8) pour cet incident précis** : le script `wazuh_ai_triage.py` a bien détecté et récupéré l'alerte `100099` (niveau 8) associée au même incident via la requête serveur filtrée (voir bug corrigé ci-dessous), confirmant que le routage par seuil fonctionne correctement en amont. L'inférence Gemma2 9B elle-même, en revanche, n'a pas pu être menée à son terme dans un délai raisonnable lors de cette session précise : sur une VM à 9,7 Go de RAM faisant tourner simultanément Wazuh (3 conteneurs), TheHive (+ Cassandra + Elasticsearch), Cortex, MISP (+ MySQL + Redis) et Shuffle (4 conteneurs), le chargement du modèle (5,9 Go) doit être en grande partie servi depuis le swap disque, ce qui a fait dépasser 8 à 28 minutes selon les tentatives — largement au-delà de ce qui est acceptable pour un cas d'usage SOC réel. Ce comportement est cohérent avec la latence de ~119 s/alerte déjà mesurée et documentée plus haut dans des conditions de charge plus favorables (voir [Limites d'infrastructure](#limites-dinfrastructure)) ; il est rapporté ici tel quel, sans minimisation, comme la limite concrète qui empêche de présenter le chemin Gemma comme aussi réactif que le chemin Shuffle sur cette infrastructure de test.
 
 ### Bugs supplémentaires trouvés et corrigés en préparant cette preuve
@@ -345,6 +355,7 @@ Le cas TheHive résultant, créé automatiquement par `SOC Automation` (compte d
 4. **Corruption de commit logs Cassandra** (backend de TheHive) après plusieurs arrêts brutaux de VM survenus pendant la session : `CommitLogReadHandler$CommitLogReadException` empêchait Cassandra de démarrer. Les commits logs corrompus ont été identifiés et mis en quarantaine (déplacés, pas supprimés) ; les données déjà persistées en SSTable (cas TheHive existants) n'ont pas été affectées.
 5. **Corruption de shards sur l'indexeur Wazuh** (même cause racine — arrêts brutaux répétés) : `CorruptIndexException: codec footer mismatch` sur 2 des 3 shards primaires de l'index du jour, cluster passé en état `RED`, bloquant toute nouvelle ingestion (Filebeat en échec `temporary bulk send failure` en boucle). Sans réplica configuré sur ce cluster à un seul nœud, ces shards n'étaient pas récupérables : l'index corrompu du jour a été supprimé (perte de quelques centaines d'alertes de bruit déjà indexées, aucune donnée de valeur), débloquant immédiatement l'ingestion (cluster repassé `GREEN`, nouvelles alertes indexées en quelques secondes).
 6. **Intégration Shuffle disparue de `ossec.conf` après un redémarrage de VM** (bug déjà rencontré et documenté plus haut, réapparu identiquement) — ré-ajoutée, avec une vigilance supplémentaire : le premier correctif appliqué avait par erreur dupliqué le bloc `<integration>` dans les deux sections `<ossec_config>` du fichier (ce fichier Wazuh en contient légitimement deux) ; corrigé en ne conservant l'intégration que dans la section principale.
+7. **Image Docker de l'analyseur Cortex `AbuseIPDB` introuvable** (`Image not found: ghcr.io/thehive-project/abuseipdb:2`) lors de la première tentative d'analyse sur `1.1.1.1`, alors qu'une analyse identique avait réussi 9 jours plus tôt sur un autre indicateur : effet de bord probable d'un des nettoyages Docker effectués plus tôt dans la session (`docker image prune`). Corrigé par un simple `docker pull` de l'image manquante, analyse relancée avec succès dans la foulée.
 
 ## Dashboard SOC personnalisé
 
