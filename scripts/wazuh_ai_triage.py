@@ -22,7 +22,11 @@ Variables d'environnement attendues :
   WAZUH_INDEXER_PASSWORD
   OLLAMA_URL          (defaut: http://localhost:11434)
   OLLAMA_MODEL        (defaut: gemma2:9b-instruct-q4_0)
-  THEHIVE_URL         (defaut: http://localhost:9000)
+  THEHIVE_URL         (defaut: http://127.0.0.1:9000 -- IPv4 explicite, pas "localhost" :
+                        la librairie Python `requests` resout "localhost" en IPv6 (::1) sur
+                        cette VM, connexion sur laquelle l'authentification par cle API de
+                        TheHive echoue silencieusement en 401 alors que la meme cle fonctionne
+                        via curl (qui privilegie IPv4) -- bug reel decouvert et corrige en session)
   THEHIVE_API_KEY
   CRITICALITY_THRESHOLD (defaut: moyenne) -- seuil de creation de cas
   LLM_INVOCATION_THRESHOLD_LEVEL (defaut: 8) -- rule.level minimum pour invoquer le LLM
@@ -46,7 +50,7 @@ WAZUH_INDEXER_PASSWORD = os.environ.get("WAZUH_INDEXER_PASSWORD", "")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma2:9b-instruct-q4_0")
 
-THEHIVE_URL = os.environ.get("THEHIVE_URL", "http://localhost:9000")
+THEHIVE_URL = os.environ.get("THEHIVE_URL", "http://127.0.0.1:9000")
 THEHIVE_API_KEY = os.environ.get("THEHIVE_API_KEY", "")
 
 CRITICALITY_ORDER = ["basse", "moyenne", "haute", "critique"]
@@ -146,7 +150,7 @@ def triage_with_llm(alert: dict) -> dict:
             "prompt": prompt,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0.1},
+            "options": {"temperature": 0.1, "num_predict": 300},
             "keep_alive": "30m",
         },
         timeout=600,

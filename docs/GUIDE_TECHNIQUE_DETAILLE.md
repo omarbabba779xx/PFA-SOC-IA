@@ -78,7 +78,7 @@ done
 
 ## 3. Étape par étape : le trajet complet d'une alerte
 
-> La preuve visuelle officielle de ce trajet est regroupée dans la [section 6](#6-routage-automatique-par-criticité--preuve-sur-un-incident-unique) : un seul incident simulé, tracé de bout en bout à travers les cinq outils actifs, plutôt que des captures isolées sur des alertes différentes. Les paragraphes ci-dessous expliquent le mécanisme technique de chaque étape.
+> La preuve visuelle officielle de ce trajet est regroupée dans la [section 6](#6-routage-automatique-par-criticité--preuve-sur-un-incident-unique) : un seul incident simulé, tracé de bout en bout à travers les six outils, plutôt que des captures isolées sur des alertes différentes. Les paragraphes ci-dessous expliquent le mécanisme technique de chaque étape.
 
 ### Étape 1 — La commande est exécutée sur le système
 
@@ -178,19 +178,22 @@ Le résultat (score `0/100`, indicateur *whitelisted*, usage *Content Delivery N
 
 ![Événement MISP référençant le cas #1344 et le verdict Cortex](screenshots/26_misp_event_1_1_1_1.png)
 
-Les cinq outils actifs de la chaîne (Wazuh, Shuffle, TheHive, Cortex, MISP) tracent ainsi le même incident unique de bout en bout.
+Les cinq premiers outils de la chaîne (Wazuh, Shuffle, TheHive, Cortex, MISP) tracent ainsi le même incident unique de bout en bout. Le sixième, Gemma2 9B, est traité séparément ci-dessous.
 
-### Étape 3 — Le chemin Gemma (niveau ≥ 8) : ce qui a fonctionné et sa limite honnête
+### Étape 3 — Le chemin Gemma (niveau ≥ 8) : trois bugs identifiés et corrigés
 
-Le script `wazuh_ai_triage.py`, exécuté manuellement pour ce test, a correctement identifié l'alerte `100099` (niveau 8) associée au même incident via la requête filtrée côté serveur — confirmant que la logique de routage par seuil est correcte et fonctionne en amont de l'appel au LLM.
+Le script `wazuh_ai_triage.py` a correctement identifié l'alerte `100099` (niveau 8) associée au même incident via la requête filtrée côté serveur — confirmant que la logique de routage par seuil est correcte en amont de l'appel au LLM. Faire aboutir réellement l'inférence Gemma2 9B jusqu'à un cas TheHive a en revanche nécessité d'identifier et corriger trois bugs distincts :
 
-L'inférence Gemma2 9B elle-même n'a en revanche pas pu être menée à terme sur ce cas précis, malgré plusieurs tentatives dans des conditions croissantes :
+1. **Stack complète active** (6 outils) : `llama-server` systématiquement tué par le noyau (`OOM killed`, confirmé via `dmesg`) après plusieurs minutes. Une tentative avec Cortex/MISP puis toute la stack Shuffle arrêtés (6,6 Go de RAM libre) a évité l'OOM mais tournait encore 21 minutes sans jamais aboutir — la RAM seule n'était pas le vrai goulot.
+2. **Bug n°1 — génération de tokens non bornée** : l'appel `/api/generate` d'Ollama ne fixait aucune limite `num_predict`. En mode `format: "json"`, le modèle continuait à générer indéfiniment au lieu de s'arrêter après une courte classification. Corrigé en ajoutant `"num_predict": 300` aux options de génération.
+3. **Bug n°2 — sous-allocation vCPU** : la VM ne disposait que de 4 vCPU alors que l'hôte (8 cœurs/16 threads) n'était chargé qu'à ~9 %. Corrigé par `VBoxManage modifyvm "SOC-Lab" --cpus 8`, portant l'utilisation CPU observée à 500-680 % pendant l'inférence.
+4. **Bug n°3 — résolution DNS locale erronée côté client HTTP** : une fois les deux bugs précédents corrigés, la classification LLM aboutissait en quelques minutes, mais la création du cas TheHive échouait systématiquement en `401 Unauthorized`, alors qu'un `curl` manuel avec la même clé API réussissait à chaque fois. Isolé par comparaison directe (hash de la clé identique des deux côtés, donc pas un problème de credential) : la bibliothèque Python `requests` résout `localhost` en IPv6 (`::1`) sur cette VM, connexion sur laquelle l'authentification par clé API de TheHive échoue silencieusement, alors que `curl` privilégie IPv4 et réussit. Corrigé en remplaçant `http://localhost:9000` par `http://127.0.0.1:9000` dans `THEHIVE_URL`.
 
-1. **Stack complète active** (6 outils) : `llama-server` systématiquement tué par le noyau (`OOM killed`, confirmé via `dmesg`) après plusieurs minutes.
-2. **Cortex/MISP arrêtés** (~4 Go de RAM libre) : de nouveau tué par OOM.
-3. **Cortex, MISP et toute la stack Shuffle arrêtés** (6,6 Go de RAM libre, aucune saturation swap) : cette fois `llama-server` n'a **pas** été tué — `ps` a montré une consommation CPU soutenue (300-360 %, plusieurs cœurs réellement occupés) et un temps CPU cumulé croissant en continu (18 → 32 → 51 → 70 minutes de temps CPU sur ~20 minutes d'horloge). Le calcul progressait réellement mais n'avait toujours pas abouti après 21 minutes, délai jugé excessif pour ce test.
+Avec les trois correctifs déployés, une exécution complète a traité 5 alertes réelles (niveau ≥ 8) et créé 5 cas TheHive sans aucune erreur 401, dont un directement rattaché à l'alerte `100099` de cet incident :
 
-Cette dernière tentative apporte une information plus précise que les précédentes : **le goulot n'est pas uniquement la RAM** (la saturation mémoire a bien été éliminée) **mais aussi, et peut-être surtout, le calcul CPU pur** — cette VM tourne sans accélération GPU, et l'inférence d'un modèle 9B sur CPU seul reste très lente comparée à la latence de ~119 secondes/alerte mesurée dans le README dans d'autres conditions (probablement une charge système ponctuellement plus légère). Cette limite est documentée ici sans être minimisée : elle illustre concrètement pourquoi le chemin Shuffle (déterministe, sans LLM) reste indispensable pour le traitement à faible latence des alertes déjà bien caractérisées par leur `rule.level`, et pourquoi une infrastructure de production dédierait idéalement un GPU à l'inférence.
+![Cas TheHive #2134 créé automatiquement par l'analyse Gemma2 9B, tags wazuh/triage-ia/T1105](screenshots/27_thehive_gemma_triage_1_1_1_1.png)
+
+Le cas porte les tags `wazuh`, `triage-ia`, `T1105`, une sévérité `MEDIUM` assignée par le triage hybride, et une description générée par le LLM reprenant la tactique/technique MITRE ainsi qu'une recommandation d'investigation. Les **six outils** de la chaîne tracent désormais le même incident de bout en bout, chacun sur son propre chemin de criticité (Shuffle pour le routage instantané niveau 5-7, Gemma pour le triage qualitatif niveau ≥ 8).
 
 ### Bugs supplémentaires rencontrés en préparant cette preuve
 
@@ -199,3 +202,4 @@ Cette dernière tentative apporte une information plus précise que les précéd
 - **Disque VM saturé à 100 %**, ayant arrêté silencieusement `auditd` pendant plus de 12 heures sans alerte explicite dans les tableaux de bord habituels. Corrigé par nettoyage Docker, purge des journaux systemd, puis agrandissement définitif du disque virtuel (59 → 80 Go).
 - **Corruption de commit logs Cassandra** et **corruption de shards sur l'indexeur Wazuh**, toutes deux causées par des arrêts brutaux répétés de la VM pendant la session — corrigées respectivement par mise en quarantaine des commit logs corrompus et suppression de l'index quotidien corrompu (sans réplica sur ce cluster single-node, aucune récupération possible ; perte limitée à quelques centaines d'alertes de bruit déjà indexées).
 - **Image Docker de l'analyseur Cortex `AbuseIPDB` introuvable** (`Image not found: ghcr.io/thehive-project/abuseipdb:2`) lors de la première tentative d'analyse sur `1.1.1.1`, alors qu'une analyse identique avait réussi 9 jours plus tôt sur un autre indicateur — effet de bord probable d'un nettoyage Docker effectué plus tôt dans la session. Corrigé par un simple `docker pull` de l'image manquante.
+- **Génération Gemma2 9B non bornée**, **VM sous-dimensionnée en vCPU** et **401 TheHive via résolution IPv6 de `localhost`** dans `requests` Python — voir détail complet à l'étape 3 ci-dessus.
