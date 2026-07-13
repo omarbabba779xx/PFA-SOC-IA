@@ -63,37 +63,9 @@ Détection (Wazuh + auditd) → Indexation → Triage IA (Ollama/Gemma2 9B) → 
 
 ## Preuve de bout en bout — la chaîne complète sur des alertes réelles
 
-Cette section rassemble des captures d'écran prises en direct pendant une session de test unique : les scénarios ont été rejoués en temps réel sur la VM et chaque étape de la chaîne a été capturée sur les alertes réellement générées, sans montage ni simulation. L'objectif : prouver que les outils sont réellement **reliés entre eux**, pas seulement testés isolément.
+La preuve visuelle officielle du projet est désormais **entièrement regroupée dans la section [Routage automatique par criticité](#routage-automatique-par-criticité--preuve-sur-un-incident-unique)** : un seul incident simulé (source `1.1.1.1`), rejoué en direct sur la VM, tracé de bout en bout à travers Wazuh, Shuffle, TheHive, Cortex et MISP avec 6 captures d'écran cohérentes entre elles (même IP, même numéro de cas, mêmes règles visibles dans chaque outil).
 
-### 1. Wazuh détecte et corrèle
-
-Vue d'ensemble du dashboard (agent actif, volumétrie réelle du lab) :
-
-![Vue d'ensemble du dashboard Wazuh](docs/screenshots/01_wazuh_dashboard_overview.png)
-
-Répartition MITRE ATT&CK en direct après exécution des scénarios avancés (`Ingress Tool Transfer`, `PowerShell`) :
-
-![Vue Threat Hunting avec répartition MITRE ATT&CK](docs/screenshots/02_threat_hunting_mitre_overview.png)
-
-Liste des alertes sur les règles personnalisées (100099/100101/100103), timestamps concordants avec l'exécution du scénario :
-
-![Liste des alertes sur les règles personnalisées](docs/screenshots/03_wazuh_alerts_custom_rules_list.png)
-
-Détail d'une alerte : les arguments `EXECVE` bruts d'un beacon C2 avec jitter (URL avec chemin et timestamp variables — preuve que le jitter anti-détection fonctionne) :
-
-![Détail d'alerte : champs audit.execve bruts](docs/screenshots/04_wazuh_alert_detail_audit_execve.png)
-
-Métadonnées de la règle associée :
-
-![Détail d'alerte : métadonnées de règle](docs/screenshots/05_wazuh_alert_detail_rule_metadata.png)
-
-Dashboard MITRE ATT&CK dédié, agrégeant les techniques détectées sur la fenêtre de test :
-
-![Dashboard MITRE ATT&CK de Wazuh](docs/screenshots/06_wazuh_mitre_attack_dashboard.png)
-
-### 2. Gemma2 9B triage réellement les alertes
-
-Le script de production (`wazuh_ai_triage.py`) exécuté contre l'indexeur Wazuh réel, avec Gemma2 9B — 3 classifications obtenues sur des alertes fraîches, toutes exactes :
+Un premier jeu de captures avait été pris plus tôt dans le projet sur des alertes et des cas TheHive distincts (numéros de cas différents selon l'outil, pas de fil conducteur unique) : elles ont été retirées de ce document pour ne garder que la preuve reliée bout en bout, plus rigoureuse pour une soutenance. Le triage Gemma2 9B avait néanmoins bien fonctionné lors de cette phase antérieure — sortie JSON réelle obtenue sur des alertes fraîches :
 
 ```
 rule.id= 100103 desc= Repeated network fetch commands executed in a short window (possible C2 beaconing)
@@ -108,57 +80,7 @@ LLM -> {"mitre_technique": "T1059.001", "criticite": "critique", ...}
 
 (sortie brute conservée dans [`docs/evaluation/pipeline_demo_results.json`](docs/evaluation/pipeline_demo_results.json))
 
-### 3. TheHive crée les cas automatiquement
-
-Liste des cas créés automatiquement, avec résumé et recommandation générés par Gemma directement dans la description :
-
-![Liste des cas TheHive créés automatiquement](docs/screenshots/07_thehive_cases_list.png)
-
-Détail du cas PowerShell (sévérité critique, tag `T1059.001`) :
-
-![Détail du cas TheHive - PowerShell](docs/screenshots/08_thehive_case_detail_powershell.png)
-
-Détail du cas C2 beaconing (`T1071`) :
-
-![Détail du cas TheHive - C2 beaconing](docs/screenshots/09_thehive_case_detail_c2_beaconing.png)
-
-Détail du cas de récupération de payload (`T1105`) :
-
-![Détail du cas TheHive - phishing/dropper](docs/screenshots/10_thehive_case_detail_phishing_t1105.png)
-
-### 4. Cortex et MISP enrichissent le même cas — la chaîne reste traçable de bout en bout
-
-Pour prouver que Cortex et MISP ne sont pas de simples démonstrations isolées, l'enrichissement a été effectué sur un **indicateur explicitement rattaché au cas TheHive `#222`** (le cas C2 beaconing créé à l'étape précédente) : une adresse IP réelle a été ajoutée comme observable de ce cas, avec une description renvoyant explicitement au numéro de cas, à la règle Wazuh et au code MITRE :
-
-![Observable IOC lié explicitement au cas #222](docs/screenshots/19_thehive_observable_ioc_linked.png)
-
-Cortex analyse ensuite ce même indicateur (VirusTotal + AbuseIPDB), avec un rapport complet retourné en quelques secondes :
-
-![Rapport de job Cortex (VirusTotal) sur l'indicateur du cas #222](docs/screenshots/18_cortex_job_report_virustotal_case222.png)
-
-Le verdict Cortex (0/91 détections malveillantes) est ensuite reporté dans MISP, sur un attribut qui référence explicitement le même numéro de cas TheHive et le même résultat d'analyse — MISP devient ainsi le point de capitalisation final de la même chaîne, pas un événement déconnecté :
-
-![Événement MISP référençant le cas #222 et le verdict Cortex](docs/screenshots/20_misp_event_linked_to_case222.png)
-
-Cette traçabilité (même numéro de cas, même indicateur, même code MITRE visible dans les trois outils) est la preuve que Wazuh, Gemma, TheHive, Cortex et MISP fonctionnent bien **en chaîne sur un seul et même incident**, et pas comme cinq démonstrations indépendantes assemblées après coup.
-
-### 6. Shuffle orchestre la réponse automatisée
-
-Le workflow `SOC PFA - Triage automatisé Wazuh` (Webhook → enrichissement Cortex → branchement conditionnel selon `rule.level` → création de cas TheHive) exécuté réellement, statut `FINISHED`, les deux branches en succès :
-
-![Exécution du workflow Shuffle terminée avec succès](docs/screenshots/15_shuffle_workflow_execution_finished.png)
-
-Graphe complet du workflow (webhook, enrichissement, branchement conditionnel) :
-
-![Graphe du workflow Shuffle](docs/screenshots/16_shuffle_workflow_graph.png)
-
-Le cas TheHive `#230` réellement créé par cette exécution (tags `shuffle-auto`, `routine`, `wazuh`), vérifié indépendamment via l'API `listCase` de TheHive :
-
-![Cas TheHive créé par Shuffle](docs/screenshots/17_thehive_case_from_shuffle.png)
-
-**Précision sur l'articulation entre les deux chemins d'automatisation** : le script Python (`wazuh_ai_triage.py`, qui invoque Gemma) et le workflow Shuffle sont deux chemins d'entrée distincts vers la **même infrastructure partagée** (même TheHive, même Cortex, même MISP) : le premier pour un triage qualitatif avec IA sur les alertes significatives, le second pour un routage instantané et déterministe sans latence LLM sur les alertes déjà bien caractérisées par `rule.level`. Les deux aboutissent au même écosystème de cas, mais ne sont pas chaînés l'un à l'autre dans une seule exécution — ce point est documenté explicitement pour ne pas laisser croire à une chaîne unique à six outils en un seul clic là où il s'agit de deux voies d'automatisation complémentaires vers le même SOC.
-
-**Tentative d'intégration Shuffle → MISP directe, et limite honnête rencontrée** : pour rapprocher encore les deux chemins d'automatisation, une tentative a été faite de pousser automatiquement l'IOC du cas vers MISP (nouvelle clé API MISP dédiée, appel direct à l'API `/events`). L'investigation a été poussée jusque dans le code source PHP de MISP (`AppController::__loginByAuthKey`) pour diagnostiquer un rejet systématique (`403 Authentication failed`) : les permissions du rôle (`Auth key access`) et le paramètre `Security.advanced_authkeys` ont été vérifiés corrects, mais la vérification de la clé en base continue d'échouer quelle que soit la méthode utilisée (interface web, CLI `cake authkey`, appel direct). Conclusion : il s'agit d'un dysfonctionnement réel de cette instance MISP (image Docker officielle), indépendant de la clé ou de la méthode d'appel, qui n'a pas pu être résolu dans un délai raisonnable sans risquer de perturber le reste de la stack. Documenté ici comme une limite honnête plutôt que masqué — l'automatisation TheHive → MISP reste donc manuelle (via le bouton natif "Export to MISP" de TheHive) ou via saisie directe dans MISP, toutes deux fonctionnelles et déjà démontrées plus haut sur le même cas `#222`.
+**Précision sur l'articulation entre les deux chemins d'automatisation** : le script Python (`wazuh_ai_triage.py`, qui invoque Gemma) et le workflow Shuffle sont deux chemins d'entrée distincts vers la **même infrastructure partagée** (même TheHive, même Cortex, même MISP) : le premier pour un triage qualitatif avec IA sur les alertes significatives, le second pour un routage instantané et déterministe sans latence LLM sur les alertes déjà bien caractérisées par `rule.level`. Les deux aboutissent au même écosystème de cas, mais ne sont pas chaînés l'un à l'autre dans une seule exécution.
 
 ### Incidents rencontrés pendant cette phase de capture (documentés, pas cachés)
 
