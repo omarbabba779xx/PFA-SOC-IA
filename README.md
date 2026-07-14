@@ -19,12 +19,13 @@ Conception et déploiement d'une maquette de plateforme SOC (Security Operations
 7. [Enrichissement et Threat Intelligence (Cortex, MISP)](#enrichissement-et-threat-intelligence-cortex-misp)
 8. [Orchestration et réponse automatisée (Shuffle SOAR)](#orchestration-et-réponse-automatisée-shuffle-soar)
 9. [Routage automatique par criticité — preuve sur un incident unique](#routage-automatique-par-criticité--preuve-sur-un-incident-unique)
-10. [Dashboard SOC personnalisé](#dashboard-soc-personnalisé)
-11. [Bugs et incidents réels — récapitulatif complet](#bugs-et-incidents-réels--récapitulatif-complet)
-12. [Limites d'infrastructure](#limites-dinfrastructure)
-13. [Reproduire l'environnement](#reproduire-lenvironnement)
-14. [État d'avancement et planning](#état-davancement-et-planning)
-15. [Valeur professionnelle](#valeur-professionnelle)
+10. [Cinq scénarios de test — preuve complète par attaque](#cinq-scénarios-de-test--preuve-complète-par-attaque)
+11. [Dashboard SOC personnalisé](#dashboard-soc-personnalisé)
+12. [Bugs et incidents réels — récapitulatif complet](#bugs-et-incidents-réels--récapitulatif-complet)
+13. [Limites d'infrastructure](#limites-dinfrastructure)
+14. [Reproduire l'environnement](#reproduire-lenvironnement)
+15. [État d'avancement et planning](#état-davancement-et-planning)
+16. [Valeur professionnelle](#valeur-professionnelle)
 
 ---
 
@@ -290,6 +291,82 @@ Le cas porte les tags `wazuh`, `triage-ia`, `T1105`, une sévérité `MEDIUM` as
 6. **Intégration Shuffle disparue de `ossec.conf` après un redémarrage de VM** (bug déjà rencontré et documenté plus haut, réapparu identiquement) — ré-ajoutée, avec une vigilance supplémentaire : le premier correctif appliqué avait par erreur dupliqué le bloc `<integration>` dans les deux sections `<ossec_config>` du fichier (ce fichier Wazuh en contient légitimement deux) ; corrigé en ne conservant l'intégration que dans la section principale.
 7. **Image Docker de l'analyseur Cortex `AbuseIPDB` introuvable** (`Image not found: ghcr.io/thehive-project/abuseipdb:2`) lors de la première tentative d'analyse sur `1.1.1.1`, alors qu'une analyse identique avait réussi 9 jours plus tôt sur un autre indicateur : effet de bord probable d'un des nettoyages Docker effectués plus tôt dans la session (`docker image prune`). Corrigé par un simple `docker pull` de l'image manquante, analyse relancée avec succès dans la foulée.
 
+## Cinq scénarios de test — preuve complète par attaque
+
+Le cahier des charges initial du projet (voir `PFA_SOC_Assiste_IA_Omar_Babba_2025-2026.pdf`) définit cinq scénarios de test couvrant les cas de base et avancés attendus d'une maquette SOC. Chacun a été rejoué individuellement, avec la même exigence que pour l'incident `1.1.1.1` de la section précédente : preuve par capture réelle, à chaque étape de la chaîne (détection Wazuh, triage IA Gemma2 9B, cas TheHive, enrichissement Cortex), plutôt que des captures isolées ou une simple description textuelle.
+
+| Scénario (cahier des charges) | Règle Wazuh | Niveau | Technique MITRE |
+|---|---|---|---|
+| Brute force SSH | `5710` (sshd, tentative sur utilisateur inexistant) | 5 | T1110 |
+| Email de phishing / URL suspecte | `100099` (curl/wget, récupération d'outil externe) | 8 | T1105 |
+| Activité PowerShell suspecte | `100101` (exécution PowerShell encodée) | 12 | T1059.001 |
+| Mouvement latéral simulé | `100105` (sessions SSH successives + élévation) | 10 | T1021.004 |
+| C2 beaconing simulé | `100103` (requêtes réseau répétées) | 10 | T1071 |
+
+### 1. Brute force SSH (T1110)
+
+Six tentatives de connexion SSH vers des utilisateurs inexistants (`bfuser1` à `bfuser6`) déclenchent la règle `5710`, niveau 5 — sous le seuil d'invocation de Gemma (`LLM_INVOCATION_THRESHOLD_LEVEL=8`) et hors de la plage de routage Shuffle (5-7 exclut le niveau 5 dans la configuration actuelle du workflow). Pour documenter malgré tout le chemin Gemma sur ce scénario, l'alerte a été soumise manuellement au triage IA via un script ad hoc (`scripts/triage_single_alert.py`, réutilisant les fonctions de `wazuh_ai_triage.py`) :
+
+![Alerte Wazuh 5710 : tentative SSH sur utilisateur inexistant bfuser6](docs/screenshots/28_wazuh_alert_5710_bruteforce_ssh.png)
+
+![Cas TheHive #2168 généré par Gemma2 9B, tags wazuh/triage-ia/T1110](docs/screenshots/37_thehive_case_bruteforce.png)
+
+Cortex analyse l'adresse source (`127.0.0.1`, la VM elle-même dans ce scénario de laboratoire) via `AbuseIPDB_2_0` :
+
+![Analyse Cortex AbuseIPDB sur 127.0.0.1](docs/screenshots/38_cortex_analysis_bruteforce.png)
+
+### 2. Phishing / récupération d'outil externe (T1105)
+
+Un `curl` vers un domaine simulé (`phishing-simulated-payload.example.invalid/malicious.sh`) déclenche la règle `100099`, niveau 8 — au-dessus du seuil Gemma, traité automatiquement par `wazuh_ai_triage.py` :
+
+![Alerte Wazuh 100099 : curl vers un domaine de phishing simulé](docs/screenshots/32_wazuh_alert_100099_phishing.png)
+
+![Cas TheHive #2144 généré par Gemma2 9B, tags wazuh/triage-ia/T1105](docs/screenshots/33_thehive_case_phishing.png)
+
+Cortex analyse le domaine cible via `VirusTotal_GetReport_3_1` : l'analyseur rejette explicitement le domaine (`InvalidArgumentError`, motif de domaine non valide) car le TLD `.invalid` utilisé pour ce scénario simulé n'est volontairement pas un domaine réel enregistrable — comportement attendu et documenté ici tel quel plutôt que masqué :
+
+![Analyse Cortex VirusTotal sur le domaine de phishing (rejet attendu, TLD .invalid)](docs/screenshots/39_cortex_analysis_phishing.png)
+
+### 3. Activité PowerShell suspecte (T1059.001)
+
+Une commande `pwsh -enc <base64>` (téléchargement distant encodé) déclenche la règle `100101`, niveau 12 (critique) :
+
+![Alerte Wazuh 100101 : commande PowerShell encodée capturée dans data.audit.execve](docs/screenshots/29_wazuh_alert_100101_powershell.png)
+
+![Cas TheHive #2151 généré par Gemma2 9B, tags wazuh/triage-ia/T1059.001](docs/screenshots/34_thehive_case_powershell.png)
+
+Ce scénario n'a pas d'observable réseau exploitable par Cortex (l'exécution est purement locale à l'endpoint, sans IP ni domaine de destination réel dans le payload encodé de démonstration) : étape volontairement absente ici plutôt que simulée artificiellement.
+
+### 4. Mouvement latéral simulé (T1021.004)
+
+Deux connexions SSH successives vers la machine elle-même suivies d'une élévation `sudo` déclenchent la règle `100105`, niveau 10 :
+
+![Alerte Wazuh 100105 : sessions SSH successives avec élévation, previous_output visible](docs/screenshots/30_wazuh_alert_100105_lateral_movement.png)
+
+![Cas TheHive #2150 généré par Gemma2 9B, tags wazuh/triage-ia/T1021.004](docs/screenshots/35_thehive_case_lateral_movement.png)
+
+Cortex analyse l'adresse source des connexions (`10.0.2.2`, passerelle réseau host-only VirtualBox) via `AbuseIPDB_2_0` :
+
+![Analyse Cortex AbuseIPDB sur 10.0.2.2](docs/screenshots/40_cortex_analysis_lateral_movement.png)
+
+### 5. C2 beaconing simulé (T1071)
+
+Cinq requêtes `curl` avec jitter (délai aléatoire 5-12 s) vers un domaine simulé déclenchent la règle `100103`, niveau 10 (corrélation de requêtes répétées) :
+
+![Alerte Wazuh 100103 : requête curl vers un domaine de C2 simulé](docs/screenshots/31_wazuh_alert_100103_c2_beaconing.png)
+
+![Cas TheHive #2145 généré par Gemma2 9B, tags wazuh/triage-ia/T1071](docs/screenshots/36_thehive_case_c2_beaconing.png)
+
+Cortex analyse le domaine de destination via `VirusTotal_GetReport_3_1` — même comportement de rejet explicite que pour le scénario phishing, et pour la même raison (TLD `.invalid`) :
+
+![Analyse Cortex VirusTotal sur le domaine C2 (rejet attendu, TLD .invalid)](docs/screenshots/41_cortex_analysis_c2_beaconing.png)
+
+### Bilan
+
+Les cinq scénarios du cahier des charges sont ainsi tous rejoués et documentés individuellement, chacun tracé de la détection Wazuh jusqu'au triage IA Gemma2 9B et au cas TheHive correspondant (tags `wazuh`/`triage-ia`/technique MITRE), avec enrichissement Cortex sur les quatre scénarios disposant d'un observable réseau exploitable. Le scénario de brute force, en dessous du seuil normal d'invocation de Gemma, a nécessité un script de triage ciblé (`scripts/triage_single_alert.py`) pour prouver que le chemin IA fonctionne aussi sur ce type d'alerte, en complément du chemin Shuffle qui le couvre normalement en production.
+
+**Bug rencontré en préparant cette preuve** : le VM s'est retrouvé en situation de mémoire quasi épuisée (111 Mo libres, swap à 100 %) après plusieurs cycles de triage Gemma successifs sans redémarrage intermédiaire des autres services, provoquant un blocage de l'interface Cortex (jobs restant indéfiniment à l'état `Waiting`, page web ne répondant plus). Diagnostiqué via `free -h` sur la VM. Corrigé en deux temps : déchargement explicite du modèle Gemma d'Ollama (`keep_alive:0` sur l'API `/api/generate`) pour libérer ~4,5 Go, puis redémarrage du conteneur Cortex pour débloquer sa file de jobs bloqués — les deux jobs en attente se sont immédiatement terminés avec succès après le redémarrage.
+
 ## Dashboard SOC personnalisé
 
 Un tableau de bord dédié (module Visualize/Dashboards de Wazuh/OpenSearch Dashboards) avec 4 indicateurs branchés sur les données réelles :
@@ -341,6 +418,8 @@ Cette maquette a fait l'objet de plusieurs sessions de re-vérification active p
 | Génération Gemma2 9B sans fin (OOM/blocages) | Aucune limite `num_predict` sur l'appel `/api/generate`, génération de tokens non bornée en mode JSON | `"num_predict": 300` ajouté aux options de génération |
 | VM sous-dimensionnée pour l'inférence LLM (4 vCPU) | Hôte 8 cœurs/16 threads chargé à ~9 % seulement | `VBoxManage modifyvm "SOC-Lab" --cpus 8` |
 | 401 Unauthorized TheHive via `requests` Python (`curl` identique réussit) | `requests` résout `localhost` en IPv6 (`::1`), authentification TheHive échoue silencieusement sur cette résolution | `THEHIVE_URL` fixé explicitement en IPv4 : `http://127.0.0.1:9000` |
+| Cortex bloqué (jobs restant `Waiting` indéfiniment, UI ne répondant plus) | VM en mémoire quasi épuisée (111 Mo libres, swap à 100 %) après plusieurs cycles de triage Gemma sans libération intermédiaire | Déchargement du modèle Gemma (`keep_alive:0`) + redémarrage du conteneur Cortex |
+| Image Docker de l'analyseur Cortex `VirusTotal_GetReport` introuvable | Même cause que pour `AbuseIPDB` plus haut (effet de bord d'un nettoyage Docker antérieur) | `docker pull ghcr.io/thehive-project/virustotal_getreport:3` |
 
 ## Limites d'infrastructure
 

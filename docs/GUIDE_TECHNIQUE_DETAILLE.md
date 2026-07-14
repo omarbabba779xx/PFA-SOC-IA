@@ -12,6 +12,7 @@ Ce document explique, étape par étape, **chaque outil utilisé**, **son rôle 
 4. [Comment le triage IA fonctionne exactement](#4-comment-le-triage-ia-fonctionne-exactement)
 5. [Comment l'orchestration Shuffle fonctionne exactement](#5-comment-lorchestration-shuffle-fonctionne-exactement)
 6. [Routage automatique par criticité — preuve sur un incident unique](#6-routage-automatique-par-criticité--preuve-sur-un-incident-unique)
+7. [Cinq scénarios de test — preuve complète par attaque](#7-cinq-scénarios-de-test--preuve-complète-par-attaque)
 
 ---
 
@@ -203,3 +204,64 @@ Le cas porte les tags `wazuh`, `triage-ia`, `T1105`, une sévérité `MEDIUM` as
 - **Corruption de commit logs Cassandra** et **corruption de shards sur l'indexeur Wazuh**, toutes deux causées par des arrêts brutaux répétés de la VM pendant la session — corrigées respectivement par mise en quarantaine des commit logs corrompus et suppression de l'index quotidien corrompu (sans réplica sur ce cluster single-node, aucune récupération possible ; perte limitée à quelques centaines d'alertes de bruit déjà indexées).
 - **Image Docker de l'analyseur Cortex `AbuseIPDB` introuvable** (`Image not found: ghcr.io/thehive-project/abuseipdb:2`) lors de la première tentative d'analyse sur `1.1.1.1`, alors qu'une analyse identique avait réussi 9 jours plus tôt sur un autre indicateur — effet de bord probable d'un nettoyage Docker effectué plus tôt dans la session. Corrigé par un simple `docker pull` de l'image manquante.
 - **Génération Gemma2 9B non bornée**, **VM sous-dimensionnée en vCPU** et **401 TheHive via résolution IPv6 de `localhost`** dans `requests` Python — voir détail complet à l'étape 3 ci-dessus.
+
+## 7. Cinq scénarios de test — preuve complète par attaque
+
+Le cahier des charges initial du projet (`PFA_SOC_Assiste_IA_Omar_Babba_2025-2026.pdf`) définit cinq scénarios de test, répartis en cas de base et cas avancés. Contrairement à la preuve de la section 6 (un seul incident, deux chemins de criticité), cette section rejoue **chacun des cinq scénarios individuellement**, avec la même exigence de traçabilité de bout en bout : détection Wazuh → triage IA Gemma2 9B → cas TheHive → enrichissement Cortex (quand un observable réseau exploitable existe).
+
+| Scénario | Règle Wazuh | Niveau | Technique MITRE |
+|---|---|---|---|
+| Brute force SSH | `5710` | 5 | T1110 |
+| Phishing / récupération d'outil externe | `100099` | 8 | T1105 |
+| PowerShell suspect | `100101` | 12 | T1059.001 |
+| Mouvement latéral simulé | `100105` | 10 | T1021.004 |
+| C2 beaconing simulé | `100103` | 10 | T1071 |
+
+### Brute force SSH (T1110)
+
+Six tentatives de connexion vers des utilisateurs inexistants (`bfuser1`-`bfuser6`) déclenchent la règle `5710`, niveau 5 — sous le seuil normal d'invocation de Gemma (8). Pour prouver que le chemin IA fonctionne aussi sur ce type d'alerte, un script ciblé (`scripts/triage_single_alert.py`, réutilisant les fonctions de `wazuh_ai_triage.py` mais interrogeant directement par `rule.id` plutôt que par la fenêtre de récence générique) a soumis cette alerte précise à Gemma :
+
+![Alerte Wazuh 5710](screenshots/28_wazuh_alert_5710_bruteforce_ssh.png)
+![Cas TheHive #2168, tags wazuh/triage-ia/T1110](screenshots/37_thehive_case_bruteforce.png)
+![Analyse Cortex AbuseIPDB sur 127.0.0.1](screenshots/38_cortex_analysis_bruteforce.png)
+
+### Phishing / récupération d'outil externe (T1105)
+
+Un `curl` vers `phishing-simulated-payload.example.invalid/malicious.sh` déclenche la règle `100099`, niveau 8 — traité automatiquement par le script de triage standard :
+
+![Alerte Wazuh 100099](screenshots/32_wazuh_alert_100099_phishing.png)
+![Cas TheHive #2144, tags wazuh/triage-ia/T1105](screenshots/33_thehive_case_phishing.png)
+![Analyse Cortex VirusTotal sur le domaine (rejet attendu, TLD .invalid)](screenshots/39_cortex_analysis_phishing.png)
+
+L'analyse Cortex sur ce domaine retourne une erreur explicite (`InvalidArgumentError`, domaine non valide) car le TLD `.invalid` du scénario simulé n'est volontairement pas enregistrable — comportement attendu, documenté tel quel.
+
+### PowerShell suspect (T1059.001)
+
+Une commande `pwsh -enc <base64>` déclenche la règle `100101`, niveau 12 (critique), capturée intégralement par `auditd` (`data.audit.execve.a1`/`a2` montrent le flag `-enc` et le payload encodé) :
+
+![Alerte Wazuh 100101, execve brut visible](screenshots/29_wazuh_alert_100101_powershell.png)
+![Cas TheHive #2151, tags wazuh/triage-ia/T1059.001](screenshots/34_thehive_case_powershell.png)
+
+Ce scénario n'a pas d'observable réseau exploitable par Cortex (exécution locale uniquement) : étape volontairement absente plutôt que simulée artificiellement.
+
+### Mouvement latéral simulé (T1021.004)
+
+Deux connexions SSH successives vers `soc@localhost` suivies d'une élévation `sudo` déclenchent la règle `100105`, niveau 10, avec l'historique des connexions précédentes visible dans le champ `previous_output` de l'alerte :
+
+![Alerte Wazuh 100105, previous_output montrant 3 sessions SSH successives](screenshots/30_wazuh_alert_100105_lateral_movement.png)
+![Cas TheHive #2150, tags wazuh/triage-ia/T1021.004](screenshots/35_thehive_case_lateral_movement.png)
+![Analyse Cortex AbuseIPDB sur 10.0.2.2 (passerelle host-only VirtualBox)](screenshots/40_cortex_analysis_lateral_movement.png)
+
+### C2 beaconing simulé (T1071)
+
+Cinq requêtes `curl` avec jitter (5-12 s) vers un domaine simulé déclenchent la règle `100103`, niveau 10, corrélant les requêtes répétées vers la même destination :
+
+![Alerte Wazuh 100103](screenshots/31_wazuh_alert_100103_c2_beaconing.png)
+![Cas TheHive #2145, tags wazuh/triage-ia/T1071](screenshots/36_thehive_case_c2_beaconing.png)
+![Analyse Cortex VirusTotal sur le domaine C2 (même rejet attendu, TLD .invalid)](screenshots/41_cortex_analysis_c2_beaconing.png)
+
+### Bilan et bug rencontré
+
+Les cinq scénarios sont ainsi documentés individuellement, chacun tracé depuis la détection Wazuh jusqu'au cas TheHive taggué par le triage IA, avec enrichissement Cortex sur les quatre scénarios disposant d'un observable réseau.
+
+**Bug rencontré** : après plusieurs cycles successifs de triage Gemma sans libérer la RAM entre chaque cycle, la VM s'est retrouvée en mémoire quasi épuisée (111 Mo libres, swap à 100 %), bloquant l'interface Cortex (jobs restant indéfiniment `Waiting`, page web non réactive). Diagnostiqué via `free -h`. Corrigé en déchargeant explicitement le modèle Gemma d'Ollama (`curl .../api/generate -d '{"keep_alive":0}'`) pour libérer ~4,5 Go, puis en redémarrant le conteneur Cortex — les deux jobs bloqués se sont terminés avec succès immédiatement après.
