@@ -1,3 +1,9 @@
+# SECURITE -- laboratoire local uniquement, pas une configuration de production :
+#   - xpack.security.enabled=false sur Elasticsearch (aucune authentification interne)
+#   - aucun port n'est publie hors 127.0.0.1 (voir "ports" ci-dessous)
+#   - reseau Docker isole (bridge dedie thehive-net), pas d'exposition WAN
+# En production : activer xpack.security, placer ces services derriere un reverse
+# proxy authentifie, et ne jamais publier Cassandra/Elasticsearch sur un port hote.
 services:
   cassandra:
     image: cassandra:4.1
@@ -11,6 +17,16 @@ services:
       - cassandra-data:/var/lib/cassandra
     networks:
       - thehive-net
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24
@@ -28,16 +44,30 @@ services:
       - es-data:/usr/share/elasticsearch/data
     networks:
       - thehive-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
 
   thehive:
     image: strangebee/thehive:5.4
     container_name: thehive
     restart: unless-stopped
     depends_on:
-      - cassandra
-      - elasticsearch
+      cassandra:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     ports:
-      - "9000:9000"
+      # Lie a 127.0.0.1 uniquement : accessible depuis l'hote de la VM (et via le
+      # port forwarding VirtualBox), jamais expose directement sur le reseau.
+      - "127.0.0.1:9000:9000"
     command:
       - --cql-hostnames
       - cassandra
@@ -52,6 +82,16 @@ services:
       - thehive-data:/opt/thp/thehive/files
     networks:
       - thehive-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/status || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
 
 networks:
   thehive-net:

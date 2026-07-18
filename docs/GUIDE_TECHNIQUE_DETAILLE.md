@@ -37,7 +37,7 @@ Ce document explique, étape par étape, **chaque outil utilisé**, **son rôle 
 
 ## 2. Comment les scénarios d'attaque ont été générés
 
-Aucune attaque n'est "fausse" au sens où le code a réellement été exécuté sur la machine — ce sont des **simulations volontairement inoffensives** (domaines `.invalid` qui ne résolvent jamais, commandes bénignes) mais dont le comportement système (processus lancés, arguments, fréquence) est identique à celui d'une vraie attaque. C'est ce que Wazuh/auditd observent réellement, pas un texte de log fabriqué à la main.
+Aucune attaque n'est "fausse" au sens où le code a réellement été exécuté sur la machine — ce sont des **simulations volontairement inoffensives** (domaines `.invalid` qui ne résolvent jamais, commandes bénignes). Les simulations reproduisent certains indicateurs techniques observables d'une attaque réelle, notamment l'exécution des processus, leurs arguments et leur fréquence — c'est ce que Wazuh/auditd observent réellement, pas un texte de log fabriqué à la main — mais elles ne reproduisent pas l'ensemble du contexte d'une intrusion réelle (pas de second hôte réellement compromis, pas de canal C2 réel vers l'extérieur, pas de passerelle mail pour le phishing, pas d'attaquant avec ses propres contraintes opérationnelles). Formulé autrement : ces preuves valident que la chaîne de détection/triage/enrichissement fonctionne sur les signaux qu'elle est censée capter, pas qu'elle a été confrontée à un adversaire réel.
 
 Script utilisé : [`scripts/generate_advanced_scenarios.sh`](../scripts/generate_advanced_scenarios.sh).
 
@@ -63,7 +63,7 @@ for i in 1 2; do
   sleep 2
 done
 ```
-**Ce qui se passe réellement** : deux connexions SSH successives vers la machine elle-même (`localhost`, pour simuler un "saut" vers une autre machine du réseau sans avoir de deuxième VM), suivies d'une tentative d'élévation de privilèges (`sudo`). C'est le schéma typique d'un attaquant qui rebondit d'une machine compromise à une autre puis tente d'obtenir les droits root. La règle Wazuh `100105` corrèle ces connexions répétées + élévation dans une fenêtre de 120 secondes.
+**Ce qui se passe réellement** : deux connexions SSH successives vers la machine elle-même (`localhost`, utilisé ici comme un **proxy de laboratoire** faute d'une deuxième VM disponible — la sequence de commandes et les événements `auditd`/SSH générés sont réels, mais il ne s'agit pas d'un déplacement entre deux hôtes physiquement distincts, ce qu'une deuxième VM permettrait de valider plus rigoureusement), suivies d'une tentative d'élévation de privilèges (`sudo`). C'est le schéma typique d'un attaquant qui rebondit d'une machine compromise à une autre puis tente d'obtenir les droits root. La règle Wazuh `100105` corrèle une connexion SSH et une élévation sudo provenant de la même adresse source dans une fenêtre de 120 secondes (voir README pour la version corrigée de cette règle, qui vérifie désormais explicitement `same_source_ip` entre les deux événements plutôt qu'une simple fréquence).
 
 ### Scénario 4 — C2 beaconing simulé (T1071), avec jitter
 
@@ -75,7 +75,7 @@ for i in 1 2 3 4 5; do
   sleep $((5 + RANDOM % 8))
 done
 ```
-**Ce qui se passe réellement** : 5 requêtes `curl` vers le même domaine factice, mais avec un **chemin d'URL aléatoire** (`checkin`, `beacon`, `poll`...) et un **intervalle de temps aléatoire** entre chaque requête (5 à 12 secondes, pas un pas fixe). C'est volontairement conçu pour imiter un vrai malware qui "bat le rappel" (*beacon*) périodiquement vers son serveur de commande et contrôle (C2), avec du **jitter** pour éviter d'être repéré par un motif trop régulier — exactement la technique qu'utilisent de vrais frameworks C2 (Cobalt Strike, etc.). La règle Wazuh `100103` détecte ≥3 occurrences de la règle `100099` (curl/wget) en 90 secondes.
+**Ce qui se passe réellement** : 5 requêtes `curl` vers le même domaine factice, mais avec un **chemin d'URL aléatoire** (`checkin`, `beacon`, `poll`...) et un **intervalle de temps aléatoire** entre chaque requête (5 à 12 secondes, pas un pas fixe). C'est volontairement conçu pour reproduire l'indicateur observable le plus caractéristique d'un beaconing C2 (des requêtes répétées vers la même destination, espacées par un intervalle irrégulier) — le **jitter** est la technique que de vrais frameworks C2 (Cobalt Strike, etc.) utilisent pour éviter d'être repérés par un motif trop régulier. Ceci dit, cette simulation ne reproduit pas un vrai canal C2 (pas de commande reçue en retour, pas de trafic chiffré/masqué, pas de serveur de commande and control réel derrière le domaine `.invalid`) : elle prouve que la chaîne détecte le motif comportemental, pas qu'elle a été confrontée à un vrai malware. La règle Wazuh `100103` détecte ≥3 occurrences de la règle `100099` (curl/wget) en 90 secondes **vers la même destination** (voir README pour la version corrigée, qui vérifie `same_field` sur l'argument de destination plutôt qu'une simple fréquence).
 
 ## 3. Étape par étape : le trajet complet d'une alerte
 
@@ -211,13 +211,15 @@ Le cahier des charges initial du projet (`PFA_SOC_Assiste_IA_Omar_Babba_2025-202
 
 | Scénario | Règle Wazuh | Niveau | Technique MITRE |
 |---|---|---|---|
-| Brute force SSH | `5710` | 5 | T1110 |
+| Brute force SSH | `5710` | 5 | T1110.001 |
 | Phishing / récupération d'outil externe | `100099` | 8 | T1105 |
 | PowerShell suspect | `100101` | 12 | T1059.001 |
 | Mouvement latéral simulé | `100105` | 10 | T1021.004 |
 | C2 beaconing simulé | `100103` | 10 | T1071 |
 
-### Brute force SSH (T1110)
+**Note de cohérence sur les règles `100099`/`100101`/`100103`/`100105`** : la version des règles utilisée pour produire les captures ci-dessous matchait uniquement le nom du process (`curl`, `pwsh`) ou une simple fréquence, sans vérifier les arguments réels ni la destination/session. `scripts/local_rules.xml` a depuis été corrigé pour exiger un indicateur suspect réel dans les arguments (100099/100101) et une corrélation par destination/session plutôt qu'une simple fréquence (100103/100105) — voir README, section "Détection avancée au niveau commande", pour le détail. Ce correctif est vérifié par tests unitaires (`tests/test_config_files.py`) mais reste à redéployer et retester sur la VM ; les captures ci-dessous restent une preuve valide du fonctionnement du pipeline Wazuh → Gemma → TheHive → Cortex, pas de la version corrigée des règles.
+
+### Brute force SSH (T1110.001)
 
 Six tentatives de connexion vers des utilisateurs inexistants (`bfuser1`-`bfuser6`) déclenchent la règle `5710`, niveau 5 — sous le seuil normal d'invocation de Gemma (8). Pour prouver que le chemin IA fonctionne aussi sur ce type d'alerte, un script ciblé (`scripts/triage_single_alert.py`, réutilisant les fonctions de `wazuh_ai_triage.py` mais interrogeant directement par `rule.id` plutôt que par la fenêtre de récence générique) a soumis cette alerte précise à Gemma :
 

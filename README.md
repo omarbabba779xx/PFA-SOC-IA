@@ -67,19 +67,21 @@ Le cahier des charges initial du projet (`PFA_SOC_Assiste_IA_Omar_Babba_2025-202
 
 | Scénario (cahier des charges) | Règle Wazuh | Niveau | Technique MITRE |
 |---|---|---|---|
-| Brute force SSH | `5710` (sshd, tentative sur utilisateur inexistant) | 5 | T1110 |
+| Brute force SSH | `5710` (sshd, tentative sur utilisateur inexistant) | 5 | T1110.001 |
 | Email de phishing / URL suspecte | `100099` (curl/wget, récupération d'outil externe) | 8 | T1105 |
 | Activité PowerShell suspecte | `100101` (exécution PowerShell encodée) | 12 | T1059.001 |
 | Mouvement latéral simulé | `100105` (sessions SSH successives + élévation) | 10 | T1021.004 |
 | C2 beaconing simulé | `100103` (requêtes réseau répétées) | 10 | T1071 |
 
-### 1. Brute force SSH (T1110)
+### 1. Brute force SSH (T1110.001)
 
 Six tentatives de connexion SSH vers des utilisateurs inexistants (`bfuser1` à `bfuser6`) déclenchent la règle `5710`, niveau 5 — sous le seuil d'invocation de Gemma (`LLM_INVOCATION_THRESHOLD_LEVEL=8`) et hors de la plage de routage Shuffle (5-7 exclut le niveau 5 dans la configuration actuelle du workflow). Pour documenter malgré tout le chemin Gemma sur ce scénario, l'alerte a été soumise manuellement au triage IA via un script ad hoc (`scripts/triage_single_alert.py`, réutilisant les fonctions de `wazuh_ai_triage.py`) :
 
 ![Alerte Wazuh 5710 : tentative SSH sur utilisateur inexistant bfuser6](docs/screenshots/28_wazuh_alert_5710_bruteforce_ssh.png)
 
 ![Cas TheHive #2168 généré par Gemma2 9B, tags wazuh/triage-ia/T1110](docs/screenshots/37_thehive_case_bruteforce.png)
+
+*Note de cohérence* : le code MITRE des scénarios de brute force a depuis été uniformisé de `T1110` (technique parente) vers `T1110.001` (sous-technique *Password Guessing*, plus précise pour ce scénario) dans le prompt de triage et les jeux de référence. La capture ci-dessus, prise avant cette uniformisation, affiche encore le tag `T1110` — les deux codes partagent la même famille MITRE, seule la granularité diffère.
 
 Cortex analyse l'adresse source (`127.0.0.1`, la VM elle-même dans ce scénario de laboratoire) via `AbuseIPDB_2_0` :
 
@@ -247,11 +249,15 @@ Quatre scénarios avancés (PowerShell suspect, mouvement latéral, C2 beaconing
 
 | ID règle | Détection | Technique MITRE | Mécanisme |
 |---|---|---|---|
-| `100099` | Exécution de `curl`/`wget` (récupération de payload) | T1105 | hérite de `80792` + `audit.command` |
-| `100101` | Exécution de `pwsh`/`powershell` | T1059.001 | hérite de `80792` + `audit.command` |
-| `100103` | `curl`/`wget` répétés (≥3 en 90s, jitter) | T1071 | corrélation par fréquence sur `100099` |
-| `100105` | Connexions SSH répétées + élévation sudo (≥3 en 120s) | T1021.004 | corrélation par fréquence sur `5715` |
+| `100098` | Exécution de `curl`/`wget` (baseline, niveau 3) | — | hérite de `80792` + `audit.command` |
+| `100099` | `100098` + argument suspect (`.sh`/`.ps1`/`.exe`, `/tmp/`, `/dev/shm/`) | T1105 | hérite de `100098` + regex sur `full_log` |
+| `100100` | Exécution de `pwsh`/`powershell` (baseline, niveau 3) | — | hérite de `80792` + `audit.command` |
+| `100101` | `100100` + argument suspect (`-enc`, `IEX`, `DownloadString`, bypass) | T1059.001 | hérite de `100100` + regex sur `full_log` |
+| `100103` | `100099` répété (≥3 en 90s) **vers la même destination** | T1071 | corrélation par fréquence + `same_field` sur `audit.execve.a1` |
+| `100105` | Élévation sudo root précédée d'une connexion SSH **depuis la même IP source** (120s) | T1021.004 | corrélation `if_matched_sid` (5715) + `same_source_ip` sur `5402` |
 | `100107` | Exécution de `nc`/`ncat` (sondage de port) | T1046 | hérite de `80792` + `audit.command` |
+
+**Révision de ces règles suite à un audit externe** : la première version (100099/100101 matchant uniquement le nom du process, 100103/100105 comptant une simple fréquence sans vérifier la destination ou la session) produisait de vrais faux positifs potentiels — un `curl` légitime ou un `pwsh` bénin déclenchait la même alerte de haute criticité qu'une réelle récupération de payload ou une commande encodée. La table ci-dessus reflète la version corrigée (`scripts/local_rules.xml`), qui sépare une règle baseline informative (niveau 3) d'une règle à criticité élevée nécessitant un indicateur réel dans les arguments, et utilise les primitives natives de corrélation Wazuh (`same_field`, `same_source_ip`) plutôt qu'un simple comptage. **Les captures d'écran 28 à 41 de ce document ont été prises avec la version précédente des règles** (avant cette correction) : elles restent une preuve valide que le pipeline Wazuh → Gemma → TheHive → Cortex fonctionne de bout en bout, mais la version corrigée des règles doit encore être redéployée sur la VM et retestée avant de pouvoir affirmer que les nouvelles conditions (arguments suspects, corrélation par destination/session) se déclenchent correctement en conditions réelles — c'est un correctif de code vérifié par tests unitaires (`tests/test_config_files.py`), pas encore par ré-exécution sur la VM.
 
 ### Quatre bugs réels trouvés et corrigés
 
@@ -440,6 +446,12 @@ python scripts/wazuh_ai_triage.py
 | Cinq scénarios du cahier des charges (brute force, phishing, PowerShell, mouvement latéral, C2) | ✅ Rejoués individuellement et documentés de bout en bout |
 | Dashboard SOC personnalisé | ✅ 4 indicateurs opérationnels |
 | Rapports PDF automatiques | ⏳ Prévu, restant à faire |
+| Règles Wazuh corrigées (arguments réels + corrélation par destination/session) | ✅ Corrigées et testées unitairement (`tests/test_config_files.py`), ⏳ redéploiement/reverification sur la VM restant à faire |
+| Idempotence, validation de schéma, prompt délimité (`wazuh_ai_triage.py`) | ✅ Implémentés et testés unitairement (`tests/test_wazuh_ai_triage.py`) |
+| Matching MITRE exact vs famille, métadonnées de run (`evaluate_llm_vs_baseline.py`) | ✅ Implémentés et testés unitairement (`tests/test_evaluate_llm_vs_baseline.py`) |
+| Suite de tests automatisés + CI (GitHub Actions : ruff, pytest, gitleaks) | ✅ 40 tests, exécutés à chaque push |
+| Docker Compose durci (health checks, limites mémoire, ports liés à 127.0.0.1) | ✅ Appliqué à TheHive et Cortex |
+| Reproductibilité (`LICENSE`, `.env.example`, `systemd/audit-merge.service`) | ✅ Ajoutés |
 
 | Semaine | Phase | Statut |
 |---|---|---|

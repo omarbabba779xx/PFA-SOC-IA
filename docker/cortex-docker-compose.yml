@@ -1,10 +1,20 @@
+# SECURITE -- risque assume, propre a un laboratoire isole :
+#   Le montage de /var/run/docker.sock donne a Cortex (et donc a tout analyseur
+#   Cortex compromis) un controle total sur le demon Docker de l'hote, y compris
+#   la possibilite de lancer un conteneur privilegie -- c'est le mecanisme
+#   utilise par Cortex pour lancer dynamiquement les conteneurs d'analyseurs, il
+#   n'y a pas de contournement simple sans changer d'architecture (ex: un proxy
+#   Docker Socket avec permissions limitees comme tecnativa/docker-socket-proxy,
+#   ou deporter les analyseurs sur un hote Cortex dedie et isole du reste de la
+#   stack). Ne jamais exposer Cortex sur un reseau non fiable avec ce montage actif.
 services:
   cortex:
     image: thehiveproject/cortex:3.1.7
     container_name: cortex
     restart: unless-stopped
     ports:
-      - "9001:9001"
+      # Lie a 127.0.0.1 uniquement, meme raisonnement que TheHive ci-dessus.
+      - "127.0.0.1:9001:9001"
     environment:
       - job_directory=/tmp/cortex-jobs
     volumes:
@@ -16,7 +26,24 @@ services:
       - thehive-elasticsearch  # reutilise l'Elasticsearch deja deploye pour TheHive (economie de RAM)
     networks:
       - default
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9001/index.html || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
 
+# Nom de reseau externe couple au nom de projet Compose de thehive-docker-compose.yml
+# (convention Docker Compose : <nom_projet>_<nom_reseau>). Si ce projet est deploye
+# sous un nom de dossier/projet different de "thehive", ce nom ne correspondra plus
+# et Cortex echouera a rejoindre le reseau -- dans ce cas, ajuster explicitement
+# COMPOSE_PROJECT_NAME=thehive avant de lancer thehive-docker-compose.yml, ou
+# remplacer "external: true" par la creation d'un reseau partage nomme explicitement
+# dans les deux fichiers.
 networks:
   default:
     name: thehive_thehive-net

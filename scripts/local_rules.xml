@@ -5,50 +5,111 @@
        This is the officially documented Wazuh/auditd integration path.
 
        The audit source itself is pre-merged by a small local service (audit_merge.py, systemd unit
-       audit-merge.service) that concatenates the SYSCALL/EXECVE/CWD/PATH/PROCTITLE records sharing the
-       same audit(...) id into a single line, matching the format Wazuh's own auditd decoder documents
-       and expects (see /var/ossec/ruleset/decoders/0040-auditd_decoders.xml) but which the raw
-       /var/log/audit/audit.log never actually produces on its own (it writes one line per record type).
-       Without this merge, the EXECVE arguments (URL, encoded command) never reach full_log, and any
-       downstream consumer (rule engine, LLM, human analyst) is blind to the actual command content. -->
-  <rule id="100099" level="8">
+       systemd/audit-merge.service in this repo) that concatenates the SYSCALL/EXECVE/CWD/PATH/PROCTITLE
+       records sharing the same audit(...) id into a single line, matching the format Wazuh's own auditd
+       decoder documents and expects (see /var/ossec/ruleset/decoders/0040-auditd_decoders.xml) but which
+       the raw /var/log/audit/audit.log never actually produces on its own (it writes one line per record
+       type). Without this merge, the EXECVE arguments (URL, encoded command) never reach full_log, and
+       any downstream consumer (rule engine, LLM, human analyst) is blind to the actual command content.
+
+       Revision note (2026-07): the original v1 rules for 100099/100101/100103/100105 matched only on
+       audit.command (the bare process name), with no inspection of the command's actual arguments or of
+       correlation context. That meant a legitimate `curl` or a benign `pwsh` invocation would trigger the
+       same high-severity alert as an actual payload retrieval or an obfuscated encoded command, and the
+       "beaconing"/"lateral movement" rules only checked *frequency of the same rule ID*, never destination
+       or session identity. v2 below splits each detection into a low-severity baseline rule (process
+       executed, nothing more implied) and a higher-severity rule that requires an actual suspicious
+       indicator in the command's arguments, and uses Wazuh's native <same_field>/<same_source_ip>
+       correlation primitives instead of a bare frequency count. This still needs to be redeployed to the
+       lab VM and re-verified against real auditd output before the next round of screenshots - the exact
+       audit.execve.aN index used by <same_field> below depends on how many flags precede the URL/command
+       in the actual invocation and must be checked against a live sample, not assumed. -->
+
+  <!-- ===================== T1105 - network fetch / tool retrieval ===================== -->
+
+  <rule id="100098" level="3">
     <if_sid>80792</if_sid>
     <field name="audit.command">^curl$|^wget$</field>
-    <description>Single network fetch via curl/wget - possible external tool/payload retrieval</description>
+    <description>Network fetch executed (curl/wget) - informational baseline, not itself suspicious</description>
+    <group>audit_command,pfa_baseline,</group>
+  </rule>
+
+  <rule id="100099" level="8">
+    <if_sid>100098</if_sid>
+    <field name="full_log" type="pcre2">(?i)\.(sh|ps1|exe|elf|bin)(["'\s]|$)|/tmp/|/dev/shm/|-o\s+/(tmp|dev/shm)</field>
+    <description>Network fetch (curl/wget) retrieving a script/executable to a suspicious path - possible external tool/payload retrieval</description>
     <mitre>
       <id>T1105</id>
     </mitre>
     <group>audit_command,pfa_phishing,</group>
   </rule>
 
-  <rule id="100101" level="12">
+  <!-- ===================== T1059.001 - suspicious/obfuscated PowerShell ===================== -->
+
+  <rule id="100100" level="3">
     <if_sid>80792</if_sid>
     <field name="audit.command">^pwsh$|^powershell$</field>
-    <description>Suspicious PowerShell execution detected via auditd</description>
+    <description>PowerShell execution detected via auditd - informational baseline, not itself suspicious</description>
+    <group>audit_command,pfa_baseline,</group>
+  </rule>
+
+  <rule id="100101" level="12">
+    <if_sid>100100</if_sid>
+    <field name="full_log" type="pcre2">(?i)-enc(odedcommand)?\b|invoke-expression|\biex\b|downloadstring|net\.webclient|-executionpolicy\s+bypass</field>
+    <description>Suspicious/obfuscated PowerShell execution (encoded command, IEX, download cradle, or execution-policy bypass) detected via auditd</description>
     <mitre>
       <id>T1059.001</id>
     </mitre>
     <group>audit_command,pfa_powershell,</group>
   </rule>
 
-  <!-- C2 beaconing simulated: repeated curl/wget executions from the same source in a short window -->
+  <!-- ===================== T1071 - repeated fetches to the SAME destination (C2 beaconing) =====================
+       same_field enforces that all matched occurrences of rule 100099 share the identical value of the
+       given audit.execve argument index (the fetch URL/destination), not merely that 100099 fired 3 times
+       against ANY targets - this is the fix for "detects a curl burst, not real beaconing" (see revision
+       note above). Verify the exact aN index against a live audit.execve sample before relying on this in
+       production: it depends on how many flags/options precede the URL in the actual curl/wget invocation. -->
+
   <rule id="100103" level="10" frequency="3" timeframe="90">
     <if_matched_sid>100099</if_matched_sid>
-    <description>Repeated network fetch commands executed in a short window (possible C2 beaconing)</description>
+    <same_field>audit.execve.a1</same_field>
+    <description>Repeated network fetch commands to the same destination in a short window (possible C2 beaconing)</description>
     <mitre>
       <id>T1071</id>
     </mitre>
     <group>audit_command,pfa_c2_beaconing,</group>
   </rule>
 
-  <!-- Lateral movement simulated: successive SSH sessions followed by privilege escalation in a short window -->
-  <rule id="100105" level="10" frequency="3" timeframe="120">
+  <!-- ===================== T1021.004 - SSH login followed by root elevation, same source =====================
+       Correlates two DISTINCT event types (SSH accepted session, rule 5715; sudo-to-root, rule 5402 from
+       Wazuh's native sudo ruleset) constrained to the same source IP within the timeframe, rather than
+       just counting repeated occurrences of one rule (the v1 bug). This is the standard Wazuh idiom for
+       "rule B fired, and rule A also fired recently from the same source" - <if_sid> is the rule that
+       actually fires the alert (sudo-to-root), <if_matched_sid> is the rule it must have been preceded by
+       (SSH accept), <same_source_ip/> constrains both to the same srcip. Needs to be redeployed and
+       verified that rule 5402 is present as-is in this Wazuh ruleset version before relying on it. -->
+
+  <rule id="100105" level="10" frequency="1" timeframe="120">
+    <if_sid>5402</if_sid>
     <if_matched_sid>5715</if_matched_sid>
-    <description>Multiple successive SSH sessions followed by privilege escalation (possible lateral movement)</description>
+    <same_source_ip />
+    <description>Sudo elevation to root shortly after an SSH login from the same source (possible lateral movement)</description>
     <mitre>
       <id>T1021.004</id>
     </mitre>
     <group>pfa_lateral_movement,</group>
+  </rule>
+
+  <!-- ===================== T1046 - network probing / port scan ===================== -->
+
+  <rule id="100107" level="6">
+    <if_sid>80792</if_sid>
+    <field name="audit.command">^nc$|^ncat$|^netcat$</field>
+    <description>Network probing tool executed (nc/ncat) - possible port scan / service discovery</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>audit_command,pfa_recon,</group>
   </rule>
 
 </group>

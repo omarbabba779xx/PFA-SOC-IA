@@ -2,11 +2,23 @@
 """
 Corrige la methodologie de labellisation du jeu de test (S5) : au lieu d'une
 reference unique par fenetre de scenario (trop grossiere), attribue une
-reference manuelle a CHAQUE alerte individuelle selon le contenu reel de son
-log, conformement a l'exigence du cahier des charges ("chaque alerte aura une
-reference attendue"). Le mapping ci-dessous est une analyse manuelle du
-contenu des logs (codes MITRE ATT&CK officiels), independante du champ
-rule.mitre deja present dans l'alerte Wazuh.
+reference manuelle a CHAQUE alerte individuelle, conformement a l'exigence
+du cahier des charges ("chaque alerte aura une reference attendue"). Le
+mapping ci-dessous est une analyse manuelle des codes MITRE ATT&CK officiels
+pour chaque type d'evenement, independante du champ rule.mitre deja present
+dans l'alerte Wazuh (qui n'est jamais lu par ce script).
+
+LIMITE METHODOLOGIQUE ASSUMEE : la reference est attribuee par correspondance
+exacte sur `rule.description` (voir MANUAL_REFERENCE ci-dessous), pas par
+relecture individuelle du contenu complet de chaque alerte. Concretement,
+cela revient a labelliser par IDENTITE DE REGLE Wazuh plutot que par instance
+-- deux alertes qui partagent la meme rule.description recoivent toujours la
+meme reference, meme si leur contexte (full_log, agent, timing) differe. Ce
+n'est donc PAS une annotation independante au sens strict (elle ne peut pas
+detecter qu'une alerte particuliere est un faux positif de sa propre regle).
+Une verification humaine par echantillonnage sur le contenu reel de full_log,
+avec desaccord mesure entre deux relecteurs, reste a faire avant de citer ces
+chiffres comme preuve de generalisation forte.
 """
 
 import json

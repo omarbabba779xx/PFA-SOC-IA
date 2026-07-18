@@ -1,3 +1,10 @@
+# NOTE : script exploratoire ponctuel conserve pour memoire de la premiere
+# preuve de bout en bout (brute force SSH via Mistral 7B, avant le passage a
+# Gemma2 9B et avant l'idempotence/la validation Pydantic ajoutees a
+# scripts/wazuh_ai_triage.py). Ne fait PAS partie du pipeline courant --
+# scripts/wazuh_ai_triage.py et scripts/triage_single_alert.py sont les
+# composants reels et maintenus. Chemins locaux (~/triage_result.json,
+# ~/.thehive_api_key) et titre de cas codes en dur, non generalisable.
 import json
 import os
 import requests

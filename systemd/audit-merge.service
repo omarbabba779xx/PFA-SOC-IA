@@ -1,0 +1,40 @@
+# Installation :
+#   sudo cp systemd/audit-merge.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now audit-merge.service
+#
+# Prerequis : /var/log/audit/audit-merged.log doit exister et etre lisible
+# par Wazuh (voir le bloc <localfile> correspondant dans ossec.conf), et le
+# repertoire scripts/ de ce depot doit etre deploye sur la VM (ex: /opt/pfa-soc-ia).
+#
+# Ce service dependant d'auditd (After=/Requires=) : s'il n'est pas actif, le
+# fichier source /var/log/audit/audit.log n'existe pas encore et le service
+# echouera au demarrage -- c'est le comportement voulu (Restart=on-failure le
+# relance automatiquement une fois auditd disponible).
+
+[Unit]
+Description=Fusion des enregistrements auditd multi-lignes pour le decodeur Wazuh
+Documentation=https://github.com/omarbabba779xx/PFA-SOC-IA
+After=auditd.service network.target
+Requires=auditd.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /opt/pfa-soc-ia/scripts/audit_merge.py
+Environment=AUDIT_MERGE_SRC=/var/log/audit/audit.log
+Environment=AUDIT_MERGE_DST=/var/log/audit/audit-merged.log
+Environment=LOG_LEVEL=INFO
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+# Durcissement minimal -- le service doit lire un fichier sous /var/log/audit
+# (root uniquement en lecture par defaut) et ecrire a cote, donc pas de
+# ProtectSystem=strict complet, mais on limite le reste de la surface.
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

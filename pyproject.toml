@@ -1,0 +1,23 @@
+[project]
+name = "pfa-soc-ia"
+version = "0.1.0"
+description = "SOC assiste par IA - PFA 4IIR EMSI Tanger 2025-2026"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["docs/", "examples/"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501"]  # ligne longue tolerée dans les templates de prompt
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+exclude = ["examples/", "docs/"]

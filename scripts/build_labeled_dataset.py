@@ -8,6 +8,22 @@ alertes Wazuh correspondantes et leur associe le label de reference.
 
 Entree  : reference_dataset.jsonl (produit par generate_test_dataset.sh)
 Sortie  : labeled_dataset.json
+
+LIMITE METHODOLOGIQUE ASSUMEE : la selection se fait par fenetre temporelle
+(toutes les alertes indexees entre le debut et la fin du scenario), pas par
+identifiant de scenario explicite. Sur une VM avec du bruit residuel, cela
+peut inclure dans le jeu de test des alertes sans rapport reel avec le
+scenario simule. Un filtre minimal (niveau >= 3) ecarte le bruit systeme
+evident, mais ne garantit pas que chaque alerte retenue appartient bien au
+scenario -- une verification par agent/utilisateur/cle d'audit serait plus
+rigoureuse et reste a faire pour une version ulterieure de ce script.
+
+NOTE : `reference_dataset.jsonl` a ete archive sous docs/evaluation/legacy/
+car son mapping MITRE (brute force = "Initial Access") contredit la
+methodologie actuelle (voir scripts/relabel_per_alert.py qui utilise
+"Credential Access", la tactique MITRE officielle pour T1110). Ce script
+reste fonctionnel mais son fichier d'entree par defaut doit etre regenere
+avec le mapping a jour avant reutilisation.
 """
 
 import json
@@ -49,7 +65,13 @@ def fetch_alerts_in_window(start: str, end: str) -> list[dict]:
         timeout=15,
     )
     resp.raise_for_status()
-    return [hit["_source"] for hit in resp.json()["hits"]["hits"]]
+    # Filtre minimal anti-bruit : ecarte les alertes de tres faible niveau
+    # (evenements systeme/Docker internes) qui n'ont aucun rapport avec les
+    # scenarios simules mais peuvent tomber dans la fenetre temporelle.
+    return [
+        hit["_source"] for hit in resp.json()["hits"]["hits"]
+        if hit["_source"].get("rule", {}).get("level", 0) >= 3
+    ]
 
 
 def main() -> None:

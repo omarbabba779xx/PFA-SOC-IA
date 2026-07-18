@@ -1,4 +1,13 @@
-import json, os
+# LIMITE METHODOLOGIQUE ASSUMEE (voir relabel_per_alert.py pour le detail complet) :
+# la reference ci-dessous est attribuee par correspondance exacte sur rule.description,
+# pas par relecture individuelle du contenu de chaque alerte -- ce jeu "holdout" est donc
+# holdout par INSTANCE (nouvelles occurrences des memes regles), pas par famille de
+# comportement inedite. Les familles couvertes ici (sudo, creation/suppression de compte,
+# cron, connexion SSH) sont deja explicitees dans le prompt de triage_prompt -- un holdout
+# par famille exigerait des scenarios dont le TYPE de comportement n'apparait dans aucun
+# exemple few-shot, ce qui reste a construire.
+import json
+import os
 
 INPUT_FILE = os.path.expanduser('~/labeled_dataset_holdout_raw.json')
 OUTPUT_FILE = os.path.expanduser('~/labeled_dataset_holdout.json')
