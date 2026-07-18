@@ -5,7 +5,14 @@ a une baseline classique basee sur les regles de correlation natives de Wazuh
 (rule.level, rule.mitre), par rapport a une reference etablie manuellement
 lors de la generation des scenarios de test.
 
-Entree  : labeled_dataset_sample.json (alerte + reference manuelle)
+Entree  : labeled_dataset_per_alert.json par defaut (voir DATASET_FILE) --
+          PAS labeled_dataset_sample.json, dont la reference est attribuee par
+          bloc de scenario (granularite trop grossiere, contamine des
+          evenements benins avec le label du scenario englobant -- voir
+          docs/evaluation/legacy/README.md). labeled_dataset_sample.json ne
+          doit servir que d'entree brute a scripts/relabel_per_alert.py, qui
+          reconstruit une reference par alerte individuelle avant tout calcul
+          de metrique.
 Sortie  : evaluation_results.json + metadata.json (parametres exacts du run,
           pour la reproductibilite) + resume des metriques sur stdout
 
