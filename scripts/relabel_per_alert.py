@@ -51,13 +51,13 @@ MANUAL_REFERENCE = {
         "incident_type": "Brute force SSH",
         "criticite": "haute",
         "mitre_tactic": "Credential Access",
-        "mitre_technique": "T1110",
+        "mitre_technique": "T1110.001",
     },
     "PAM: User login failed.": {
         "incident_type": "Echec authentification",
         "criticite": "moyenne",
         "mitre_tactic": "Credential Access",
-        "mitre_technique": "T1110",
+        "mitre_technique": "T1110.001",
     },
     "User missed the password to change UID (user id).": {
         "incident_type": "Echec elevation de privileges (su)",
@@ -109,7 +109,9 @@ def main() -> None:
     with open(OUTPUT_FILE, "w") as f:
         json.dump(relabeled, f, indent=2, default=str)
 
-    print(f"[+] {len(relabeled)} alerte(s) relabellisee(s) par contenu reel -> {OUTPUT_FILE}")
+    print(f"[+] {len(relabeled)} alerte(s) relabellisee(s) par table de reference manuelle "
+          f"(mapping sur rule.description, PAS une relecture individuelle -- voir la limite "
+          f"methodologique documentee en tete de ce fichier) -> {OUTPUT_FILE}")
     if unmatched:
         print(f"[!] {unmatched} alerte(s) sans correspondance dans le mapping manuel, exclue(s)")
 

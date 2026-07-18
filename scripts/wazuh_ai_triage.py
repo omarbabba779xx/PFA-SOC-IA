@@ -322,6 +322,14 @@ def triage_with_llm(alert: dict) -> TriageResult | None:
         return None
 
 
+class TheHiveVerificationError(Exception):
+    """Leve quand la verification pre-creation (recherche par sourceRef) echoue --
+    volontairement fail-closed : on prefere ne PAS creer de cas plutot que de risquer
+    un doublon parce qu'on n'a pas pu confirmer qu'aucun cas n'existait deja. L'appelant
+    (main()) laisse cette exception remonter jusqu'a la boucle principale, qui ne marque
+    PAS l'alerte comme traitee -- elle sera donc retentee au prochain lancement."""
+
+
 def find_existing_case_by_source_ref(source_ref: str) -> str | None:
     """Interroge TheHive pour un cas deja cree avec ce sourceRef (= _es_id de
     l'alerte). Filet de securite complementaire a l'idempotence SQLite locale :
@@ -329,7 +337,12 @@ def find_existing_case_by_source_ref(source_ref: str) -> str | None:
     mark_processed(), l'etat local ne sait pas qu'un cas a deja ete cree, mais
     TheHive, lui, le sait -- cette verification cote source de verite empeche un
     doublon au prochain lancement, meme si la base SQLite locale est incomplete
-    ou a ete perdue."""
+    ou a ete perdue.
+
+    Fail-closed : si la recherche echoue (TheHive injoignable, timeout), on ne peut
+    PAS supposer qu'aucun cas n'existe -- lever TheHiveVerificationError plutot que de
+    continuer silencieusement, ce qui aurait pu creer un doublon exactement dans le
+    scenario que cette fonction est censee prevenir."""
     if not source_ref:
         return None
     try:
@@ -344,21 +357,27 @@ def find_existing_case_by_source_ref(source_ref: str) -> str | None:
         if isinstance(results, list) and results:
             return results[0].get("_id")
     except requests.RequestException as exc:
-        log.warning("Verification sourceRef TheHive echouee (non bloquant, on continue) : %s", exc)
+        raise TheHiveVerificationError(
+            f"Verification sourceRef TheHive echouee pour {source_ref!r} : {exc}"
+        ) from exc
     return None
 
 
-def create_thehive_case(alert: dict, triage: TriageResult, criticite: str) -> str:
+def create_thehive_case(alert: dict, triage: TriageResult, criticite: str) -> dict:
     """Cree un cas TheHive. La criticite (severity) provient de la baseline
     (approche hybride) ; le LLM fournit uniquement le mapping MITRE et le
     contexte narratif (resume, recommandation).
     Verifie d'abord aupres de TheHive (source de verite) qu'aucun cas n'existe
     deja pour ce sourceRef, au cas ou un run precedent aurait cree le cas puis
-    ete interrompu avant de marquer l'alerte comme traitee localement."""
+    ete interrompu avant de marquer l'alerte comme traitee localement.
+
+    Retourne {"case_id": str, "created": bool} -- "created" distingue un cas
+    nouvellement cree d'un cas deja existant reutilise, pour que l'appelant puisse
+    compter separement les vrais cas crees et les doublons locaux evites."""
     existing = find_existing_case_by_source_ref(alert.get("_es_id", ""))
     if existing:
         log.warning("Cas TheHive deja existant pour sourceRef=%s (id=%s) -- pas de doublon cree", alert.get("_es_id"), existing)
-        return existing
+        return {"case_id": existing, "created": False}
     rule = alert.get("rule", {})
     payload = {
         "title": f"[{criticite.upper()}] {triage.incident_type}",
@@ -388,7 +407,7 @@ def create_thehive_case(alert: dict, triage: TriageResult, criticite: str) -> st
         timeout=15,
     )
     resp.raise_for_status()
-    return resp.json()["_id"]
+    return {"case_id": resp.json()["_id"], "created": True}
 
 
 def main() -> None:
@@ -401,6 +420,7 @@ def main() -> None:
 
     llm_invoked = 0
     cases_created = 0
+    cases_reused = 0
     duplicates_skipped = 0
     rejected_invalid = 0
     errors = 0
@@ -432,16 +452,29 @@ def main() -> None:
             case_id = None
             status = "processed"
             if CRITICALITY_ORDER.index(criticite) >= threshold_idx:
-                case_id = create_thehive_case(alert, triage, criticite)
-                cases_created += 1
+                result = create_thehive_case(alert, triage, criticite)
+                case_id = result["case_id"]
                 status = "case_created"
-                log.info("-> cas TheHive cree : %s", case_id)
+                if result["created"]:
+                    cases_created += 1
+                    log.info("-> cas TheHive cree : %s", case_id)
+                else:
+                    cases_reused += 1
+                    log.info("-> cas TheHive existant reutilise (doublon local evite) : %s", case_id)
 
             # mark_processed() n'est atteint qu'apres la creation reussie du cas : si le
             # script crashe entre les deux, find_existing_case_by_source_ref() (dans
             # create_thehive_case) rattrapera le doublon potentiel au prochain lancement
             # plutot que d'en creer un second.
             mark_processed(state_conn, alert_id, case_id, status=status)
+        except TheHiveVerificationError as exc:
+            # Fail-closed : la verification pre-creation a echoue, donc AUCUN mark_processed
+            # n'est appele ici (volontairement) -- l'alerte sera retentee au prochain lancement
+            # plutot que de risquer un cas en double parce qu'on n'a pas pu confirmer son absence.
+            errors += 1
+            log.error("Verification TheHive impossible pour l'alerte %s, alerte laissee "
+                      "retryable (pas de cas cree) : %s", alert_id or "?", exc)
+            continue
         except Exception as exc:
             errors += 1
             log.error("Erreur sur l'alerte %s, traitement poursuivi : %s", alert_id or "?", exc)
@@ -449,10 +482,10 @@ def main() -> None:
 
     state_conn.close()
     log.info(
-        "Resume : %d alerte(s) soumise(s) au LLM, %d cas TheHive cree(s), "
+        "Resume : %d alerte(s) soumise(s) au LLM, %d cas TheHive cree(s), %d cas existant(s) reutilise(s), "
         "%d doublon(s) ignore(s) (idempotence), %d reponse(s) LLM rejetee(s) (schema invalide), "
         "%d erreur(s)",
-        llm_invoked, cases_created, duplicates_skipped, rejected_invalid, errors,
+        llm_invoked, cases_created, cases_reused, duplicates_skipped, rejected_invalid, errors,
     )
 
 

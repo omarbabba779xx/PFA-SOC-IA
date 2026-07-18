@@ -62,6 +62,26 @@ Bugs trouvés et corrigés pendant cette vérification (voir README pour le dét
 se limitant à la proximité temporelle, limite documentée explicitement dans le commentaire de la
 règle et dans le README.
 
+### Correction ultérieure non couverte par la capture 44 (100103)
+
+**Important** : la ligne `100103` du tableau ci-dessus et la capture
+`44_wazuh_alert_100103_verified.png` prouvent seulement que la règle s'est déclenchée sur trois
+occurrences répétées de `curl` — elles ne prouvent PAS que la corrélation portait sur la bonne
+destination. Une relecture ultérieure de `scripts/generate_advanced_scenarios.sh` a révélé que la
+regle utilisait `<same_field>audit.execve.a1</same_field>`, alors que l'invocation `curl` réelle du
+générateur (`curl -s -m3 "URL"`) place l'URL en position `a3`, pas `a1` (`a1` vaut systématiquement
+`-s`, identique sur toute invocation curl quelle que soit la destination). Le test manuel documenté
+ci-dessus (`curl -s http://c2-v2-simulated.example.invalid/checkin`, sans `-m3`) place lui aussi
+l'URL en `a2`, pas `a1` — la capture 44 prouve donc uniquement que la règle a matché le champ `-s`
+par coïncidence, pas la destination. La règle a été corrigée pour utiliser `audit.execve.a3`
+(correspondant à l'invocation exacte de `generate_advanced_scenarios.sh`), mais **cette correction
+n'a pas encore été re-testée en direct sur la VM** (accès SSH indisponible pendant cette passe) : ni
+le cas positif (3 fetches vers la même destination avec `-m3`) ni le cas négatif (3 fetches vers 3
+destinations différentes ne doivent PAS déclencher `100103`) n'ont été revérifiés. La ligne 100103
+du tableau ci-dessus doit être lue comme "l'ancienne version buggée s'est déclenchée", pas comme
+"la corrélation par destination fonctionne" — voir `scripts/local_rules.xml` pour le commentaire
+technique complet et le statut exact.
+
 ## Comment compléter ce manifeste
 
 ```bash

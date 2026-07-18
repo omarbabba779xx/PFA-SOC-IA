@@ -7,6 +7,8 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 os.environ.setdefault("WAZUH_INDEXER_PASSWORD", "test-password-not-real")
@@ -102,8 +104,8 @@ class TestCreateTheHiveCase:
         search_resp = _mock_response([])  # find_existing_case_by_source_ref -> aucun resultat
         create_resp = _mock_response({"_id": "case-new"})
         with patch("wazuh_ai_triage.requests.post", side_effect=[search_resp, create_resp]) as mock_post:
-            case_id = wat.create_thehive_case(alert, self._triage(), "haute")
-        assert case_id == "case-new"
+            result = wat.create_thehive_case(alert, self._triage(), "haute")
+        assert result == {"case_id": "case-new", "created": True}
         assert mock_post.call_count == 2
 
     def test_returns_existing_case_without_duplicate_when_source_ref_already_used(self):
@@ -113,9 +115,22 @@ class TestCreateTheHiveCase:
         alert["_es_id"] = "es-id-1"
         search_resp = _mock_response([{"_id": "case-existing"}])
         with patch("wazuh_ai_triage.requests.post", return_value=search_resp) as mock_post:
-            case_id = wat.create_thehive_case(alert, self._triage(), "haute")
-        assert case_id == "case-existing"
+            result = wat.create_thehive_case(alert, self._triage(), "haute")
+        assert result == {"case_id": "case-existing", "created": False}
         assert mock_post.call_count == 1  # uniquement la recherche, pas de POST de creation
+
+    def test_search_failure_raises_fail_closed_instead_of_risking_duplicate(self):
+        """Si la verification par sourceRef echoue (TheHive injoignable), on ne doit PAS
+        creer de cas en supposant silencieusement qu'aucun n'existe -- c'est exactement le
+        scenario que cette verification est censee prevenir. TheHiveVerificationError doit
+        remonter et aucun POST de creation ne doit partir."""
+        alert = _wazuh_hit("es-id-1")["_source"]
+        alert["_es_id"] = "es-id-1"
+        import requests as real_requests
+        with patch("wazuh_ai_triage.requests.post", side_effect=real_requests.ConnectionError("down")), \
+             patch("wazuh_ai_triage.time.sleep"), \
+             pytest.raises(wat.TheHiveVerificationError):
+            wat.create_thehive_case(alert, self._triage(), "haute")
 
 
 class TestFullPipelineWithSqliteState:
@@ -143,8 +158,9 @@ class TestFullPipelineWithSqliteState:
         with patch("wazuh_ai_triage.requests.post", side_effect=[ollama_resp, search_resp, create_resp]):
             triage = wat.triage_with_llm(alert)
             assert triage is not None
-            case_id = wat.create_thehive_case(alert, triage, "haute")
-            wat.mark_processed(conn, "es-id-full", case_id, status="case_created")
+            result = wat.create_thehive_case(alert, triage, "haute")
+            assert result["created"] is True
+            wat.mark_processed(conn, "es-id-full", result["case_id"], status="case_created")
 
         assert wat.already_processed(conn, "es-id-full") is True
         row = conn.execute("SELECT status, case_id FROM processed_alerts WHERE alert_id = ?", ("es-id-full",)).fetchone()

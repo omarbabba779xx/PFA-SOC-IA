@@ -20,6 +20,7 @@ sont PAS le meme code. Cette version separe explicitement :
 et rapporte les deux taux separement plutot qu'un seul chiffre agrege.
 """
 
+import hashlib
 import json
 import os
 import platform
@@ -193,12 +194,26 @@ def mitre_match(ref_technique: str | None, predicted_technique) -> dict:
     return {"exact_match": False, "family_match": False}
 
 
-def compute_classification_metrics(refs: list[str], preds: list[str], labels: list[str]) -> dict:
+_INVALID_PRED = "__invalid_or_missing__"
+
+
+def compute_classification_metrics(refs: list[str], preds: list[str], labels: list[str], count_invalid_as_error: bool = False) -> dict:
     """Precision/rappel/F1 par classe (one-vs-rest) + matrice de confusion, pour une
     classification a labels fixes (ici : criticite basse/moyenne/haute/critique).
-    Une prediction absente/invalide (hors de `labels`) compte comme une erreur envers
-    toutes les classes (ni vrai positif ni vrai negatif correct) plutot que d'etre
-    silencieusement ignoree, pour ne pas gonfler artificiellement les taux."""
+
+    count_invalid_as_error=False (defaut) : une prediction hors-schema (erreur de parsing
+    JSON, valeur non normalisable) est EXCLUE du calcul -- les metriques ne portent que sur
+    les sorties valides ("metrics_on_valid_outputs"). C'est un choix methodologique legitime
+    pour isoler la qualite de classification PURE, mais il masque le cout reel des echecs de
+    parsing : un modele qui repond correctement sur 8/10 alertes et echoue completement sur
+    2/10 peut afficher un rappel de 100% sur les 8 valides, ce qui ne reflete pas la
+    performance de bout en bout du pipeline.
+
+    count_invalid_as_error=True : chaque prediction invalide est comptee comme un FN pour
+    la classe de reference (elle ne peut jamais etre un TP, faute de valeur exploitable) --
+    utiliser cette variante pour rapporter la performance "end_to_end" reelle, qui inclut le
+    cout des echecs de parsing plutot que de les faire disparaitre du denominateur. Voir
+    valid_output_coverage() pour le taux de sorties exploitables separement."""
     confusion = {ref_label: {pred_label: 0 for pred_label in labels} for ref_label in labels}
     for ref, pred in zip(refs, preds, strict=True):
         ref_key = ref if ref in labels else None
@@ -206,7 +221,9 @@ def compute_classification_metrics(refs: list[str], preds: list[str], labels: li
         if ref_key is None:
             continue  # reference invalide : ne devrait pas arriver, dataset mal forme
         if pred_key is None:
-            continue  # prediction hors-schema : deja compte via parse_error_rate ailleurs
+            if count_invalid_as_error:
+                confusion[ref_key][_INVALID_PRED] = confusion[ref_key].get(_INVALID_PRED, 0) + 1
+            continue  # exclu de la matrice de confusion (classes fixes) mais compte plus bas
         confusion[ref_key][pred_key] += 1
 
     per_class = {}
@@ -214,6 +231,7 @@ def compute_classification_metrics(refs: list[str], preds: list[str], labels: li
         tp = confusion[label][label]
         fp = sum(confusion[other][label] for other in labels if other != label)
         fn = sum(confusion[label][other] for other in labels if other != label)
+        fn += confusion[label].get(_INVALID_PRED, 0)  # no-op si count_invalid_as_error=False
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
         f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
@@ -224,10 +242,20 @@ def compute_classification_metrics(refs: list[str], preds: list[str], labels: li
     macro_f1 = sum(m["f1"] for m in per_class.values()) / len(labels)
 
     return {
-        "confusion_matrix": confusion,
+        "confusion_matrix": {k: {pk: pv for pk, pv in v.items() if pk != _INVALID_PRED} for k, v in confusion.items()},
+        "invalid_predictions_by_true_class": {k: v.get(_INVALID_PRED, 0) for k, v in confusion.items()},
         "per_class": per_class,
         "macro_avg": {"precision": macro_precision, "recall": macro_recall, "f1": macro_f1},
     }
+
+
+def valid_output_coverage(preds: list[str], labels: list[str]) -> float:
+    """Proportion des predictions qui sont exploitables (dans le schema attendu). A publier
+    a cote de metrics_on_valid_outputs : un taux de rappel eleve calcule sur un faible taux de
+    couverture est trompeur -- voir la docstring de compute_classification_metrics()."""
+    if not preds:
+        return 0.0
+    return sum(1 for p in preds if p in labels) / len(preds)
 
 
 def get_git_commit() -> str:
@@ -236,6 +264,19 @@ def get_git_commit() -> str:
             ["git", "rev-parse", "HEAD"], cwd=os.path.dirname(os.path.abspath(__file__)),
             stderr=subprocess.DEVNULL,
         ).decode().strip()
+    except Exception:
+        return "unknown"
+
+
+def _git_is_dirty() -> bool | str:
+    """True si des changements non commites existent au moment du run -- un resultat
+    produit sur un arbre modifie n'est pas reproductible depuis le seul commit cite."""
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=os.path.dirname(os.path.abspath(__file__)),
+            stderr=subprocess.DEVNULL,
+        ).decode()
+        return bool(status.strip())
     except Exception:
         return "unknown"
 
@@ -249,18 +290,32 @@ def get_ollama_model_digest() -> str:
         return "unknown"
 
 
+def get_dataset_sha256() -> str:
+    """Hash du fichier dataset tel qu'effectivement lu par ce run -- preuve que deux runs
+    cites comme comparables ont bien utilise des donnees identiques, pas seulement un nom
+    de fichier identique (le fichier a pu etre modifie entre deux runs)."""
+    try:
+        with open(DATASET_FILE, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except OSError:
+        return "unknown"
+
+
 def write_run_metadata(n_alerts: int) -> None:
     """Enregistre les parametres exacts de ce run pour pouvoir prouver que deux
     fichiers de resultats proviennent bien de la meme configuration experimentale."""
     metadata = {
+        "run_id": f"{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{os.getpid()}",
         "run_started_at": datetime.now(UTC).isoformat(),
         "git_commit": get_git_commit(),
+        "git_dirty": _git_is_dirty(),
         "ollama_model": OLLAMA_MODEL,
         "ollama_model_digest": get_ollama_model_digest(),
         "temperature": TEMPERATURE,
         "num_predict": NUM_PREDICT,
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "dataset_file": DATASET_FILE,
+        "dataset_sha256": get_dataset_sha256(),
         "n_alerts": n_alerts,
         "python_version": platform.python_version(),
         "platform": platform.platform(),
@@ -317,21 +372,31 @@ def main() -> None:
 
     baseline_metrics = compute_classification_metrics(refs_criticite, baseline_preds_criticite, CRITICALITY_ORDER)
     llm_metrics = compute_classification_metrics(refs_criticite, llm_preds_criticite, CRITICALITY_ORDER)
+    llm_metrics_end_to_end = compute_classification_metrics(
+        refs_criticite, llm_preds_criticite, CRITICALITY_ORDER, count_invalid_as_error=True
+    )
+    llm_valid_output_coverage = valid_output_coverage(llm_preds_criticite, CRITICALITY_ORDER)
 
     output = {
         "results": results,
         "classification_metrics": {
             "criticite": {
                 "baseline": baseline_metrics,
-                "llm": llm_metrics,
+                "llm_on_valid_outputs": llm_metrics,
+                "llm_end_to_end": llm_metrics_end_to_end,
+                "llm_valid_output_coverage": llm_valid_output_coverage,
                 "note": (
                     "Precision/rappel/F1 calcules sur la classification de criticite "
                     "(basse/moyenne/haute/critique), one-vs-rest, moyenne macro (non ponderee "
                     "par le support -- chaque classe compte a egalite quelle que soit sa frequence "
-                    "dans le dataset). Une prediction hors des 4 labels attendus (erreur de "
-                    "parsing JSON, valeur non normalisable) est exclue du calcul plutot que "
-                    "comptee comme un vrai/faux positif arbitraire -- voir llm_parse_error par "
-                    "entree pour le taux de telles predictions."
+                    "dans le dataset). 'llm_on_valid_outputs' EXCLUT les predictions hors schema "
+                    "(erreur de parsing JSON, valeur non normalisable) du calcul -- ne mesure que la "
+                    "qualite de classification sur les sorties exploitables. 'llm_end_to_end' compte "
+                    "au contraire chaque prediction invalide comme un faux negatif pour la classe de "
+                    "reference -- c'est la mesure a citer pour la performance reelle du pipeline de "
+                    "bout en bout. 'llm_valid_output_coverage' est le taux de sorties exploitables : "
+                    "un rappel eleve sur 'llm_on_valid_outputs' avec une couverture faible est trompeur "
+                    "si cite seul, d'ou la publication des trois valeurs separement."
                 ),
             },
         },
@@ -375,7 +440,12 @@ def main() -> None:
     )
 
     print("\n===== METRIQUES DE CLASSIFICATION (criticite) =====")
-    for name, metrics in (("Regles (baseline)", baseline_metrics), ("LLM", llm_metrics)):
+    print(f"Couverture de sorties LLM exploitables (schema valide) : {llm_valid_output_coverage:.1%}")
+    for name, metrics in (
+        ("Regles (baseline)", baseline_metrics),
+        ("LLM (sorties valides uniquement)", llm_metrics),
+        ("LLM (bout en bout, invalide = erreur)", llm_metrics_end_to_end),
+    ):
         m = metrics["macro_avg"]
         print(f"{name} -- precision macro={m['precision']:.2f} rappel macro={m['recall']:.2f} F1 macro={m['f1']:.2f}")
         for label, per_class in metrics["per_class"].items():
@@ -383,7 +453,8 @@ def main() -> None:
                   f"F1={per_class['f1']:.2f} (support={per_class['support']})")
     print(
         "\nMatrice de confusion et details par classe ecrits dans "
-        f"{OUTPUT_FILE} (cle classification_metrics.criticite)."
+        f"{OUTPUT_FILE} (cle classification_metrics.criticite). Citer 'llm_end_to_end', pas "
+        "'llm_on_valid_outputs', comme mesure de performance reelle du pipeline."
     )
 
 

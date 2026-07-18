@@ -92,35 +92,47 @@ def main() -> None:
     )
 
     state_conn = None
-    if not args.dry_run:
-        state_conn = init_state_db()
-        if alert_id and already_processed(state_conn, alert_id):
-            log.info("Alerte %s deja traitee precedemment (idempotence) -- rien a faire.", alert_id)
+    try:
+        if not args.dry_run:
+            state_conn = init_state_db()
+            if alert_id and already_processed(state_conn, alert_id):
+                log.info("Alerte %s deja traitee precedemment (idempotence) -- rien a faire.", alert_id)
+                return
+
+        criticite = baseline_criticality(alert)
+        triage = triage_with_llm(alert)
+        if triage is None:
+            log.error("Reponse LLM invalide ou Ollama injoignable -- aucun cas cree.")
+            if state_conn and not args.dry_run:
+                # failed_retryable, pas "processed" : un echec transitoire ne doit pas empecher
+                # une nouvelle tentative ulterieure (meme bug que dans wazuh_ai_triage.py, corrige
+                # ici de la meme facon -- voir ce script pour le detail du raisonnement).
+                mark_processed(state_conn, alert_id, None, status="failed_retryable")
+            sys.exit(1)
+
+        log.info("%s -> criticite (hybride/baseline)=%s, mitre=%s", triage.incident_type, criticite, triage.mitre_technique)
+
+        if args.dry_run:
+            log.info("[--dry-run] Aucun cas TheHive cree, aucun etat enregistre.")
             return
 
-    criticite = baseline_criticality(alert)
-    triage = triage_with_llm(alert)
-    if triage is None:
-        log.error("Reponse LLM invalide ou Ollama injoignable -- aucun cas cree.")
-        if state_conn and not args.dry_run:
-            mark_processed(state_conn, alert_id, None)
-        sys.exit(1)
+        case_id = None
+        status = "processed"
+        if not args.no_create_case:
+            result = create_thehive_case(alert, triage, criticite)
+            case_id = result["case_id"]
+            status = "case_created"
+            if result["created"]:
+                log.info("-> cas TheHive cree : %s", case_id)
+            else:
+                log.info("-> cas TheHive existant reutilise (doublon local evite) : %s", case_id)
+        else:
+            log.info("[--no-create-case] Triage effectue, aucun cas TheHive cree.")
 
-    log.info("%s -> criticite (hybride/baseline)=%s, mitre=%s", triage.incident_type, criticite, triage.mitre_technique)
-
-    if args.dry_run:
-        log.info("[--dry-run] Aucun cas TheHive cree, aucun etat enregistre.")
-        return
-
-    case_id = None
-    if not args.no_create_case:
-        case_id = create_thehive_case(alert, triage, criticite)
-        log.info("-> cas TheHive cree : %s", case_id)
-    else:
-        log.info("[--no-create-case] Triage effectue, aucun cas TheHive cree.")
-
-    mark_processed(state_conn, alert_id, case_id)
-    state_conn.close()
+        mark_processed(state_conn, alert_id, case_id, status=status)
+    finally:
+        if state_conn:
+            state_conn.close()
 
 
 if __name__ == "__main__":

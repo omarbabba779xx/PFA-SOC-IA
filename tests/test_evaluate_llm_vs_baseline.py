@@ -14,6 +14,7 @@ from evaluate_llm_vs_baseline import (  # noqa: E402
     mitre_family,
     mitre_match,
     normalize_criticality,
+    valid_output_coverage,
 )
 
 CRITICALITY_LABELS = ["basse", "moyenne", "haute", "critique"]
@@ -60,6 +61,32 @@ def test_classification_metrics_class_with_no_support_scores_zero_not_error():
     # "critique" n'apparait jamais dans les references : precision/rappel doivent
     # etre 0.0 par convention (pas de ZeroDivisionError).
     assert metrics["per_class"]["critique"] == {"precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 0}
+
+
+def test_classification_metrics_end_to_end_counts_invalid_prediction_as_false_negative():
+    """count_invalid_as_error=True est la mesure a citer comme performance reelle du
+    pipeline : une sortie hors-schema doit degrader le rappel de sa classe de reference
+    plutot que de disparaitre du calcul (bug signale par l'audit : la docstring precedente
+    affirmait deja compter les invalides comme une erreur, mais le code faisait `continue`,
+    les excluant silencieusement -- ce test verrouille le comportement corrige)."""
+    refs = ["haute", "haute"]
+    preds = ["haute", "PARSE_ERROR"]  # 1 correct, 1 hors schema
+    metrics = compute_classification_metrics(refs, preds, CRITICALITY_LABELS, count_invalid_as_error=True)
+    assert metrics["per_class"]["haute"]["support"] == 2  # les 2 references comptent toujours
+    assert metrics["per_class"]["haute"]["recall"] == 0.5  # 1 TP / (1 TP + 1 FN-invalide)
+    assert metrics["invalid_predictions_by_true_class"]["haute"] == 1
+
+    # Sans count_invalid_as_error, la meme entree ne penalise pas le rappel (comportement
+    # "sorties valides uniquement", documente et distinct, pas silencieux).
+    metrics_valid_only = compute_classification_metrics(refs, preds, CRITICALITY_LABELS)
+    assert metrics_valid_only["per_class"]["haute"]["recall"] == 1.0
+    assert metrics_valid_only["per_class"]["haute"]["support"] == 1
+
+
+def test_valid_output_coverage():
+    assert valid_output_coverage(["basse", "haute", "PARSE_ERROR"], CRITICALITY_LABELS) == 2 / 3
+    assert valid_output_coverage([], CRITICALITY_LABELS) == 0.0
+    assert valid_output_coverage(["basse"], CRITICALITY_LABELS) == 1.0
 
 
 def test_mitre_match_exact():

