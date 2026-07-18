@@ -17,13 +17,21 @@
        correlation context. That meant a legitimate `curl` or a benign `pwsh` invocation would trigger the
        same high-severity alert as an actual payload retrieval or an obfuscated encoded command, and the
        "beaconing"/"lateral movement" rules only checked *frequency of the same rule ID*, never destination
-       or session identity. v2 below splits each detection into a low-severity baseline rule (process
-       executed, nothing more implied) and a higher-severity rule that requires an actual suspicious
-       indicator in the command's arguments, and uses Wazuh's native <same_field>/<same_source_ip>
-       correlation primitives instead of a bare frequency count. This still needs to be redeployed to the
-       lab VM and re-verified against real auditd output before the next round of screenshots - the exact
-       audit.execve.aN index used by <same_field> below depends on how many flags precede the URL/command
-       in the actual invocation and must be checked against a live sample, not assumed. -->
+       or session identity. v2 splits each detection into a low-severity baseline rule (process executed,
+       nothing more implied) and a higher-severity rule requiring an actual suspicious indicator.
+
+       Revision note 2 (deployed and verified live on this VM via wazuh-logtest, not assumed): the first
+       attempt at v2 used <field name="full_log" type="pcre2">...</field> for 100099/100101, which loads
+       without any syntax error but NEVER MATCHES for auditd-decoded events - "full_log" is not a
+       queryable field for this decoder in this Wazuh version (confirmed by testing a trivial single-token
+       pattern in isolation: it still never matched, on a log line that visibly contained the token).
+       Fixed by switching to a bare <regex type="pcre2"> (no field= attribute), which matches against the
+       raw pre-decoded log line and was confirmed working via wazuh-logtest against real captured
+       audit.execve output, including a case-insensitivity check (uppercase ".SH" matched the
+       case-insensitive PCRE2 pattern correctly). This is now a verified finding, not a guess: the same
+       "field name=full_log" mistake would silently produce a rule that always loads cleanly and never
+       fires, which is worse than a loud failure - always test a new field-matching rule against a real
+       captured log line via wazuh-logtest before trusting it. -->
 
   <!-- ===================== T1105 - network fetch / tool retrieval ===================== -->
 
@@ -36,7 +44,7 @@
 
   <rule id="100099" level="8">
     <if_sid>100098</if_sid>
-    <field name="full_log" type="pcre2">(?i)\.(sh|ps1|exe|elf|bin)(["'\s]|$)|/tmp/|/dev/shm/|-o\s+/(tmp|dev/shm)</field>
+    <regex type="pcre2">(?i)\.(sh|ps1|exe|elf|bin)(["'\s]|$)|/tmp/|/dev/shm/|-o\s+/(tmp|dev/shm)</regex>
     <description>Network fetch (curl/wget) retrieving a script/executable to a suspicious path - possible external tool/payload retrieval</description>
     <mitre>
       <id>T1105</id>
@@ -55,7 +63,7 @@
 
   <rule id="100101" level="12">
     <if_sid>100100</if_sid>
-    <field name="full_log" type="pcre2">(?i)-enc(odedcommand)?\b|invoke-expression|\biex\b|downloadstring|net\.webclient|-executionpolicy\s+bypass</field>
+    <regex type="pcre2">(?i)-enc(odedcommand)?\b|invoke-expression|\biex\b|downloadstring|net\.webclient|-executionpolicy\s+bypass</regex>
     <description>Suspicious/obfuscated PowerShell execution (encoded command, IEX, download cradle, or execution-policy bypass) detected via auditd</description>
     <mitre>
       <id>T1059.001</id>
@@ -64,14 +72,26 @@
   </rule>
 
   <!-- ===================== T1071 - repeated fetches to the SAME destination (C2 beaconing) =====================
-       same_field enforces that all matched occurrences of rule 100099 share the identical value of the
-       given audit.execve argument index (the fetch URL/destination), not merely that 100099 fired 3 times
+       same_field enforces that all matched occurrences share the identical value of the given
+       audit.execve argument index (the fetch URL/destination), not merely that a fetch fired 3 times
        against ANY targets - this is the fix for "detects a curl burst, not real beaconing" (see revision
-       note above). Verify the exact aN index against a live audit.execve sample before relying on this in
-       production: it depends on how many flags/options precede the URL in the actual curl/wget invocation. -->
+       note above).
+
+       Chained on 100098 (bare fetch), NOT 100099 (fetch with a suspicious extension/path) - found and
+       fixed after testing live via wazuh-logtest: real C2 check-in URLs typically look like
+       "/checkin", "/beacon", "/poll" (see generate_advanced_scenarios.sh), which never match 100099's
+       suspicious-extension regex, so a rule chained on 100099 would never have a beaconing pattern to
+       correlate against in practice. Repeated identical-destination fetches are themselves the
+       suspicious signal here, independent of whether any single fetch also looks like a payload
+       download - chaining on the baseline rule is the correct scope.
+
+       Verify the exact aN index against a live audit.execve sample before relying on this in
+       production: it depends on how many flags/options precede the URL in the actual curl/wget
+       invocation (confirmed correct for the "curl <url> -s" argument order used by
+       generate_advanced_scenarios.sh, where the URL lands in a1; a different flag order would shift it). -->
 
   <rule id="100103" level="10" frequency="3" timeframe="90">
-    <if_matched_sid>100099</if_matched_sid>
+    <if_matched_sid>100098</if_matched_sid>
     <same_field>audit.execve.a1</same_field>
     <description>Repeated network fetch commands to the same destination in a short window (possible C2 beaconing)</description>
     <mitre>
@@ -80,20 +100,40 @@
     <group>audit_command,pfa_c2_beaconing,</group>
   </rule>
 
-  <!-- ===================== T1021.004 - SSH login followed by root elevation, same source =====================
-       Correlates two DISTINCT event types (SSH accepted session, rule 5715; sudo-to-root, rule 5402 from
-       Wazuh's native sudo ruleset) constrained to the same source IP within the timeframe, rather than
-       just counting repeated occurrences of one rule (the v1 bug). This is the standard Wazuh idiom for
-       "rule B fired, and rule A also fired recently from the same source" - <if_sid> is the rule that
-       actually fires the alert (sudo-to-root), <if_matched_sid> is the rule it must have been preceded by
-       (SSH accept), <same_source_ip/> constrains both to the same srcip. Needs to be redeployed and
-       verified that rule 5402 is present as-is in this Wazuh ruleset version before relying on it. -->
+  <!-- ===================== T1021.004 - SSH login followed by root elevation, time-proximity only =====================
+       Revision 3, fully verified live on the VM via wazuh-logtest (all three prior assumptions were
+       wrong, each found by actually deploying and testing, not by reading the XML and assuming it would
+       work):
+         1. frequency="1" is rejected by Wazuh at config-load time (minimum is 2) - caught immediately
+            by `wazuh-analysisd -t`.
+         2. <same_source_ip/> can never match: rule 5402 ("Successful sudo to ROOT executed") is decoded
+            by ruleset/decoders/0320-sudo_decoders.xml, which only extracts srcuser - sudo runs in an
+            already-open local terminal session and has no network source, so srcip is never populated.
+         3. <same_user/> was tried next on the theory that both events populate a "user" field for the
+            same local account (soc). This is also confirmed wrong: rule 5715's sshd decoder stores the
+            logged-in account as dstuser ("the user being logged into"), while rule 5402's sudo decoder
+            stores the SAME physical account as srcuser ("the user invoking sudo") and the elevation
+            target ("root") as dstuser. These are different field ROLES holding the value "soc" on one
+            side and "root" on the other for dstuser, so no single same_* field directive can bridge them
+            - confirmed empirically: removing <same_user/> and testing a real SSH-accept + sudo-to-root
+            sequence via wazuh-logtest correctly produced the alert; adding <same_user/> back made it
+            silently stop firing, on the identical input. Wazuh's native same_* primitives (same_field,
+            same_source_ip, same_user, ...) each compare one identical field name across both matched
+            events - they cannot cross-reference dstuser on one rule against srcuser on another. Bridging
+            them natively would require writing a custom decoder that copies the sshd dstuser into a
+            normalized field also used by the sudo decoder, which is a real fix but bigger in scope than
+            a rule-file change and was not attempted here.
+       Corrected to drop the user-identity correlation entirely and rely on TIME PROXIMITY alone (a
+       sudo-to-root within 120s of an SSH accept, anywhere on the host) - a weaker signal than
+       "same user", explicitly accepted as a known limitation: on a genuinely multi-user host, two
+       different users independently SSH-ing in and using sudo within the same 120s window would produce
+       a false positive here. On this single-account lab VM the distinction is moot, which is exactly why
+       this gap was easy to miss without live testing. -->
 
-  <rule id="100105" level="10" frequency="1" timeframe="120">
+  <rule id="100105" level="10" frequency="2" timeframe="120">
     <if_sid>5402</if_sid>
     <if_matched_sid>5715</if_matched_sid>
-    <same_source_ip />
-    <description>Sudo elevation to root shortly after an SSH login from the same source (possible lateral movement)</description>
+    <description>Sudo elevation to root shortly after an SSH login on the same host (possible lateral movement; time-proximity only, not confirmed same user - see comment above)</description>
     <mitre>
       <id>T1021.004</id>
     </mitre>
