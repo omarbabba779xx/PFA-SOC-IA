@@ -193,6 +193,43 @@ def mitre_match(ref_technique: str | None, predicted_technique) -> dict:
     return {"exact_match": False, "family_match": False}
 
 
+def compute_classification_metrics(refs: list[str], preds: list[str], labels: list[str]) -> dict:
+    """Precision/rappel/F1 par classe (one-vs-rest) + matrice de confusion, pour une
+    classification a labels fixes (ici : criticite basse/moyenne/haute/critique).
+    Une prediction absente/invalide (hors de `labels`) compte comme une erreur envers
+    toutes les classes (ni vrai positif ni vrai negatif correct) plutot que d'etre
+    silencieusement ignoree, pour ne pas gonfler artificiellement les taux."""
+    confusion = {ref_label: {pred_label: 0 for pred_label in labels} for ref_label in labels}
+    for ref, pred in zip(refs, preds, strict=True):
+        ref_key = ref if ref in labels else None
+        pred_key = pred if pred in labels else None
+        if ref_key is None:
+            continue  # reference invalide : ne devrait pas arriver, dataset mal forme
+        if pred_key is None:
+            continue  # prediction hors-schema : deja compte via parse_error_rate ailleurs
+        confusion[ref_key][pred_key] += 1
+
+    per_class = {}
+    for label in labels:
+        tp = confusion[label][label]
+        fp = sum(confusion[other][label] for other in labels if other != label)
+        fn = sum(confusion[label][other] for other in labels if other != label)
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        per_class[label] = {"precision": precision, "recall": recall, "f1": f1, "support": tp + fn}
+
+    macro_precision = sum(m["precision"] for m in per_class.values()) / len(labels)
+    macro_recall = sum(m["recall"] for m in per_class.values()) / len(labels)
+    macro_f1 = sum(m["f1"] for m in per_class.values()) / len(labels)
+
+    return {
+        "confusion_matrix": confusion,
+        "per_class": per_class,
+        "macro_avg": {"precision": macro_precision, "recall": macro_recall, "f1": macro_f1},
+    }
+
+
 def get_git_commit() -> str:
     try:
         return subprocess.check_output(
@@ -274,8 +311,34 @@ def main() -> None:
               f"llm_mitre_family={entry['llm_mitre_family_match']} "
               f"({llm_duration:.1f}s)")
 
+    refs_criticite = [r["reference"]["criticite"] for r in results]
+    baseline_preds_criticite = [normalize_criticality(r["baseline"]["criticite"])[0] for r in results]
+    llm_preds_criticite = [normalize_criticality(r["llm"].get("criticite", ""))[0] for r in results]
+
+    baseline_metrics = compute_classification_metrics(refs_criticite, baseline_preds_criticite, CRITICALITY_ORDER)
+    llm_metrics = compute_classification_metrics(refs_criticite, llm_preds_criticite, CRITICALITY_ORDER)
+
+    output = {
+        "results": results,
+        "classification_metrics": {
+            "criticite": {
+                "baseline": baseline_metrics,
+                "llm": llm_metrics,
+                "note": (
+                    "Precision/rappel/F1 calcules sur la classification de criticite "
+                    "(basse/moyenne/haute/critique), one-vs-rest, moyenne macro (non ponderee "
+                    "par le support -- chaque classe compte a egalite quelle que soit sa frequence "
+                    "dans le dataset). Une prediction hors des 4 labels attendus (erreur de "
+                    "parsing JSON, valeur non normalisable) est exclue du calcul plutot que "
+                    "comptee comme un vrai/faux positif arbitraire -- voir llm_parse_error par "
+                    "entree pour le taux de telles predictions."
+                ),
+            },
+        },
+    }
+
     with open(OUTPUT_FILE, "w") as f:
-        json.dump(results, f, indent=2, default=str)
+        json.dump(output, f, indent=2, default=str)
 
     n = len(results)
     avg_baseline_gap = sum(r["baseline_criticality_gap"] for r in results) / n
@@ -309,6 +372,18 @@ def main() -> None:
         "citer comme taux de reussite MITRE. Le taux 'family match' compte les cas ou le "
         "modele identifie la bonne famille de technique (ex: T1110) sans la sous-technique "
         "exacte (ex: T1110.001 attendu) -- utile diagnostiquement, mais ce n'est PAS un succes."
+    )
+
+    print("\n===== METRIQUES DE CLASSIFICATION (criticite) =====")
+    for name, metrics in (("Regles (baseline)", baseline_metrics), ("LLM", llm_metrics)):
+        m = metrics["macro_avg"]
+        print(f"{name} -- precision macro={m['precision']:.2f} rappel macro={m['recall']:.2f} F1 macro={m['f1']:.2f}")
+        for label, per_class in metrics["per_class"].items():
+            print(f"    {label:<9} precision={per_class['precision']:.2f} rappel={per_class['recall']:.2f} "
+                  f"F1={per_class['f1']:.2f} (support={per_class['support']})")
+    print(
+        "\nMatrice de confusion et details par classe ecrits dans "
+        f"{OUTPUT_FILE} (cle classification_metrics.criticite)."
     )
 
 

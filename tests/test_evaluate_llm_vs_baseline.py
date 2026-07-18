@@ -8,12 +8,58 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
 from evaluate_llm_vs_baseline import (  # noqa: E402
+    compute_classification_metrics,
     criticality_gap,
     extract_mitre_code,
     mitre_family,
     mitre_match,
     normalize_criticality,
 )
+
+CRITICALITY_LABELS = ["basse", "moyenne", "haute", "critique"]
+
+
+def test_classification_metrics_perfect_predictions_score_one():
+    refs = ["basse", "moyenne", "haute", "critique"]
+    metrics = compute_classification_metrics(refs, refs, CRITICALITY_LABELS)
+    assert metrics["macro_avg"] == {"precision": 1.0, "recall": 1.0, "f1": 1.0}
+    for label in CRITICALITY_LABELS:
+        assert metrics["per_class"][label]["precision"] == 1.0
+        assert metrics["per_class"][label]["recall"] == 1.0
+        assert metrics["confusion_matrix"][label][label] == 1
+
+
+def test_classification_metrics_confusion_matrix_counts_misclassifications():
+    refs = ["haute", "haute", "moyenne"]
+    preds = ["haute", "moyenne", "moyenne"]  # 1 vrai positif haute, 1 haute predit moyenne (FN), 1 moyenne correct
+    metrics = compute_classification_metrics(refs, preds, CRITICALITY_LABELS)
+    assert metrics["confusion_matrix"]["haute"]["haute"] == 1
+    assert metrics["confusion_matrix"]["haute"]["moyenne"] == 1
+    assert metrics["confusion_matrix"]["moyenne"]["moyenne"] == 1
+    # haute : 1 TP, 0 FP, 1 FN -> precision=1.0, rappel=0.5
+    assert metrics["per_class"]["haute"]["precision"] == 1.0
+    assert metrics["per_class"]["haute"]["recall"] == 0.5
+    # moyenne : 1 TP, 1 FP (le "haute" mal classe), 0 FN -> precision=0.5, rappel=1.0
+    assert metrics["per_class"]["moyenne"]["precision"] == 0.5
+    assert metrics["per_class"]["moyenne"]["recall"] == 1.0
+
+
+def test_classification_metrics_invalid_prediction_excluded_not_penalized_arbitrarily():
+    refs = ["haute"]
+    preds = ["PARSE_ERROR"]  # hors du schema de labels attendu
+    metrics = compute_classification_metrics(refs, preds, CRITICALITY_LABELS)
+    # Aucune case de la matrice de confusion ne doit etre incrementee pour une prediction invalide.
+    assert all(v == 0 for row in metrics["confusion_matrix"].values() for v in row.values())
+    assert metrics["per_class"]["haute"]["support"] == 0
+
+
+def test_classification_metrics_class_with_no_support_scores_zero_not_error():
+    refs = ["basse", "basse"]
+    preds = ["basse", "basse"]
+    metrics = compute_classification_metrics(refs, preds, CRITICALITY_LABELS)
+    # "critique" n'apparait jamais dans les references : precision/rappel doivent
+    # etre 0.0 par convention (pas de ZeroDivisionError).
+    assert metrics["per_class"]["critique"] == {"precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 0}
 
 
 def test_mitre_match_exact():
