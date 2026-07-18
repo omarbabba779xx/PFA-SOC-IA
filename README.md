@@ -194,7 +194,9 @@ Le cas porte les tags `wazuh`, `triage-ia`, `T1105`, une sévérité `MEDIUM` as
 
 ## Parcours expérimental — évaluer le LLM face à une baseline à règles
 
-Un jeu de **38 alertes labellisées manuellement** a été constitué à partir de 9 scénarios (brute force SSH, connexions valides, sudo/su, création/suppression de compte, tâche planifiée, commande obfusquée). Chaque alerte a été classifiée par deux méthodes indépendantes et comparée à une référence manuelle :
+Un jeu de **38 alertes labellisées par une table de référence manuelle** a été constitué à partir de 9 scénarios (brute force SSH, connexions valides, sudo/su, création/suppression de compte, tâche planifiée, commande obfusquée). Chaque alerte a été classifiée par deux méthodes indépendantes et comparée à une référence manuelle :
+
+> **Limite méthodologique assumée** : la référence est attribuée par correspondance exacte sur `rule.description` (voir `scripts/relabel_per_alert.py`), pas par relecture individuelle du contenu complet de chaque alerte — deux alertes partageant la même `rule.description` reçoivent toujours la même référence, même si leur contexte diffère. Ce n'est donc **pas** une annotation humaine indépendante par instance au sens strict ; elle ne peut pas détecter qu'une alerte particulière est un faux positif de sa propre règle. Une annotation indépendante par échantillonnage, avec mesure d'accord inter-annotateur, reste à faire avant de citer ces chiffres comme preuve définitive de performance.
 - **Baseline à règles** : mapping natif de Wazuh (`rule.level` → criticité, `rule.mitre` → tactique/technique), sans LLM.
 - **LLM** : via Ollama, avec un prompt structuré demandant une sortie JSON stricte.
 
@@ -222,6 +224,8 @@ Quatre limites réelles ont été identifiées et corrigées après une relectur
 | Écart de criticité | 0.11 | 0.75 |
 
 Sur ce jeu jamais vu, la baseline perd en précision (61.1 % contre 73.7 %) alors que le LLM reste stable (94.4 % contre 97.4 %) — un argument de généralisation en faveur du LLM, pas contre.
+
+> **⚠️ Ce chiffre de 94,4 % doit être lu avec prudence** : une relecture a révélé que 11 des 36 alertes du holdout étaient des doublons partagés entre plusieurs scénarios (seules 25 étaient réellement distinctes), et que les familles d'événements du holdout (SSH, sudo, PAM, cron, comptes) recoupent largement celles déjà explicitées dans les exemples few-shot du prompt — le holdout est donc indépendant *par instance*, pas par *famille de comportement*. Le dataset a été dédupliqué depuis (voir `docs/evaluation/README.md`), mais ce chiffre de 94,4 % a été mesuré **avant** la déduplication et n'a pas encore été recalculé sur le jeu corrigé — ne pas le citer comme preuve de généralisation forte en l'état.
 
 **2. Approche hybride** — `wazuh_ai_triage.py` combine désormais les deux méthodes selon leurs forces : **criticité finale = baseline** (déterministe, fiable), **mapping MITRE + résumé = LLM** (~97 % de correspondance). Le LLM n'est plus jugé sur la tâche où il est faible.
 
@@ -302,9 +306,10 @@ Face à la limite persistante de Mistral 7B sur le scénario phishing, le modèl
 | Phishing, lot 1 (6 alertes) | 16,7 % (1/6) | **100 % (6/6)** |
 | Phishing, lot 2 (5 alertes) | 40 % (2/5) | **100 % (5/5)** |
 | Phishing, lot 3 — reproductibilité (4 alertes) | — | **100 % (4/4)** |
-| 18 alertes combinées (phishing + PowerShell + C2) | 66,7 % | **100 % (18/18)**, écart de criticité 0,00 |
 
-**Cumulé sur les 3 lots phishing testés avec Gemma2 9B : 15/15 (100 %)** — un résultat reproductible sur trois batches indépendants, pas un coup de chance sur un seul run. Résultats bruts : [`evaluation_results_phishing_gemma.json`](docs/evaluation/evaluation_results_phishing_gemma.json), [`..._gemma2.json`](docs/evaluation/evaluation_results_phishing_gemma2.json), [`..._repro.json`](docs/evaluation/evaluation_results_phishing_repro.json), [`evaluation_results_advanced_gemma.json`](docs/evaluation/evaluation_results_advanced_gemma.json).
+**Cumulé sur les 3 lots phishing testés avec Gemma2 9B : 15/15 (100 %)** — un résultat reproductible sur trois batches indépendants, pas un coup de chance sur un seul run. Résultats bruts : [`evaluation_results_phishing_gemma.json`](docs/evaluation/evaluation_results_phishing_gemma.json), [`..._gemma2.json`](docs/evaluation/evaluation_results_phishing_gemma2.json), [`..._repro.json`](docs/evaluation/evaluation_results_phishing_repro.json).
+
+> **Ligne "18 alertes combinées (phishing + PowerShell + C2)" retirée le 2026-07-18** : une relecture du contenu brut des alertes a révélé que 7 des 18 alertes de ce lot (5 "phishing", 2 "C2 beaconing") étaient en réalité des appels `curl` locaux vers l'API Ollama (`localhost:11434/api/tags`) ou l'indexeur Wazuh (`localhost:9200`) — du trafic d'infrastructure du laboratoire capté par les anciennes règles trop permissives, pas les scénarios simulés. Le "100 % (18/18)" mesurait donc en partie la capacité du modèle à reproduire une étiquette héritée d'une règle Wazuh buguée, pas une vraie classification. Dataset nettoyé (11 alertes restantes) et ancien résultat archivés dans [`docs/evaluation/legacy/`](docs/evaluation/legacy/README.md) — aucune évaluation de remplacement n'a encore été relancée (nécessite Ollama + VM), donc aucun chiffre de remplacement n'est cité ici pour l'instant.
 
 **Précision honnête** : sur le lot de reproductibilité, l'écart moyen de criticité du LLM était de 1,00 (le modèle a répondu "haute" au lieu de "moyenne"). Sans impact réel : l'architecture hybride utilise la criticité de la baseline à règles, jamais celle du LLM, pour la création des cas TheHive.
 
@@ -453,7 +458,7 @@ python scripts/wazuh_ai_triage.py
 | Infrastructure (VM Ubuntu 22.04 + Docker, 8 vCPU / 9,7 Go RAM) | ✅ Opérationnel |
 | Wazuh (Manager + Indexer + Dashboard + auditd) | ✅ Déployé, testé de bout en bout |
 | TheHive 5.4 | ✅ Déployé, cas créés automatiquement (Shuffle et Gemma) |
-| Ollama + Gemma2 9B (quantifié q4_0) | ✅ Déployé, triage testé et validé (100 % MITRE sur tous les scénarios avancés) |
+| Ollama + Gemma2 9B (quantifié q4_0) | ✅ Déployé, triage testé et validé (100 % MITRE sur les 15 alertes phishing Gemma2 9B, résultat reproduit sur 3 lots indépendants — voir avertissement plus haut sur les "18 alertes combinées", retirées suite à une contamination confirmée du dataset) |
 | Script Python Wazuh → LLM → TheHive | ✅ Fonctionnel, réexécuté et vérifié en conditions réelles sur les 5 scénarios du cahier des charges |
 | Jeu de 38+36 alertes labellisées + évaluation LLM vs baseline | ✅ Réalisé, répété 3 fois pour mesurer la variance |
 | Cortex (analyse d'observables) | ✅ Déployé, analyseurs réels testés sur des IP/domaines réels des scénarios, connecteur TheHive lié et testé |
@@ -462,10 +467,10 @@ python scripts/wazuh_ai_triage.py
 | Cinq scénarios du cahier des charges (brute force, phishing, PowerShell, mouvement latéral, C2) | ✅ Rejoués individuellement et documentés de bout en bout |
 | Dashboard SOC personnalisé | ✅ 4 indicateurs opérationnels |
 | Rapports PDF automatiques | ⏳ Prévu, restant à faire |
-| Règles Wazuh corrigées (arguments réels + corrélation par destination/session) | ✅ Corrigées et testées unitairement (`tests/test_config_files.py`), ⏳ redéploiement/reverification sur la VM restant à faire |
+| Règles Wazuh corrigées (arguments réels + corrélation par destination/session) | ✅ 100099/100101/100105/100107 corrigées, redéployées et vérifiées en direct sur la VM avec alertes réelles (`wazuh-logtest` + captures 42-46, voir `docs/evidence/EVIDENCE.md`). ⚠️ 100103 (corrélation C2 par destination) avait un second bug non détecté par cette vérification live (comparait un flag `-s` constant, pas l'URL réelle — voir commentaire dans `scripts/local_rules.xml`) : corrigé dans le code mais **pas encore re-testé sur la VM** |
 | Idempotence, validation de schéma, prompt délimité (`wazuh_ai_triage.py`) | ✅ Implémentés et testés unitairement (`tests/test_wazuh_ai_triage.py`) |
 | Matching MITRE exact vs famille, métadonnées de run (`evaluate_llm_vs_baseline.py`) | ✅ Implémentés et testés unitairement (`tests/test_evaluate_llm_vs_baseline.py`) |
-| Suite de tests automatisés + CI (GitHub Actions : ruff, pytest, gitleaks) | ✅ 40 tests, exécutés à chaque push |
+| Suite de tests automatisés + CI (GitHub Actions : ruff, pytest, gitleaks) | ✅ 58 tests (unitaires + intégration avec Wazuh/Ollama/TheHive mockés), exécutés à chaque push |
 | Docker Compose durci (health checks, limites mémoire, ports liés à 127.0.0.1) | ✅ Appliqué à TheHive et Cortex |
 | Reproductibilité (`LICENSE`, `.env.example`, `systemd/audit-merge.service`) | ✅ Ajoutés |
 
@@ -483,7 +488,7 @@ python scripts/wazuh_ai_triage.py
 
 ## Valeur professionnelle
 
-Ce projet couvre les compétences SOC Analyst Tier 1/2 (triage, mapping MITRE, corrélation), Détection Engineering (règles personnalisées, `auditd`), Automatisation SOC (Python, APIs, SOAR), et IA appliquée (évaluation mesurable et rigoureuse d'un LLM comme assistant de triage, avec comparaison de modèles), le tout sur une infrastructure Docker Compose reproductible et honnêtement documentée — y compris ses limites.
+Ce projet couvre les compétences SOC Analyst Tier 1/2 (triage, mapping MITRE, corrélation), Détection Engineering (règles personnalisées, `auditd`), Automatisation SOC (Python, APIs, SOAR), et IA appliquée (évaluation mesurable d'un LLM comme assistant de triage, avec comparaison de modèles — mesurable, mais pas encore rigoureuse au sens strict : la labellisation reste une table de référence par règle et non une annotation indépendante par instance, et le holdout n'est pas encore dédupliqué au niveau des résultats publiés, voir les avertissements ci-dessus), le tout sur une infrastructure Docker Compose reproductible et honnêtement documentée — y compris ses limites.
 
 ---
 

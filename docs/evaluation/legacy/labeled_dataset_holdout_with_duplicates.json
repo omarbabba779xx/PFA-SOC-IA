@@ -1607,6 +1607,424 @@
       "predecoder": {
         "hostname": "soc-lab",
         "program_name": "sudo",
+        "timestamp": "Jul 03 01:09:40"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 13,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 03 01:09:40 soc-lab sudo[136238]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:41.277Z",
+      "location": "journald",
+      "id": "1783040981.17962",
+      "timestamp": "2026-07-03T01:09:41.277+0000"
+    },
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "holdout_user_onboarding",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 03 01:09:40"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/sbin/useradd -m holdout_onboard1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 9,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 03 01:09:40 soc-lab sudo[136238]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/sbin/useradd -m holdout_onboard1",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:41.277Z",
+      "location": "journald",
+      "id": "1783040981.18394",
+      "timestamp": "2026-07-03T01:09:41.277+0000"
+    },
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "holdout_user_onboarding",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "useradd",
+        "timestamp": "Jul 03 01:09:40"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "rule": {
+        "firedtimes": 1,
+        "mail": false,
+        "level": 8,
+        "pci_dss": [
+          "10.2.7",
+          "10.2.5",
+          "8.1.2"
+        ],
+        "hipaa": [
+          "164.312.b",
+          "164.312.a.2.I",
+          "164.312.a.2.II"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "New group added to the system.",
+        "groups": [
+          "syslog",
+          "adduser"
+        ],
+        "id": "5901",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.2",
+          "IA.4"
+        ],
+        "gpg13": [
+          "4.13"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "name": "useradd"
+      },
+      "full_log": "Jul 03 01:09:40 soc-lab useradd[136239]: new group: name=holdout_onboard1, GID=1001",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:41.279Z",
+      "location": "journald",
+      "id": "1783040981.18910",
+      "timestamp": "2026-07-03T01:09:41.279+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de groupe (lie a la creation de compte)",
+      "criticite": "basse",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "holdout_user_onboarding",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "useradd",
+        "timestamp": "Jul 03 01:09:40"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1001",
+        "gid": "1001",
+        "shell": "/bin/sh,",
+        "dstuser": "holdout_onboard1",
+        "home": "/home/holdout_onboard1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 8,
+        "pci_dss": [
+          "10.2.7",
+          "10.2.5",
+          "8.1.2"
+        ],
+        "hipaa": [
+          "164.312.b",
+          "164.312.a.2.I",
+          "164.312.a.2.II"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "New user added to the system.",
+        "groups": [
+          "syslog",
+          "adduser"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.2",
+          "IA.4"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 1,
+        "mitre": {
+          "technique": [
+            "Create Account"
+          ],
+          "id": [
+            "T1136"
+          ],
+          "tactic": [
+            "Persistence"
+          ]
+        },
+        "id": "5902",
+        "gpg13": [
+          "4.13"
+        ]
+      },
+      "decoder": {
+        "parent": "useradd",
+        "name": "useradd"
+      },
+      "full_log": "Jul 03 01:09:40 soc-lab useradd[136239]: new user: name=holdout_onboard1, UID=1001, GID=1001, home=/home/holdout_onboard1, shell=/bin/sh, from=none",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:41.281Z",
+      "location": "journald",
+      "id": "1783040981.19381",
+      "timestamp": "2026-07-03T01:09:41.281+0000"
+    },
+    "reference": {
+      "incident_type": "Creation de compte",
+      "criticite": "moyenne",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1136"
+    }
+  },
+  {
+    "scenario": "holdout_user_onboarding",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 03 01:09:40"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 13,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 03 01:09:40 soc-lab sudo[136238]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:41.283Z",
+      "location": "journald",
+      "id": "1783040981.20003",
+      "timestamp": "2026-07-03T01:09:41.283+0000"
+    },
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "holdout_user_onboarding",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
         "timestamp": "Jul 03 01:09:43"
       },
       "agent": {
@@ -1945,6 +2363,411 @@
     "alert": {
       "predecoder": {
         "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 03 01:09:43"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "soc",
+        "dstuser": "root",
+        "pwd": "/home/soc",
+        "command": "/usr/sbin/userdel holdout_onboard1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5",
+          "10.2.2"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Successful sudo to ROOT executed.",
+        "groups": [
+          "syslog",
+          "sudo"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.6"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 10,
+        "mitre": {
+          "technique": [
+            "Sudo and Sudo Caching"
+          ],
+          "id": [
+            "T1548.003"
+          ],
+          "tactic": [
+            "Privilege Escalation",
+            "Defense Evasion"
+          ]
+        },
+        "id": "5402",
+        "gpg13": [
+          "7.6",
+          "7.8",
+          "7.13"
+        ]
+      },
+      "decoder": {
+        "parent": "sudo",
+        "name": "sudo",
+        "ftscomment": "First time user executed the sudo command"
+      },
+      "full_log": "Jul 03 01:09:43 soc-lab sudo[136469]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/sbin/userdel holdout_onboard1",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:45.309Z",
+      "location": "journald",
+      "id": "1783040985.20374",
+      "timestamp": "2026-07-03T01:09:45.309+0000"
+    },
+    "reference": {
+      "incident_type": "Elevation de privileges (sudo)",
+      "criticite": "basse",
+      "mitre_tactic": "Privilege Escalation",
+      "mitre_technique": "T1548"
+    }
+  },
+  {
+    "scenario": "holdout_user_cleanup",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "userdel",
+        "timestamp": "Jul 03 01:09:43"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "srcuser": "holdout_onboard1"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.7",
+          "10.2.5",
+          "8.1.2"
+        ],
+        "hipaa": [
+          "164.312.b",
+          "164.312.a.2.I",
+          "164.312.a.2.II"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Group (or user) deleted from the system.",
+        "groups": [
+          "syslog",
+          "adduser"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7",
+          "AC.2",
+          "IA.4"
+        ],
+        "gdpr": [
+          "IV_35.7.d",
+          "IV_32.2"
+        ],
+        "firedtimes": 1,
+        "mitre": {
+          "technique": [
+            "Account Access Removal"
+          ],
+          "id": [
+            "T1531"
+          ],
+          "tactic": [
+            "Impact"
+          ]
+        },
+        "id": "5903",
+        "gpg13": [
+          "4.13"
+        ]
+      },
+      "decoder": {
+        "name": "open-userdel"
+      },
+      "full_log": "Jul 03 01:09:43 soc-lab userdel[136471]: delete user 'holdout_onboard1'",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:45.351Z",
+      "location": "journald",
+      "id": "1783040985.21255",
+      "timestamp": "2026-07-03T01:09:45.351+0000"
+    },
+    "reference": {
+      "incident_type": "Suppression de compte",
+      "criticite": "basse",
+      "mitre_tactic": "Impact",
+      "mitre_technique": "T1531"
+    }
+  },
+  {
+    "scenario": "holdout_user_cleanup",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 03 01:09:43"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "root"
+      },
+      "rule": {
+        "firedtimes": 14,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 03 01:09:43 soc-lab sudo[136469]: pam_unix(sudo:session): session closed for user root",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:45.351Z",
+      "location": "journald",
+      "id": "1783040985.20884",
+      "timestamp": "2026-07-03T01:09:45.351+0000"
+    },
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "holdout_user_cleanup",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sudo",
+        "timestamp": "Jul 03 01:09:43"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "uid": "1000",
+        "dstuser": "root(uid=0)"
+      },
+      "rule": {
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session opened.",
+        "groups": [
+          "pam",
+          "syslog",
+          "authentication_success"
+        ],
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ],
+        "firedtimes": 14,
+        "mitre": {
+          "technique": [
+            "Valid Accounts"
+          ],
+          "id": [
+            "T1078"
+          ],
+          "tactic": [
+            "Defense Evasion",
+            "Persistence",
+            "Privilege Escalation",
+            "Initial Access"
+          ]
+        },
+        "id": "5501",
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 03 01:09:43 soc-lab sudo[136469]: pam_unix(sudo:session): session opened for user root(uid=0) by (uid=1000)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:45.351Z",
+      "location": "journald",
+      "id": "1783040985.21724",
+      "timestamp": "2026-07-03T01:09:45.351+0000"
+    },
+    "reference": {
+      "incident_type": "Ouverture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "holdout_user_cleanup",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "crontab",
+        "timestamp": "Jul 03 01:09:46"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "rule": {
+        "firedtimes": 1,
+        "mail": false,
+        "level": 5,
+        "pci_dss": [
+          "10.2.7",
+          "10.6.1"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "Crontab entry changed.",
+        "groups": [
+          "syslog",
+          "cron"
+        ],
+        "id": "2832",
+        "nist_800_53": [
+          "AU.14",
+          "AU.6"
+        ],
+        "gpg13": [
+          "4.13"
+        ],
+        "gdpr": [
+          "IV_35.7.d"
+        ]
+      },
+      "decoder": {},
+      "full_log": "Jul 03 01:09:46 soc-lab crontab[136667]: (soc) REPLACE (soc)",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:47.311Z",
+      "location": "journald",
+      "id": "1783040987.22156",
+      "timestamp": "2026-07-03T01:09:47.311+0000"
+    },
+    "reference": {
+      "incident_type": "Modification de tache planifiee",
+      "criticite": "basse",
+      "mitre_tactic": "Persistence",
+      "mitre_technique": "T1053"
+    }
+  },
+  {
+    "scenario": "holdout_cron_benign",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
         "program_name": "crontab",
         "timestamp": "Jul 03 01:09:46"
       },
@@ -2008,6 +2831,78 @@
   },
   {
     "scenario": "holdout_base64_benign",
+    "alert": {
+      "predecoder": {
+        "hostname": "soc-lab",
+        "program_name": "sshd",
+        "timestamp": "Jul 03 01:09:53"
+      },
+      "agent": {
+        "ip": "127.0.0.1",
+        "name": "soc-lab",
+        "id": "001"
+      },
+      "manager": {
+        "name": "wazuh.manager"
+      },
+      "data": {
+        "dstuser": "soc"
+      },
+      "rule": {
+        "firedtimes": 15,
+        "mail": false,
+        "level": 3,
+        "pci_dss": [
+          "10.2.5"
+        ],
+        "hipaa": [
+          "164.312.b"
+        ],
+        "tsc": [
+          "CC6.8",
+          "CC7.2",
+          "CC7.3"
+        ],
+        "description": "PAM: Login session closed.",
+        "groups": [
+          "pam",
+          "syslog"
+        ],
+        "id": "5502",
+        "nist_800_53": [
+          "AU.14",
+          "AC.7"
+        ],
+        "gpg13": [
+          "7.8",
+          "7.9"
+        ],
+        "gdpr": [
+          "IV_32.2"
+        ]
+      },
+      "decoder": {
+        "parent": "pam",
+        "name": "pam"
+      },
+      "full_log": "Jul 03 01:09:53 soc-lab sshd[136000]: pam_unix(sshd:session): session closed for user soc",
+      "input": {
+        "type": "log"
+      },
+      "@timestamp": "2026-07-03T01:09:53.324Z",
+      "location": "journald",
+      "id": "1783040993.22491",
+      "timestamp": "2026-07-03T01:09:53.324+0000"
+    },
+    "reference": {
+      "incident_type": "Fermeture de session",
+      "criticite": "basse",
+      "mitre_tactic": "Initial Access",
+      "mitre_technique": "T1078"
+    }
+  },
+  {
+    "scenario": "holdout_ssh_valid_frequent",
     "alert": {
       "predecoder": {
         "hostname": "soc-lab",
