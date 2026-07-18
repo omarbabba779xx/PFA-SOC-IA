@@ -91,20 +91,67 @@ def test_triage_result_rejects_prompt_injection_attempt_as_incident_type_too_lon
 
 # --- idempotence (SQLite local, fichier temporaire) ---
 
-def test_idempotence_marks_and_detects_processed_alert(tmp_path):
+def test_idempotence_marks_and_detects_processed_alert(monkeypatch, tmp_path):
     db_path = str(tmp_path / "state.sqlite3")
-    conn = sqlite3.connect(db_path)
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS processed_alerts ("
-        "  alert_id TEXT PRIMARY KEY, case_id TEXT, processed_at TEXT NOT NULL)"
-    )
-    conn.commit()
+    monkeypatch.setattr("wazuh_ai_triage.STATE_DB_PATH", db_path)
+    conn = init_state_db()
 
     assert already_processed(conn, "alert-123") is False
-    mark_processed(conn, "alert-123", "case-456")
+    mark_processed(conn, "alert-123", "case-456", status="case_created")
     assert already_processed(conn, "alert-123") is True
     assert already_processed(conn, "alert-999") is False
     conn.close()
+
+
+def test_idempotence_failed_retryable_is_not_treated_as_processed(monkeypatch, tmp_path):
+    """Une reponse LLM invalide/echec transitoire (status=failed_retryable) ne doit
+    PAS empecher une nouvelle tentative au prochain lancement -- sinon une panne
+    Ollama passagere condamnerait l'alerte a etre ignoree pour toujours."""
+    db_path = str(tmp_path / "state.sqlite3")
+    monkeypatch.setattr("wazuh_ai_triage.STATE_DB_PATH", db_path)
+    conn = init_state_db()
+
+    mark_processed(conn, "alert-transient-fail", None, status="failed_retryable")
+    assert already_processed(conn, "alert-transient-fail") is False
+
+    # Une fois traitee avec succes, l'alerte devient bien "traitee".
+    mark_processed(conn, "alert-transient-fail", "case-789", status="case_created")
+    assert already_processed(conn, "alert-transient-fail") is True
+    conn.close()
+
+
+def test_init_state_db_migrates_legacy_schema_without_status_column(tmp_path):
+    """Une base creee par une version anterieure du script (sans colonne status)
+    doit etre migree automatiquement au lieu de faire planter le script."""
+    db_path = str(tmp_path / "legacy_state.sqlite3")
+    legacy_conn = sqlite3.connect(db_path)
+    legacy_conn.execute(
+        "CREATE TABLE processed_alerts (alert_id TEXT PRIMARY KEY, case_id TEXT, processed_at TEXT NOT NULL)"
+    )
+    legacy_conn.execute(
+        "INSERT INTO processed_alerts (alert_id, case_id, processed_at) VALUES (?, ?, ?)",
+        ("old-alert", "old-case", "2026-01-01T00:00:00Z"),
+    )
+    legacy_conn.commit()
+    legacy_conn.close()
+
+    conn = sqlite3.connect(db_path)
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(processed_alerts)")}
+    assert "status" not in cols
+    conn.close()
+
+    import wazuh_ai_triage
+    orig_path = wazuh_ai_triage.STATE_DB_PATH
+    wazuh_ai_triage.STATE_DB_PATH = db_path
+    try:
+        migrated = wazuh_ai_triage.init_state_db()
+        cols = {row[1] for row in migrated.execute("PRAGMA table_info(processed_alerts)")}
+        assert "status" in cols
+        row = migrated.execute("SELECT status FROM processed_alerts WHERE alert_id = ?", ("old-alert",)).fetchone()
+        assert row[0] == "processed"  # valeur par defaut appliquee retroactivement
+        migrated.close()
+    finally:
+        wazuh_ai_triage.STATE_DB_PATH = orig_path
 
 
 def test_init_state_db_creates_table(tmp_path):

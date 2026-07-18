@@ -161,24 +161,35 @@ def init_state_db() -> sqlite3.Connection:
         "CREATE TABLE IF NOT EXISTS processed_alerts ("
         "  alert_id TEXT PRIMARY KEY,"
         "  case_id TEXT,"
+        "  status TEXT NOT NULL DEFAULT 'processed',"
         "  processed_at TEXT NOT NULL"
         ")"
     )
+    # Migration douce pour une base creee par une version anterieure du script
+    # (avant l'ajout de la colonne status) -- ne casse pas les deploiements existants.
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(processed_alerts)")}
+    if "status" not in existing_cols:
+        conn.execute("ALTER TABLE processed_alerts ADD COLUMN status TEXT NOT NULL DEFAULT 'processed'")
     conn.commit()
     return conn
 
 
 def already_processed(conn: sqlite3.Connection, alert_id: str) -> bool:
+    """Une alerte n'est consideree traitee (et donc ignoree au prochain run) que si
+    son dernier statut est definitif (processed = pas de cas du a la criticite,
+    case_created = cas cree avec succes). Le statut failed_retryable (echec LLM/reseau
+    transitoire) n'est PAS considere comme traite, pour permettre une nouvelle tentative
+    au prochain lancement plutot que d'abandonner silencieusement l'alerte."""
     row = conn.execute(
-        "SELECT 1 FROM processed_alerts WHERE alert_id = ?", (alert_id,)
+        "SELECT status FROM processed_alerts WHERE alert_id = ?", (alert_id,)
     ).fetchone()
-    return row is not None
+    return row is not None and row[0] != "failed_retryable"
 
 
-def mark_processed(conn: sqlite3.Connection, alert_id: str, case_id: str | None) -> None:
+def mark_processed(conn: sqlite3.Connection, alert_id: str, case_id: str | None, status: str = "processed") -> None:
     conn.execute(
-        "INSERT OR REPLACE INTO processed_alerts (alert_id, case_id, processed_at) VALUES (?, ?, ?)",
-        (alert_id, case_id, datetime.now(UTC).isoformat() + "Z"),
+        "INSERT OR REPLACE INTO processed_alerts (alert_id, case_id, status, processed_at) VALUES (?, ?, ?, ?)",
+        (alert_id, case_id, status, datetime.now(UTC).isoformat() + "Z"),
     )
     conn.commit()
 
@@ -311,10 +322,43 @@ def triage_with_llm(alert: dict) -> TriageResult | None:
         return None
 
 
+def find_existing_case_by_source_ref(source_ref: str) -> str | None:
+    """Interroge TheHive pour un cas deja cree avec ce sourceRef (= _es_id de
+    l'alerte). Filet de securite complementaire a l'idempotence SQLite locale :
+    si le script est interrompu (crash, kill -9) entre create_thehive_case() et
+    mark_processed(), l'etat local ne sait pas qu'un cas a deja ete cree, mais
+    TheHive, lui, le sait -- cette verification cote source de verite empeche un
+    doublon au prochain lancement, meme si la base SQLite locale est incomplete
+    ou a ete perdue."""
+    if not source_ref:
+        return None
+    try:
+        resp = _post_with_retry(
+            f"{THEHIVE_URL}/api/v1/case/_search",
+            headers={"Authorization": f"Bearer {THEHIVE_API_KEY}"},
+            json={"query": [{"_name": "getCase"}, {"_name": "filter", "sourceRef": source_ref}]},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        results = resp.json()
+        if isinstance(results, list) and results:
+            return results[0].get("_id")
+    except requests.RequestException as exc:
+        log.warning("Verification sourceRef TheHive echouee (non bloquant, on continue) : %s", exc)
+    return None
+
+
 def create_thehive_case(alert: dict, triage: TriageResult, criticite: str) -> str:
     """Cree un cas TheHive. La criticite (severity) provient de la baseline
     (approche hybride) ; le LLM fournit uniquement le mapping MITRE et le
-    contexte narratif (resume, recommandation)."""
+    contexte narratif (resume, recommandation).
+    Verifie d'abord aupres de TheHive (source de verite) qu'aucun cas n'existe
+    deja pour ce sourceRef, au cas ou un run precedent aurait cree le cas puis
+    ete interrompu avant de marquer l'alerte comme traitee localement."""
+    existing = find_existing_case_by_source_ref(alert.get("_es_id", ""))
+    if existing:
+        log.warning("Cas TheHive deja existant pour sourceRef=%s (id=%s) -- pas de doublon cree", alert.get("_es_id"), existing)
+        return existing
     rule = alert.get("rule", {})
     payload = {
         "title": f"[{criticite.upper()}] {triage.incident_type}",
@@ -375,18 +419,29 @@ def main() -> None:
 
             if triage is None:
                 rejected_invalid += 1
-                mark_processed(state_conn, alert_id, None)
+                # failed_retryable et non "processed" definitif : un echec LLM/reseau
+                # transitoire (timeout Ollama, reponse hors-schema ponctuelle) ne doit
+                # pas condamner l'alerte a etre ignoree pour toujours -- already_processed()
+                # ne considere pas ce statut comme traite, donc l'alerte sera retentee au
+                # prochain lancement du script tant qu'elle reste dans la fenetre temporelle.
+                mark_processed(state_conn, alert_id, None, status="failed_retryable")
                 continue
 
             log.info("%s -> criticite (hybride/baseline)=%s, mitre=%s", triage.incident_type, criticite, triage.mitre_technique)
 
             case_id = None
+            status = "processed"
             if CRITICALITY_ORDER.index(criticite) >= threshold_idx:
                 case_id = create_thehive_case(alert, triage, criticite)
                 cases_created += 1
+                status = "case_created"
                 log.info("-> cas TheHive cree : %s", case_id)
 
-            mark_processed(state_conn, alert_id, case_id)
+            # mark_processed() n'est atteint qu'apres la creation reussie du cas : si le
+            # script crashe entre les deux, find_existing_case_by_source_ref() (dans
+            # create_thehive_case) rattrapera le doublon potentiel au prochain lancement
+            # plutot que d'en creer un second.
+            mark_processed(state_conn, alert_id, case_id, status=status)
         except Exception as exc:
             errors += 1
             log.error("Erreur sur l'alerte %s, traitement poursuivi : %s", alert_id or "?", exc)
