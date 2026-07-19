@@ -1,0 +1,17 @@
+title = "gitleaks config PFA-SOC-IA"
+
+# Herite des regles par defaut de gitleaks, ajoute uniquement une allowlist
+# ciblee pour les manifestes de hash SHA-256 utilises comme preuves d'evidence
+# (docs/evidence/.../SHA256SUMS*.csv). Ces fichiers contiennent des hachages
+# hexadecimaux longs et a haute entropie, qui declenchent de faux positifs sur
+# la regle "generic-api-key" -- ce ne sont jamais des secrets, uniquement des
+# empreintes de fichiers deja publiques dans le meme commit. Verifie
+# manuellement a chaque fois avant d'etre ajoute a cette liste : un hash
+# legitime a toujours 64 caracteres hexadecimaux exactement.
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''docs/evidence/.*/SHA256SUMS.*\.csv$''',
+]
