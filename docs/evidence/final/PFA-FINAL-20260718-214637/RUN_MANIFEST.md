@@ -95,8 +95,62 @@ casserait les images du README actuel sans aucune preuve de remplacement à mett
 Ce déplacement sera fait dès que la Phase 2 (génération réelle des scénarios) aura
 effectivement produit de nouvelles preuves.
 
+## Mise à jour — déblocage SSH et progression réelle (2026-07-18/19)
+
+Le blocage SSH ci-dessus a été levé : la clé privée `id_ed25519` et les identifiants de
+tous les services ont été retrouvés dans un fichier `CREDENTIALS.md` local (hors dépôt Git,
+conformément à la règle de ne jamais committer de secret), situé à
+`Desktop/Nouveau dossier/soc-lab/CREDENTIALS.md` — ce fichier existait depuis une session
+précédente mais n'avait pas été localisé avant.
+
+### Phase 1 — Validation Wazuh : ✅ complétée
+
+- `wazuh-analysisd -t` : configuration valide (exit 0).
+- Règle `100103` corrigée (`audit.execve.a1` → `a3`) redéployée et testée en direct :
+  test positif (3 requêtes vers la même destination `c2-final-test.example.invalid`)
+  → règle 100103 déclenchée sur la 3e occurrence ; test négatif (3 destinations
+  différentes) → 100103 ne s'est déclenchée sur AUCUNE des trois. Preuve :
+  `raw/scenario5_100103_positive_negative_test.json`.
+
+### Phase 2 — Génération des 6 scénarios + contrôles négatifs : ✅ complétée
+
+Tous générés réellement sur la VM (SSH), résultats indexés et vérifiés via l'API
+Elasticsearch : brute force SSH (5710), téléchargement suspect (100099), PowerShell
+encodé (100101), mouvement latéral SSH+sudo (100105), C2 beaconing (100103), sondage
+réseau nc (100107). Alertes brutes + SHA-256 : voir `raw/scenario*_alert_*.json` et
+`scenario_alerts_index.csv`.
+
+**Bug de compatibilité trouvé et corrigé** : `scripts/wazuh_ai_triage.py` et
+`scripts/evaluate_llm_vs_baseline.py` utilisaient `from datetime import UTC`, disponible
+seulement à partir de Python 3.11 — la VM du lab n'a que Python 3.10. Corrigé vers
+`timezone.utc` (portable depuis Python 3.2), `pyproject.toml` mis à jour pour refléter
+l'environnement d'exécution réel (`requires-python = ">=3.10"`).
+
+### Phase 4 — Gemma triage réel : ✅ complétée
+
+6 alertes réelles (une par scénario) triées par Gemma2 9B directement sur la VM
+(`~/venv/bin/python3 run_gemma_triage.py`, `OLLAMA_KEEP_ALIVE=0`). Les 6 réponses sont
+valides et correctement classifiées (MITRE technique exacte pour les 6 scénarios). Preuves
+complètes (requête, réponse brute, résultat validé, métadonnées) dans `gemma/`.
+
+### Phase 5 — TheHive : ⚠️ BLOQUÉ (licence invalide côté application)
+
+Voir `thehive/license-investigation/THEHIVE_LICENSE_INVESTIGATION_EVIDENCE.md` pour le
+détail complet. Résumé : `POST /api/v1/case` retourne systématiquement
+`403 manageCase/create`, pour le compte de service ET le compte humain, malgré un profil
+`analyst` correctement assigné. `GET /api/v1/status` confirme officiellement
+`license.isValid: false` (licence de secours `no-license`, quotas nuls). Une tentative de
+créer un nouveau compte de service échoue avec `LicenseLimitExceeded`. Aucune action
+destructive n'a été effectuée ; en attente d'une licence Community officielle à activer
+avant de pouvoir reprendre la création de cas.
+
+### Phases 6-13 (Cortex, MISP, Shuffle, dashboard, dataset final, évaluation) : non commencées
+
+Bloquées en aval de la Phase 5 (TheHive) — l'enrichissement Cortex et l'export MISP du
+pipeline officiel dépendent de cas TheHive réels, qui ne peuvent pas encore être créés.
+
 ## Prochaine action
 
-En attente d'un accès shell valide à la VM `SOC-Lab` pour reprendre à la Phase 1
-(validation de la configuration Wazuh). Toutes les autres phases du plan de validation en
-dépendent directement.
+En attente d'une licence TheHive Community valide (voir section License ci-dessus) pour
+reprendre la Phase 5. Les Phases 1, 2 et 4 sont complétées avec des preuves réelles et
+hashées.

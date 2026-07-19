@@ -1,0 +1,8 @@
+login HTTP=200
+=== 1-3. full org-scoped object showing all memberships/profile-per-org ===
+{"_id":"~40976608","_createdBy":"admin@thehive.local","_updatedBy":"admin@thehive.local","_createdAt":1782952947158,"_updatedAt":1784415279003,"login":"soc-automation@thehive.local","name":"SOC Automation","hasKey":true,"hasPassword":true,"hasMFA":false,"locked":false,"profile":"analyst","permissions":["manageCase/create","manageAlert/update","manageProcedure","managePage","manageObservable","manageCase/delete","manageAlert/create","manageCaseReport","manageAlert/delete","accessTheHiveFS","manageDashboard","manageKnowledgeBase","manageAction","manageShare","manageAnalyse","manageFunction/invoke","manageTask","manageCase/merge","manageCustomEvent","manageAlert/import","manageCase/changeOwnership","manageComment","manageAlert/reopen","manageCase/update","manageCase/reopen"],"organisation":"soc-lab","type":"Service","defaultOrganisation":"soc-lab","extraData":{}}
+HTTP_CODE=200
+
+=== 4-5. whoami via its own key (real org context the key resolves to) ===
+{"_id":"~40976608","_createdBy":"admin@thehive.local","_updatedBy":"admin@thehive.local","_createdAt":1782952947158,"_updatedAt":1784415279003,"login":"soc-automation@thehive.local","name":"SOC Automation","hasKey":true,"hasPassword":true,"hasMFA":false,"locked":false,"profile":"analyst","permissions":["manageAlert/create","manageKnowledgeBase"],"organisation":"soc-lab","organisations":[{"organisationId":"~40964312","organisation":"soc-lab","profile":"analyst","links":[]}],"type":"Service","defaultOrganisation":"soc-lab","extraData":{}}
+HTTP_CODE=200

@@ -1,0 +1,75 @@
+{
+  "@timestamp": "2026-07-18T22:04:59.487Z",
+  "agent": {
+    "id": "001",
+    "ip": "127.0.0.1",
+    "name": "soc-lab"
+  },
+  "data": {
+    "audit": {
+      "arch": "c000003e",
+      "auid": "1000",
+      "command": "curl",
+      "cwd": "/home/soc",
+      "egid": "1000",
+      "euid": "1000",
+      "exe": "/usr/bin/curl",
+      "execve": {
+        "a0": "curl",
+        "a1": "-s",
+        "a2": "-m3",
+        "a3": "http://c2-final-test.example.invalid/checkin"
+      },
+      "exit": "0",
+      "file": {
+        "inode": "2631531",
+        "mode": "0100755",
+        "name": "/usr/bin/curl"
+      },
+      "fsgid": "1000",
+      "fsuid": "1000",
+      "gid": "1000",
+      "id": "9921",
+      "key": "audit-wazuh-c",
+      "pid": "695424",
+      "ppid": "695408",
+      "session": "134",
+      "sgid": "1000",
+      "success": "yes",
+      "suid": "1000",
+      "syscall": "59",
+      "tty": "(none)",
+      "type": "SYSCALL",
+      "uid": "1000"
+    }
+  },
+  "decoder": {
+    "name": "auditd",
+    "parent": "auditd"
+  },
+  "full_log": "type=SYSCALL msg=audit(1784412296.843:9921): arch=c000003e syscall=59 success=yes exit=0 a0=56150f702fc0 a1=56150f703d40 a2=56150f6fef10 a3=1b6 items=2 ppid=695408 pid=695424 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=134 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1784412296.843:9921): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-final-test.example.invalid/checkin\" type=CWD msg=audit(1784412296.843:9921): cwd=\"/home/soc\" type=PATH msg=audit(1784412296.843:9921): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1784412296.843:9921): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1784412296.843:9921): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D66696E616C2D746573742E6578616D706C652E696E76616C69642F636865636B696E",
+  "id": "1784412299.10259079",
+  "input": {
+    "type": "log"
+  },
+  "location": "/var/log/audit/audit-merged.log",
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "previous_output": "type=SYSCALL msg=audit(1784412290.835:9919): arch=c000003e syscall=59 success=yes exit=0 a0=56150f703310 a1=56150f703d80 a2=56150f6fef10 a3=1b6 items=2 ppid=695408 pid=695421 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=134 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1784412290.835:9919): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-final-test.example.invalid/checkin\" type=CWD msg=audit(1784412290.835:9919): cwd=\"/home/soc\" type=PATH msg=audit(1784412290.835:9919): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1784412290.835:9919): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1784412290.835:9919): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D66696E616C2D746573742E6578616D706C652E696E76616C69642F636865636B696E\ntype=SYSCALL msg=audit(1784412284.795:9917): arch=c000003e syscall=59 success=yes exit=0 a0=56150f703310 a1=56150f703cb0 a2=56150f6fef10 a3=1b6 items=2 ppid=695408 pid=695409 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=134 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1784412284.795:9917): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m3\" a3=\"http://c2-final-test.example.invalid/checkin\" type=CWD msg=audit(1784412284.795:9917): cwd=\"/home/soc\" type=PATH msg=audit(1784412284.795:9917): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1784412284.795:9917): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1784412284.795:9917): proctitle=6375726C002D73002D6D3300687474703A2F2F63322D66696E616C2D746573742E6578616D706C652E696E76616C69642F636865636B696E",
+  "rule": {
+    "description": "Repeated network fetch commands to the same destination in a short window (possible C2 beaconing) - positional match on audit.execve.a3, fragile to argument order, see comment above",
+    "firedtimes": 1,
+    "frequency": 3,
+    "groups": [
+      "local",
+      "pfa_custom",
+      "audit_command",
+      "pfa_c2_beaconing"
+    ],
+    "id": "100103",
+    "level": 10,
+    "mail": false
+  },
+  "timestamp": "2026-07-18T22:04:59.487+0000"
+}

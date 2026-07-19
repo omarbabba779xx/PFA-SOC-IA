@@ -1,0 +1,72 @@
+{
+  "@timestamp": "2026-07-18T22:06:44.198Z",
+  "agent": {
+    "id": "001",
+    "ip": "127.0.0.1",
+    "name": "soc-lab"
+  },
+  "data": {
+    "audit": {
+      "arch": "c000003e",
+      "auid": "1000",
+      "command": "pwsh",
+      "cwd": "/home/soc",
+      "egid": "1000",
+      "euid": "1000",
+      "exe": "/snap/powershell/378/opt/powershell/pwsh",
+      "execve": {
+        "a0": "/snap/powershell/378/opt/powershell/pwsh",
+        "a1": "-enc",
+        "a2": "ZQBjAGgAbwAgAFAARgBBAC0ARgBJAE4AQQBMAC0AMgAwADIANgAwADcAMQA4AC0AMgAxADQANgAzADcAIAA+ACAALwB0AG0AcAAvAHAAdwBzAGgAXwB0AGUAcwB0AF8AUABGAEEALQBGAEkATgBBAEwALQAyADAAMgA2ADAANwAxADgALQAyADEANAA2ADMANwAuAHQAeAB0AA=="
+      },
+      "exit": "0",
+      "file": {
+        "inode": "596",
+        "mode": "0100755",
+        "name": "/snap/powershell/378/opt/powershell/pwsh"
+      },
+      "fsgid": "1000",
+      "fsuid": "1000",
+      "gid": "1000",
+      "id": "10317",
+      "key": "audit-wazuh-c",
+      "pid": "695787",
+      "ppid": "695782",
+      "session": "141",
+      "sgid": "1000",
+      "success": "yes",
+      "suid": "1000",
+      "syscall": "59",
+      "tty": "(none)",
+      "type": "SYSCALL",
+      "uid": "1000"
+    }
+  },
+  "decoder": {
+    "name": "auditd",
+    "parent": "auditd"
+  },
+  "full_log": "type=SYSCALL msg=audit(1784412401.582:10317): arch=c000003e syscall=59 success=yes exit=0 a0=559a28224738 a1=559a30a38b18 a2=559a30a38d48 a3=1 items=2 ppid=695782 pid=695787 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=141 comm=\"pwsh\" exe=\"/snap/powershell/378/opt/powershell/pwsh\" subj=snap.powershell.powershell key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1784412401.582:10317): argc=3 a0=\"/snap/powershell/378/opt/powershell/pwsh\" a1=\"-enc\" a2=\"ZQBjAGgAbwAgAFAARgBBAC0ARgBJAE4AQQBMAC0AMgAwADIANgAwADcAMQA4AC0AMgAxADQANgAzADcAIAA+ACAALwB0AG0AcAAvAHAAdwBzAGgAXwB0AGUAcwB0AF8AUABGAEEALQBGAEkATgBBAEwALQAyADAAMgA2ADAANwAxADgALQAyADEANAA2ADMANwAuAHQAeAB0AA==\" type=CWD msg=audit(1784412401.582:10317): cwd=\"/home/soc\" type=PATH msg=audit(1784412401.582:10317): item=0 name=\"/snap/powershell/378/opt/powershell/pwsh\" inode=596 dev=07:05 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1784412401.582:10317): item=1 name=\"/snap/core22/current/lib64/ld-linux-x86-64.so.2\" inode=7489 dev=07:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1784412401.582:10317): proctitle=70777368002D656E63005A51426A41476741627741674146414152674242414330415267424A414534415151424D414330414D674177414449414E674177414463414D514134414330414D674178414451414E67417A414463414941412B414341414C7742304147304163414176414841416477427A41476741587742304147",
+  "id": "1784412404.10945847",
+  "input": {
+    "type": "log"
+  },
+  "location": "/var/log/audit/audit-merged.log",
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "rule": {
+    "description": "Suspicious/obfuscated PowerShell execution (encoded command, IEX, download cradle, or execution-policy bypass) detected via auditd",
+    "firedtimes": 2,
+    "groups": [
+      "local",
+      "pfa_custom",
+      "audit_command",
+      "pfa_powershell"
+    ],
+    "id": "100101",
+    "level": 12,
+    "mail": true
+  },
+  "timestamp": "2026-07-18T22:06:44.198+0000"
+}

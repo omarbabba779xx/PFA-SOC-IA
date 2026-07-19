@@ -1,0 +1,12 @@
+{
+  "run_id": "PFA-FINAL-20260718-214637",
+  "wazuh_alert_id": "fNRGd58BPpYiiyppy-eZ",
+  "alert_sha256": "0f7e81ac8e659d98cb5f6516d35d83c96f9e6c06d0f390ba8e5a7661339d9002",
+  "scenario": "scenario4_lateral_movement",
+  "model": "gemma2:9b-instruct-q4_0",
+  "keep_alive": "0",
+  "duration_sec": 105.41,
+  "valid_output": true,
+  "date_utc": "2026-07-18T22:22:53Z",
+  "python_version": "3.10.12"
+}

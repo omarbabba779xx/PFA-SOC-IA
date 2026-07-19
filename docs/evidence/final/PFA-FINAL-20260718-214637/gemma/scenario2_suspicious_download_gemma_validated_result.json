@@ -1,0 +1,8 @@
+{
+  "incident_type": "Recuperation d'un outil ou payload externe",
+  "criticite": "haute",
+  "mitre_tactic": "Command and Control",
+  "mitre_technique": "T1105",
+  "resume": "Un log audit montre l'utilisation de curl pour recuperer un fichier depuis une URL vers un chemin suspect.",
+  "recommandation": "Investigue la source du fichier et le chemin d'enregistrement. Verifie si le fichier est malveillant."
+}

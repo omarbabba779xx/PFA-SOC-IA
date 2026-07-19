@@ -1,0 +1,16 @@
+=== docker ps ===
+NAMES                           IMAGE                                                   STATUS
+thehive                         strangebee/thehive:5.4                                  Up 20 minutes
+thehive-cassandra               cassandra:4.1                                           Up 51 minutes
+thehive-elasticsearch           docker.elastic.co/elasticsearch/elasticsearch:7.17.24   Up 20 minutes
+single-node-wazuh.dashboard-1   wazuh/wazuh-dashboard:4.10.1                            Up 6 hours
+single-node-wazuh.manager-1     wazuh/wazuh-manager:4.10.1                              Up 6 hours
+single-node-wazuh.indexer-1     wazuh/wazuh-indexer:4.10.1                              Up 6 hours
+=== docker inspect thehive (image, mounts) ===
+Image: strangebee/thehive:5.4
+ImageID: sha256:ba3212a89be79de6ec8e6e66b84f3c0801c3b8d726aacc767ad6257030df7a13
+/var/lib/docker/volumes/thehive_thehive-data/_data -> /opt/thp/thehive/files
+
+=== cassandra/es images ===
+Cassandra Image: cassandra:4.1
+ES Image: docker.elastic.co/elasticsearch/elasticsearch:7.17.24

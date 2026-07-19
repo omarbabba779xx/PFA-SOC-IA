@@ -2,11 +2,15 @@
 name = "pfa-soc-ia"
 version = "0.1.0"
 description = "SOC assiste par IA - PFA 4IIR EMSI Tanger 2025-2026"
-requires-python = ">=3.11"
+# La VM du lab (Ubuntu 22.04, ou tourne reellement scripts/wazuh_ai_triage.py) n'a que
+# Python 3.10 -- confirme en executant le script dessus pendant la validation finale, ce qui
+# a revele un usage de datetime.UTC (ajoute en 3.11 seulement) qui cassait sur la cible reelle.
+# La borne ci-dessous reflete l'environnement d'execution reel, pas seulement le poste de dev.
+requires-python = ">=3.10"
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py310"
 extend-exclude = ["docs/", "examples/"]
 
 [tool.ruff.lint]

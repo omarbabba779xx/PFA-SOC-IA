@@ -1,0 +1,47 @@
+{
+  "@timestamp": "2026-07-18T22:09:14.833Z",
+  "agent": {
+    "id": "001",
+    "ip": "127.0.0.1",
+    "name": "soc-lab"
+  },
+  "data": {
+    "command": "/usr/bin/whoami",
+    "dstuser": "root",
+    "pwd": "/home/soc",
+    "srcuser": "soc"
+  },
+  "decoder": {
+    "ftscomment": "First time user executed the sudo command",
+    "name": "sudo",
+    "parent": "sudo"
+  },
+  "full_log": "Jul 18 22:09:11 soc-lab sudo[696180]:      soc : PWD=/home/soc ; USER=root ; COMMAND=/usr/bin/whoami",
+  "id": "1784412554.11336651",
+  "input": {
+    "type": "log"
+  },
+  "location": "journald",
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "predecoder": {
+    "hostname": "soc-lab",
+    "program_name": "sudo",
+    "timestamp": "Jul 18 22:09:11"
+  },
+  "rule": {
+    "description": "Sudo elevation to root shortly after an SSH login on the same host (possible lateral movement; time-proximity only, not confirmed same user - see comment above)",
+    "firedtimes": 3,
+    "frequency": 2,
+    "groups": [
+      "local",
+      "pfa_custom",
+      "pfa_lateral_movement"
+    ],
+    "id": "100105",
+    "level": 10,
+    "mail": false
+  },
+  "timestamp": "2026-07-18T22:09:14.833+0000"
+}

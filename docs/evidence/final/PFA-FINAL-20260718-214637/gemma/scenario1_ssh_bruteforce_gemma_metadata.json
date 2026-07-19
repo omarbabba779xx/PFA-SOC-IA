@@ -1,0 +1,12 @@
+{
+  "run_id": "PFA-FINAL-20260718-214637",
+  "wazuh_alert_id": "A9RHd58BPpYiiyppOegr",
+  "alert_sha256": "107f977b0aa072e4a4da6405e429c59aa591440e06930d162e56fca3e4a38dec",
+  "scenario": "scenario1_ssh_bruteforce",
+  "model": "gemma2:9b-instruct-q4_0",
+  "keep_alive": "0",
+  "duration_sec": 105.67,
+  "valid_output": true,
+  "date_utc": "2026-07-18T22:16:46Z",
+  "python_version": "3.10.12"
+}

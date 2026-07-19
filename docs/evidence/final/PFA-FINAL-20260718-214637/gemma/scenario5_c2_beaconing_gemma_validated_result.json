@@ -1,0 +1,8 @@
+{
+  "incident_type": "Repeated network fetch commands to the same destination",
+  "criticite": "haute",
+  "mitre_tactic": "Command and Control",
+  "mitre_technique": "T1071",
+  "resume": "Le log montre des requetes repetees vers la meme destination, ce qui peut indiquer un beaconing C2.",
+  "recommandation": "Investigate the source of the repeated network requests and analyze the content of the fetched data."
+}

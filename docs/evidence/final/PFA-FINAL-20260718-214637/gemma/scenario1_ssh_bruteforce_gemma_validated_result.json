@@ -1,0 +1,8 @@
+{
+  "incident_type": "brute force / devinette de mot de passe",
+  "criticite": "haute",
+  "mitre_tactic": "Credential Access",
+  "mitre_technique": "T1110.001",
+  "resume": "Tentative de connexion SSH avec un utilisateur inexistant depuis l'adresse IP 10.0.2.2.",
+  "recommandation": "Investigate the source IP address and potential compromised accounts."
+}
