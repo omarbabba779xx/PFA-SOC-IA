@@ -120,6 +120,26 @@ Preuve brute complète (stdout, y compris les réponses JSON de Gemma2 et de
 TheHive) : `raw/real_pipeline_integration_test_tag_mode.json`. Alerte source :
 `raw/source_alert_9em5ep8B-jsqxPD_sgRy.json`.
 
+## Captures d'écran (vérifiées visuellement, hashées)
+
+Prises directement par l'utilisateur dans le navigateur réel (pas de fenêtre de chat, pas
+de simulation), vérifiées une à une contre les preuves JSON brutes ci-dessus avant d'être
+retenues. Hashes dans `SHA256SUMS_thehive52.csv`.
+
+| # | Fichier | Contenu | Vérifié contre |
+|---|---|---|---|
+| 0 | `screenshots/00_organisation_list_version.png` | Liste des organisations (`admin`, `soc-lab`) + version TheHive `5.2.16.1` visible en bas de page | version confirmée par `/api/status` |
+| 1 | `screenshots/01_case_list_real_cases.png` | Liste des 4 cas réels (#1-#4), connecté en tant que `analyst52@thehive.local` | `raw/human_account_operational_test.txt`, `raw/service_account_operational_test.txt` |
+| 2 | `screenshots/02_case_40984808_detail.png` | Détail du cas `~40984808`, tag `source-ref-sha256:d846e4a9...` visible, description complète | `raw/real_pipeline_integration_test_tag_mode.json` (case_id, tag, description identiques) |
+| 3 | `screenshots/03_soclab_users_list.png` | Organisation `soc-lab`, les deux comptes (`analyst52@thehive.local`, `soc-pipeline52@thehive.local`) | correspond aux comptes utilisés dans tous les tests ci-dessus |
+
+Note : aucune capture de bannière "licence invalide" n'a été produite pour TheHive
+5.2.16-1, car cette version n'a pas de sous-système de licence du tout — confirmé par
+`GET /api/status`, qui ne contient aucun champ `license` (contrairement à
+`GET /api/v1/status` sur TheHive 5.4.11-1, qui expose `license.isValid`). L'absence du
+mécanisme entier, démontrée par l'API, est une preuve plus solide qu'une capture d'écran
+d'une bannière absente.
+
 ## Ce qui n'a PAS été fait
 
 - Aucun test de charge multi-worker n'a été exécuté (hors du périmètre
