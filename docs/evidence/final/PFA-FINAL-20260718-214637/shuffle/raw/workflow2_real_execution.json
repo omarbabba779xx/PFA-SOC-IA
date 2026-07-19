@@ -1,0 +1,30 @@
+{
+  "execution_id": "ff44aa57-110f-4369-b49a-7754021deabc",
+  "workflow_id": "8a1e2a50-89a6-400a-98a5-b564327f0833",
+  "status": "FINISHED",
+  "started": "2026-07-20T00:02:56",
+  "finished": "2026-07-20T00:03:04",
+  "results": [
+    {
+      "label": "Start_Passthrough",
+      "app_name": "Shuffle Tools",
+      "action": "repeat_back_to_me",
+      "status": "SUCCESS",
+      "result": "Hello world"
+    },
+    {
+      "label": "http_1",
+      "app_name": "http",
+      "action": "GET",
+      "status": "SUCCESS",
+      "result": {
+        "status": 200,
+        "url": "http://172.21.0.1:9020/api/v1/case/~40984808",
+        "success": true,
+        "body_field_count": 26,
+        "headers_field_count": 4,
+        "note": "headers/body content redacted in this manifest (contains no secret in body; headers section held the Authorization bearer token used for this call, intentionally not reproduced here)"
+      }
+    }
+  ]
+}
