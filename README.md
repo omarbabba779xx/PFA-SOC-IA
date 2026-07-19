@@ -31,10 +31,27 @@ blocages.
 | 2 — Génération des 6 scénarios + contrôles négatifs | ✅ Réalisé réellement sur la VM | Brute force SSH, téléchargement suspect, PowerShell encodé, mouvement latéral SSH+sudo, C2 beaconing, sondage réseau — alertes réelles indexées, extraites et hashées : [`scenario_alerts_index.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/scenario_alerts_index.csv) |
 | 3 — Gel du corpus d'alertes | ✅ | [`raw/full_corpus_window_no80792.json`](docs/evidence/final/PFA-FINAL-20260718-214637/raw/full_corpus_window_no80792.json) |
 | 4 — Triage Gemma2 9B | ✅ 6/6 alertes réelles triées, MITRE correct pour chacune | Requête, réponse brute, résultat validé et métadonnées pour chaque scénario dans [`gemma/`](docs/evidence/final/PFA-FINAL-20260718-214637/gemma/) |
-| 5 — TheHive (création de cas) | ⚠️ **Bloqué** | Voir section ci-dessous |
-| 6-13 — Cortex, MISP, Shuffle, dashboard, dataset final, évaluation | ⏳ Non commencé | Dépendent de la Phase 5 |
+| 5 — TheHive (création de cas) | ✅ Débloqué sur instance 5.2.16-1 isolée | Voir section ci-dessous |
+| 6-13 — Cortex, MISP, Shuffle, dashboard, dataset final, évaluation | ⏳ Non commencé | Vérification de compatibilité API restante avant reprise |
 
-## Blocage actuel : licence TheHive invalide
+## TheHive : instance 5.4.11-1 bloquée (licence), instance 5.2.16-1 isolée opérationnelle
+
+L'instance TheHive `5.4.11-1` d'origine reste bloquée par une licence applicative
+invalide (voir ci-dessous, non résolu, archivée en lecture seule). Le portail de licence
+StrangeBee s'étant révélé définitivement inaccessible, une instance **TheHive
+5.2.16-1** — une version Community officielle antérieure au système de licence par
+portail — a été déployée dans un environnement entièrement isolé (nouveaux conteneurs,
+volumes, réseau, comptes ; aucun contournement de licence, aucun patch binaire).
+
+Cas réels créés et vérifiés avec les deux comptes (humain et service), y compris un test
+d'intégration de bout en bout réel (alerte Wazuh réelle → triage Gemma2 réel → cas
+TheHive réel → réexécution prouvant l'absence de doublon). Une incompatibilité API réelle
+a été découverte (`sourceRef` et `/api/v1/case/_search` absents de TheHive 5.2.16-1) et
+corrigée par une couche de compatibilité explicite (`THEHIVE_DEDUP_MODE`), documentée en
+détail avec preuves brutes dans
+[`thehive52/API_COMPATIBILITY_FINDINGS.md`](docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/API_COMPATIBILITY_FINDINGS.md).
+
+## Blocage résiduel : licence TheHive 5.4.11-1 invalide (instance archivée)
 
 `POST /api/v1/case` retourne systématiquement `403 manageCase/create`, pour le compte de
 service **et** le compte humain, malgré un profil `analyst` correctement assigné dans

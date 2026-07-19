@@ -1,0 +1,85 @@
+=== ETAPE 1 : triage LLM reel (Ollama/Gemma2) ===
+=== ETAPE 2 : create_thehive_case (mode=tag), run 1 (creation attendue) ===
+=== ETAPE 3 : GET case cree pour verifier le tag persiste ===
+=== ETAPE 4 : rerun create_thehive_case avec la MEME alerte (etat SQLite absent, simule via l'absence totale d'appel a init_state_db/already_processed) ===
+2026-07-19 14:18:51,226 [WARNING] Cas TheHive deja existant pour l'alerte 9em5ep8B-jsqxPD_sgRy (mode=tag, id=~40984808) -- pas de doublon cree
+{
+  "alert_es_id": "9em5ep8B-jsqxPD_sgRy",
+  "rule_id": "100103",
+  "triage": {
+    "incident_type": "Requetes repetees vers la meme destination",
+    "criticite": "haute",
+    "mitre_tactic": "Command and Control",
+    "mitre_technique": "T1071",
+    "resume": "Le log montre des requetes repetees vers la meme destination, ce qui peut indiquer un beaconing C2.",
+    "recommandation": "Investigue l'adresse IP cible et le contenu des requetes. Bloque les connexions suspectes."
+  },
+  "criticite_baseline": "haute",
+  "run1_result": {
+    "case_id": "~40984808",
+    "created": true
+  },
+  "deterministic_tag": "source-ref-sha256:d846e4a95a8c1bdf5b2e85d6eedd0bc411be6a5512a8e698ebe9e1cd8501518a",
+  "run1_case_get": {
+    "_id": "~40984808",
+    "_type": "Case",
+    "_createdBy": "soc-pipeline52@thehive.local",
+    "_createdAt": 1784470729292,
+    "number": 4,
+    "title": "[HAUTE] Requetes repetees vers la meme destination",
+    "description": "Le log montre des requetes repetees vers la meme destination, ce qui peut indiquer un beaconing C2.\n\n**Tactique MITRE** : Command and Control\n**Technique MITRE** : T1071\n**Recommandation IA** : Investigue l'adresse IP cible et le contenu des requetes. Bloque les connexions suspectes.\n\n**Alerte source** : regle Wazuh `100103` (`Repeated network fetch commands to the same destination in a short window (possible C2 beaconing) - positional match on audit.execve.a3, fragile to argument order, see comment above`), niveau 10\n**Agent** : soc-lab\n**Horodatage** : 2026-07-19T14:13:25.968+0000\n**Modele** : gemma2:9b-instruct-q4_0\n**Traitement** : hybride (criticite = baseline `rule.level`, mapping MITRE = LLM)\n**Alert ID (Elasticsearch)** : `9em5ep8B-jsqxPD_sgRy`\n\nGenere automatiquement depuis l'alerte Wazuh.",
+    "severity": 3,
+    "severityLabel": "HIGH",
+    "startDate": 1784470728999,
+    "tags": [
+      "T1071",
+      "triage-ia",
+      "rule-100103",
+      "source-ref-sha256:d846e4a95a8c1bdf5b2e85d6eedd0bc411be6a5512a8e698ebe9e1cd8501518a",
+      "wazuh"
+    ],
+    "flag": false,
+    "tlp": 2,
+    "tlpLabel": "AMBER",
+    "pap": 2,
+    "papLabel": "AMBER",
+    "status": "New",
+    "stage": "New",
+    "assignee": "soc-pipeline52@thehive.local",
+    "customFields": [],
+    "userPermissions": [
+      "manageCase/create",
+      "manageAlert/update",
+      "manageProcedure",
+      "managePage",
+      "manageObservable",
+      "manageCase/delete",
+      "manageAlert/create",
+      "manageCaseReport",
+      "manageAlert/delete",
+      "accessTheHiveFS",
+      "manageKnowledgeBase",
+      "manageAction",
+      "manageShare",
+      "manageAnalyse",
+      "manageFunction/invoke",
+      "manageTask",
+      "manageCase/merge",
+      "manageCustomEvent",
+      "manageAlert/import",
+      "manageCase/changeOwnership",
+      "manageComment",
+      "manageAlert/reopen",
+      "manageCase/update",
+      "manageCase/reopen"
+    ],
+    "extraData": {},
+    "newDate": 1784470729000,
+    "timeToDetect": 1
+  },
+  "run2_result": {
+    "case_id": "~40984808",
+    "created": false
+  },
+  "no_duplicate": true
+}

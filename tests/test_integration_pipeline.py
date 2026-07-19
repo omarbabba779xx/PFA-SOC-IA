@@ -133,6 +133,156 @@ class TestCreateTheHiveCase:
             wat.create_thehive_case(alert, self._triage(), "haute")
 
 
+class TestSourceRefTag:
+    """build_source_ref_tag() -- convention d'idempotence pour TheHive 5.2.16-1
+    (pas de champ Case.sourceRef sur cette version, voir
+    docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/API_COMPATIBILITY_FINDINGS.md)."""
+
+    def test_same_alert_id_produces_same_tag(self):
+        assert wat.build_source_ref_tag("es-id-1") == wat.build_source_ref_tag("es-id-1")
+
+    def test_different_alert_ids_produce_different_tags(self):
+        assert wat.build_source_ref_tag("es-id-1") != wat.build_source_ref_tag("es-id-2")
+
+    def test_tag_format_is_sha256_hex_digest(self):
+        tag = wat.build_source_ref_tag("es-id-1")
+        assert tag.startswith("source-ref-sha256:")
+        digest = tag.removeprefix("source-ref-sha256:")
+        assert len(digest) == 64
+        int(digest, 16)  # leve ValueError si ce n'est pas de l'hexadecimal
+
+    def test_empty_alert_id_is_rejected(self):
+        with pytest.raises(ValueError):
+            wat.build_source_ref_tag("")
+
+
+class TestFindExistingCaseByTag:
+    def test_query_endpoint_and_filter_shape(self):
+        search_resp = _mock_response([])
+        with patch("wazuh_ai_triage.requests.post", return_value=search_resp) as mock_post:
+            result = wat.find_existing_case_by_tag("source-ref-sha256:abc")
+        assert result is None
+        call = mock_post.call_args
+        assert call.args[0].endswith("/api/v1/query")
+        assert call.kwargs["json"]["query"] == [
+            {"_name": "listCase"},
+            {"_name": "filter", "_field": "tags", "_value": "source-ref-sha256:abc"},
+        ]
+
+    def test_existing_result_returns_case_id(self):
+        search_resp = _mock_response([{"_id": "case-existing-tag"}])
+        with patch("wazuh_ai_triage.requests.post", return_value=search_resp):
+            result = wat.find_existing_case_by_tag("source-ref-sha256:abc")
+        assert result == "case-existing-tag"
+
+    def test_empty_result_returns_none(self):
+        search_resp = _mock_response([])
+        with patch("wazuh_ai_triage.requests.post", return_value=search_resp):
+            result = wat.find_existing_case_by_tag("source-ref-sha256:abc")
+        assert result is None
+
+    def test_timeout_raises_verification_error(self):
+        import requests as real_requests
+        with patch("wazuh_ai_triage.requests.post", side_effect=real_requests.Timeout("timed out")), \
+             patch("wazuh_ai_triage.time.sleep"), \
+             pytest.raises(wat.TheHiveVerificationError):
+            wat.find_existing_case_by_tag("source-ref-sha256:abc")
+
+    def test_http_error_raises_verification_error(self):
+        import requests as real_requests
+        error_resp = MagicMock()
+        error_resp.status_code = 500
+        error_resp.raise_for_status.side_effect = real_requests.HTTPError("500")
+        with patch("wazuh_ai_triage.requests.post", return_value=error_resp), \
+             patch("wazuh_ai_triage.time.sleep"), \
+             pytest.raises(wat.TheHiveVerificationError):
+            wat.find_existing_case_by_tag("source-ref-sha256:abc")
+
+    def test_unexpected_response_shape_raises_verification_error(self):
+        """Reponse 200 mais pas une liste (ex : objet d'erreur inattendu) -- ne doit
+        jamais etre interprete silencieusement comme 'aucun cas existant'."""
+        malformed_resp = _mock_response({"type": "SomeUnexpectedShape"})
+        with patch("wazuh_ai_triage.requests.post", return_value=malformed_resp), \
+             pytest.raises(wat.TheHiveVerificationError):
+            wat.find_existing_case_by_tag("source-ref-sha256:abc")
+
+
+class TestDedupModeDispatch:
+    def test_source_ref_mode_calls_source_ref_search(self, monkeypatch):
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "source_ref")
+        with patch("wazuh_ai_triage.find_existing_case_by_source_ref", return_value="case-x") as m_sr, \
+             patch("wazuh_ai_triage.find_existing_case_by_tag") as m_tag:
+            result = wat.find_existing_case("es-id-1")
+        assert result == "case-x"
+        m_sr.assert_called_once_with("es-id-1")
+        m_tag.assert_not_called()
+
+    def test_tag_mode_calls_tag_search_with_deterministic_tag(self, monkeypatch):
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "tag")
+        with patch("wazuh_ai_triage.find_existing_case_by_tag", return_value="case-y") as m_tag, \
+             patch("wazuh_ai_triage.find_existing_case_by_source_ref") as m_sr:
+            result = wat.find_existing_case("es-id-1")
+        assert result == "case-y"
+        m_tag.assert_called_once_with(wat.build_source_ref_tag("es-id-1"))
+        m_sr.assert_not_called()
+
+    def test_invalid_dedup_mode_is_rejected_by_validate_configuration(self, monkeypatch):
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "not-a-real-mode")
+        with pytest.raises(SystemExit):
+            wat.validate_configuration()
+
+
+class TestCreateTheHiveCaseTagMode:
+    def _triage(self):
+        return wat.TriageResult(
+            incident_type="Recuperation d'outil externe",
+            criticite="haute",
+            mitre_tactic="Command and Control",
+            mitre_technique="T1105",
+            resume="resume test",
+            recommandation="recommandation test",
+        )
+
+    def test_creates_case_without_source_ref_field_and_with_tag(self, monkeypatch):
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "tag")
+        alert = _wazuh_hit("es-id-tag-1")["_source"]
+        alert["_es_id"] = "es-id-tag-1"
+        search_resp = _mock_response([])
+        create_resp = _mock_response({"_id": "case-tag-new"})
+        with patch("wazuh_ai_triage.requests.post", side_effect=[search_resp, create_resp]) as mock_post:
+            result = wat.create_thehive_case(alert, self._triage(), "haute")
+        assert result == {"case_id": "case-tag-new", "created": True}
+        create_call = mock_post.call_args_list[1]
+        payload = create_call.kwargs["json"]
+        assert "sourceRef" not in payload
+        assert wat.build_source_ref_tag("es-id-tag-1") in payload["tags"]
+        assert "es-id-tag-1" in payload["description"]
+
+    def test_reuses_existing_case_found_by_tag_no_second_post(self, monkeypatch):
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "tag")
+        alert = _wazuh_hit("es-id-tag-2")["_source"]
+        alert["_es_id"] = "es-id-tag-2"
+        search_resp = _mock_response([{"_id": "case-tag-existing"}])
+        with patch("wazuh_ai_triage.requests.post", return_value=search_resp) as mock_post:
+            result = wat.create_thehive_case(alert, self._triage(), "haute")
+        assert result == {"case_id": "case-tag-existing", "created": False}
+        assert mock_post.call_count == 1
+
+    def test_headers_include_organisation_and_never_log_authorization(self, monkeypatch, caplog):
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "tag")
+        alert = _wazuh_hit("es-id-tag-3")["_source"]
+        alert["_es_id"] = "es-id-tag-3"
+        search_resp = _mock_response([])
+        create_resp = _mock_response({"_id": "case-tag-3"})
+        with patch("wazuh_ai_triage.requests.post", side_effect=[search_resp, create_resp]) as mock_post:
+            wat.create_thehive_case(alert, self._triage(), "haute")
+        for call in mock_post.call_args_list:
+            headers = call.kwargs["headers"]
+            assert headers["X-Organisation"] == wat.THEHIVE_ORGANISATION
+            assert headers["Content-Type"] == "application/json"
+        assert wat.THEHIVE_API_KEY not in caplog.text
+
+
 class TestFullPipelineWithSqliteState:
     def test_end_to_end_alert_to_case_marks_state_as_case_created(self, monkeypatch, tmp_path):
         db_path = str(tmp_path / "state.sqlite3")
@@ -166,6 +316,45 @@ class TestFullPipelineWithSqliteState:
         row = conn.execute("SELECT status, case_id FROM processed_alerts WHERE alert_id = ?", ("es-id-full",)).fetchone()
         assert row == ("case_created", "case-e2e")
         conn.close()
+
+    def test_tag_mode_reruns_with_empty_state_db_reuse_case_no_duplicate(self, monkeypatch, tmp_path):
+        """Simule la perte de l'etat SQLite local (nouvelle base vide) pour la MEME alerte,
+        en mode THEHIVE_DEDUP_MODE=tag : la recherche cote TheHive doit retrouver le cas deja
+        cree et retourner created=False, sans creer de second cas -- preuve que la
+        deduplication cote TheHive fonctionne independamment de l'etat local."""
+        monkeypatch.setattr(wat, "THEHIVE_DEDUP_MODE", "tag")
+        alert = _wazuh_hit("es-id-rerun")["_source"]
+        alert["_es_id"] = "es-id-rerun"
+        triage = wat.TriageResult(
+            incident_type="Recuperation d'outil externe", criticite="haute",
+            mitre_tactic="Command and Control", mitre_technique="T1105",
+            resume="r", recommandation="r",
+        )
+
+        # Run 1 : base SQLite vide, aucun cas existant cote TheHive -> creation.
+        db_path_1 = str(tmp_path / "state_run1.sqlite3")
+        monkeypatch.setattr(wat, "STATE_DB_PATH", db_path_1)
+        conn1 = wat.init_state_db()
+        search_resp_1 = _mock_response([])
+        create_resp_1 = _mock_response({"_id": "case-rerun-1"})
+        with patch("wazuh_ai_triage.requests.post", side_effect=[search_resp_1, create_resp_1]):
+            result1 = wat.create_thehive_case(alert, triage, "haute")
+        assert result1 == {"case_id": "case-rerun-1", "created": True}
+        wat.mark_processed(conn1, "es-id-rerun", result1["case_id"], status="case_created")
+        conn1.close()
+
+        # Run 2 : NOUVELLE base SQLite vide (etat local "perdu"), mais TheHive retrouve
+        # le cas via le tag deterministe -> reutilisation, pas de second POST de creation.
+        db_path_2 = str(tmp_path / "state_run2_empty.sqlite3")
+        monkeypatch.setattr(wat, "STATE_DB_PATH", db_path_2)
+        conn2 = wat.init_state_db()
+        assert wat.already_processed(conn2, "es-id-rerun") is False  # etat local bien reparti a zero
+        search_resp_2 = _mock_response([{"_id": "case-rerun-1"}])
+        with patch("wazuh_ai_triage.requests.post", return_value=search_resp_2) as mock_post_2:
+            result2 = wat.create_thehive_case(alert, triage, "haute")
+        assert result2 == {"case_id": "case-rerun-1", "created": False}
+        assert mock_post_2.call_count == 1  # uniquement la recherche par tag, aucune creation
+        conn2.close()
 
     def test_end_to_end_llm_failure_leaves_alert_retryable(self, monkeypatch, tmp_path):
         db_path = str(tmp_path / "state.sqlite3")
