@@ -1,0 +1,102 @@
+[
+  {
+    "id": "7a38cc1b-0989-4d05-a507-f58a975789d6",
+    "name": "PFA-FINAL-20260718-214637 - Enrichissement periodique MISP",
+    "description": "",
+    "start": "69daa85b-e7d2-42eb-a9ff-a7c9a4a686f3",
+    "actions": [
+      {
+        "id": "69daa85b-e7d2-42eb-a9ff-a7c9a4a686f3",
+        "name": "repeat_back_to_me",
+        "app_name": "Shuffle Tools",
+        "label": "Change Me"
+      }
+    ],
+    "triggers": [
+      {
+        "id": "2758fa33-17a6-48b8-8402-a40c6c430776",
+        "trigger_type": "SCHEDULE",
+        "label": "Schedule_1",
+        "status": "uninitialized"
+      }
+    ],
+    "branches": [
+      {
+        "source_id": "2758fa33-17a6-48b8-8402-a40c6c430776",
+        "destination_id": "69daa85b-e7d2-42eb-a9ff-a7c9a4a686f3"
+      }
+    ],
+    "created": 1784494801,
+    "edited": 1784494825
+  },
+  {
+    "id": "8a1e2a50-89a6-400a-98a5-b564327f0833",
+    "name": "PFA-FINAL-20260718-214637 - Notification TheHive vers Slack (simulation)",
+    "actions": [
+      {
+        "id": "d5c1634e-b752-4e78-b5d6-a6e90d1cc316",
+        "name": "repeat_back_to_me",
+        "app_name": "Shuffle Tools",
+        "label": "Change Me"
+      }
+    ],
+    "triggers": [
+      {
+        "id": "37d8387f-4227-4157-825b-f9f1f7c4ac6e",
+        "trigger_type": "WEBHOOK",
+        "label": "Webhook_1",
+        "status": "uninitialized"
+      }
+    ],
+    "branches": [
+      {
+        "destination_id": "d5c1634e-b752-4e78-b5d6-a6e90d1cc316",
+        "id": "c91fabe9-ca41-4cdf-9280-4147a1150f99",
+        "source_id": "37d8387f-4227-4157-825b-f9f1f7c4ac6e",
+        "label": "",
+        "has_errors": false,
+        "conditions": null,
+        "decorator": false,
+        "parent_controlled": false,
+        "source_parent": ""
+      }
+    ],
+    "created": 1784494719,
+    "edited": 1784494746
+  },
+  {
+    "id": "4a25d7c1-b45e-4963-a6bc-1731279dc9d6",
+    "name": "PFA-FINAL-20260718-214637 - Triage niveau 5-7",
+    "actions": [
+      {
+        "id": "ee6327ba-b47e-48c5-919d-9716549807a4",
+        "name": "repeat_back_to_me",
+        "app_name": "Shuffle Tools",
+        "label": "Change Me"
+      }
+    ],
+    "triggers": [
+      {
+        "id": "46afdcb8-599f-489e-808e-6137ec616915",
+        "trigger_type": "WEBHOOK",
+        "label": "Webhook_1",
+        "status": "uninitialized"
+      }
+    ],
+    "branches": [
+      {
+        "destination_id": "ee6327ba-b47e-48c5-919d-9716549807a4",
+        "id": "5b9dd779-296a-42ac-bb2a-76be802a8657",
+        "source_id": "46afdcb8-599f-489e-808e-6137ec616915",
+        "label": "",
+        "has_errors": false,
+        "conditions": null,
+        "decorator": false,
+        "parent_controlled": false,
+        "source_parent": ""
+      }
+    ],
+    "created": 1784494631,
+    "edited": 1784494661
+  }
+]
