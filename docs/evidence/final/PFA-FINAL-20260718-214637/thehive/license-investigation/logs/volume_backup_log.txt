@@ -1,0 +1,18 @@
+Backup effectue le 2026-07-19T01:10:23Z (avant activation de licence, avant toute modification)
+
+Emplacement des archives : ~/thehive_backups/ sur la VM SOC-Lab (soc@127.0.0.1:2222)
+Ne pas commiter les archives elles-memes (trop volumineuses, restent sur la VM).
+
+Fichiers :
+- cassandra-data-PFA-FINAL-20260718-214637.tar.gz : 126515945 octets
+- es-data-PFA-FINAL-20260718-214637.tar.gz : 46558289 octets
+- thehive-data-PFA-FINAL-20260718-214637.tar.gz : 87 octets
+
+Verification d'integrite (tar -tzf) : OK pour les 3 archives
+
+SHA-256 :
+abb357d0b5da029f9f81af8535088dc866fd828492455ed5c641aceed4086b5d  cassandra-data-PFA-FINAL-20260718-214637.tar.gz
+fd1832b6a72fcab1d53fd7929b929dcb09c3e4c8242d762cfea623393eb98a64  es-data-PFA-FINAL-20260718-214637.tar.gz
+bb34d8abd082d602c0ea630b4092a6879f95b97b99a7eb61b480ef9f4fef89e0  thehive-data-PFA-FINAL-20260718-214637.tar.gz
+
+Espace disque restant apres backup : 14G / 79G disponible sur la VM
