@@ -149,8 +149,45 @@ avant de pouvoir reprendre la création de cas.
 Bloquées en aval de la Phase 5 (TheHive) — l'enrichissement Cortex et l'export MISP du
 pipeline officiel dépendent de cas TheHive réels, qui ne peuvent pas encore être créés.
 
+## Mise à jour — TheHive 5.2.16-1 (instance isolée) : Phase 5 débloquée (2026-07-19)
+
+L'accès au portail de licence StrangeBee s'étant révélé définitivement indisponible pour
+l'utilisateur, une architecture de secours approuvée a été déployée : une instance
+TheHive **5.2.16-1** entièrement isolée (conteneurs, volumes, réseau, comptes neufs —
+`pfa-thehive52-final` sur la VM), une version Community officielle antérieure au système
+de licence par portail (pas de contournement, pas de patch binaire, pas de falsification
+de licence). L'instance 5.4.11-1 précédente a été gelée à l'arrêt (conteneurs stoppés,
+volumes conservés) comme archive en lecture seule, non supprimée.
+
+- Organisation `soc-lab` créée, compte humain `analyst52@thehive.local` (mot de passe +
+  clé API) et compte de service `soc-pipeline52@thehive.local` (clé API), tous deux
+  profil `analyst`.
+- Test opérationnel complet réussi avec les deux comptes : création de cas réels
+  (`~20640`, `~45280`, `~12480`, `~40984808`), lecture, ajout d'observable, ajout de
+  tâche, mise à jour de tag, recherche — voir
+  `thehive52/raw/human_account_operational_test.txt` et
+  `thehive52/raw/service_account_operational_test.txt`.
+- **Incompatibilité API réelle découverte et documentée** : le champ `Case.sourceRef` et
+  l'endpoint `/api/v1/case/_search`, utilisés par le pipeline existant, n'existent pas sur
+  TheHive 5.2.16-1 (confirmé par une `AttributeCheckingError` officielle et une réponse
+  `404`). Voir `thehive52/API_COMPATIBILITY_FINDINGS.md` pour le détail complet.
+- **Adaptation appliquée** : couche de compatibilité `THEHIVE_DEDUP_MODE` (`source_ref` |
+  `tag`, obligatoire, sans détection automatique) dans `scripts/wazuh_ai_triage.py`. Le
+  mode `tag` utilise un tag déterministe `source-ref-sha256:<SHA256 du _es_id>` recherché
+  via `/api/v1/query`. 17 tests ajoutés (75/75 passent, `ruff` sans erreur).
+- **Test d'intégration réel de bout en bout** (pas mocké) : alerte Wazuh réelle
+  (`9em5ep8B-jsqxPD_sgRy`, règle 100103) → triage Gemma2 9B réel (T1071, cohérent) → cas
+  TheHive réel créé (`~40984808`) avec le tag déterministe persisté → réexécution avec la
+  même alerte sans état SQLite local → cas existant retrouvé, **aucun doublon créé**.
+  Preuve brute : `thehive52/raw/real_pipeline_integration_test_tag_mode.json`.
+
+### Phase 5 — TheHive : statut mis à jour
+
+✅ **Débloqué** sur l'instance 5.2.16-1 isolée (voir ci-dessus). L'instance 5.4.11-1
+reste bloquée par licence invalide (non résolu, archivée en lecture seule).
+
 ## Prochaine action
 
-En attente d'une licence TheHive Community valide (voir section License ci-dessus) pour
-reprendre la Phase 5. Les Phases 1, 2 et 4 sont complétées avec des preuves réelles et
-hashées.
+Section 8 du plan de secours (vérification de compatibilité API complète pour tous les
+endpoints du pipeline) et Section 17 (rapport de synthèse) restent à finaliser avant de
+reprendre Cortex, MISP puis Shuffle dans cet ordre.
