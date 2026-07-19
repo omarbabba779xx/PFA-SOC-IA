@@ -57,7 +57,44 @@ Prises par l'utilisateur, vérifiées champ par champ contre les preuves brutes 
 |---|---|
 | `screenshots/cortex_01_job_list.png` | Jobs History Cortex, job `VirusTotal_GetReport_3_1` sur `c2-integration-test[.]example[.]invalid`, statut `Success` |
 | `screenshots/cortex_02_job_report_detail.png` | Détail du job, rapport complet identique au JSON brut (`InvalidArgumentError`) |
-| `screenshots/03_case_40984808_observable.png` | Onglet Observables du cas `~40984808` dans TheHive, observable `fqdn` avec "No report(s) available" — confirme honnêtement que l'intégration TheHive→Cortex n'a pas été câblée dans cette passe (test effectué directement via l'API Cortex) |
+| `screenshots/03_case_40984808_observable.png` | Onglet Observables du cas `~40984808` dans TheHive, observable `fqdn` (liste, avant le câblage TheHive↔Cortex ci-dessous) |
+| `screenshots/04_observable_analyzer_linked.png` | Vue détail de l'observable après le câblage : section "Analyzers" affichant `VirusTotal_GetReport_3_1` avec un ✓ et la date réelle de la dernière analyse (19/07/2026 21:20) |
+
+## Mise à jour — câblage réel de l'intégration TheHive↔Cortex
+
+Contrairement à la section "Ce qui n'a PAS été fait" ci-dessous (rédigée après le premier
+test, effectué directement contre l'API Cortex), l'intégration a ensuite été **réellement
+câblée et testée avec succès** :
+
+1. Le conteneur `cortex` a été rejoint au réseau Docker de TheHive
+   (`docker network connect pfa-thehive52-final_pfa52-net cortex`), lui donnant un nom DNS
+   résoluble (`cortex`) depuis le conteneur TheHive.
+2. Le service TheHive dans `docker-compose.yml` a été reconfiguré : remplacement de
+   `--no-config-cortex` par `--cortex-hostnames cortex --cortex-keys <clé API Cortex>`,
+   flags documentés et supportés nativement par l'entrypoint de l'image TheHive
+   (confirmé en lisant `/opt/thehive/entrypoint` dans le conteneur).
+3. `docker compose up -d thehive` a recréé le conteneur applicatif TheHive (les volumes
+   Cassandra/Elasticsearch, donc toutes les données de cas, n'ont pas été touchés — les 4
+   cas réels existants sont restés intacts après la recréation, vérifié en se reconnectant).
+4. Log TheHive confirmant le chargement : `Add Cortex cortex0: http://cortex:9001`,
+   `Loading module org.thp.thehive.connector.cortex.CortexModule`, `Analyzer templates
+   already present (found 246)`.
+5. **Test réel via l'interface** : ouverture du cas `~40984808` en tant que
+   `analyst52@thehive.local`, onglet Observables → menu contextuel → "Run analyzers" →
+   `VirusTotal_GetReport_3_1 [cortex0]` apparaît (chargé dynamiquement depuis Cortex, pas
+   fabriqué) → sélection et exécution.
+6. Job Cortex créé avec les paramètres `{"organisation":"soc-lab","user":"analyst52@thehive.local"}`
+   (preuve que c'est bien TheHive, via l'action UI, qui a soumis le job — pas un appel direct
+   à l'API Cortex comme le test précédent) : `cortex0/f7oJfJ8Bzlxl2vZwI6aO`.
+7. Log TheHive : `Job cortex0/f7oJfJ8Bzlxl2vZwI6aO has finished with status Success, updating
+   job ~4136` — le rapport a été importé dans le job TheHive natif `~4136`, récupérable via
+   `GET /api/connector/cortex/job/~4136` (même contenu que le rapport Cortex direct :
+   `InvalidArgumentError`, domaine `.invalid` rejeté par VirusTotal).
+8. Vue "Observable details" dans l'UI TheHive confirme visuellement : section "Analyzers"
+   avec `VirusTotal_GetReport_3_1` et un ✓ horodaté — capture `04_observable_analyzer_linked.png`.
+
+Preuves brutes complètes : `raw/thehive_cortex_ui_integration_fix.txt` (commande Compose
+modifiée, logs TheHive pertinents, réponse complète du job `~4136`).
 
 ## Sécurité
 
@@ -70,10 +107,9 @@ des valeurs brutes avant staging.
 
 - Aucun test avec un observable `ip`/`hash` réel n'a été effectué dans cette passe (le seul
   test réalisé porte sur le `fqdn` synthétique de l'alerte source).
-- L'intégration Cortex↔TheHive 5.2.16-1 via l'interface TheHive (bouton "Run analyzer"
-  depuis un cas) n'a pas été configurée ni testée — TheHive a été démarré avec
-  `--no-config-cortex` ; ce test a été effectué directement contre l'API Cortex. Le câblage
-  UI TheHive→Cortex reste à faire si le pipeline final en a besoin.
+- Aucun test de responder (uniquement des analyseurs) n'a été effectué.
+- Le câblage TheHive↔Cortex n'a été appliqué qu'à l'instance TheHive 5.2.16-1 isolée, pas à
+  l'ancienne instance 5.4.11-1 (toujours bloquée par licence, archivée en lecture seule).
 
 ## Preuves brutes
 
