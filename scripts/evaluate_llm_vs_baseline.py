@@ -35,9 +35,12 @@ import re
 import subprocess
 import sys
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import requests
+
+UTC = timezone.utc  # voir wazuh_ai_triage.py : datetime.UTC n'existe qu'a partir de Python 3.11,
+                     # la VM du lab tourne en 3.10 -- timezone.utc est l'equivalent portable.
 
 CRITICALITY_EN_TO_FR = {"low": "basse", "medium": "moyenne", "high": "haute", "critical": "critique"}
 

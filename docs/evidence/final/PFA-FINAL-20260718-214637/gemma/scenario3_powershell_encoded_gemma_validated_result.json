@@ -1,0 +1,8 @@
+{
+  "incident_type": "Execution PowerShell suspecte/obfusquee",
+  "criticite": "critique",
+  "mitre_tactic": "Execution",
+  "mitre_technique": "T1059.001",
+  "resume": "Un processus 'pwsh' a execute une commande PowerShell encodee avec l'argument '-enc'.",
+  "recommandation": "Investigate immediately. This indicates potential malicious activity."
+}

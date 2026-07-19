@@ -1,0 +1,73 @@
+{
+  "@timestamp": "2026-07-18T22:06:34.146Z",
+  "agent": {
+    "id": "001",
+    "ip": "127.0.0.1",
+    "name": "soc-lab"
+  },
+  "data": {
+    "audit": {
+      "arch": "c000003e",
+      "auid": "1000",
+      "command": "curl",
+      "cwd": "/tmp/httpsrv",
+      "egid": "1000",
+      "euid": "1000",
+      "exe": "/usr/bin/curl",
+      "execve": {
+        "a0": "curl",
+        "a1": "-s",
+        "a2": "-m5",
+        "a3": "http://localhost:11434/api/tags"
+      },
+      "exit": "0",
+      "file": {
+        "inode": "2631531",
+        "mode": "0100755",
+        "name": "/usr/bin/curl"
+      },
+      "fsgid": "1000",
+      "fsuid": "1000",
+      "gid": "1000",
+      "id": "10232",
+      "key": "audit-wazuh-c",
+      "pid": "695723",
+      "ppid": "695715",
+      "session": "140",
+      "sgid": "1000",
+      "success": "yes",
+      "suid": "1000",
+      "syscall": "59",
+      "tty": "(none)",
+      "type": "SYSCALL",
+      "uid": "1000"
+    }
+  },
+  "decoder": {
+    "name": "auditd",
+    "parent": "auditd"
+  },
+  "full_log": "type=SYSCALL msg=audit(1784412391.510:10232): arch=c000003e syscall=59 success=yes exit=0 a0=55c6b0212880 a1=55c6b021e210 a2=55c6b0218f90 a3=1b6 items=2 ppid=695715 pid=695723 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=140 comm=\"curl\" exe=\"/usr/bin/curl\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1784412391.510:10232): argc=4 a0=\"curl\" a1=\"-s\" a2=\"-m5\" a3=\"http://localhost:11434/api/tags\" type=CWD msg=audit(1784412391.510:10232): cwd=\"/tmp/httpsrv\" type=PATH msg=audit(1784412391.510:10232): item=0 name=\"/usr/bin/curl\" inode=2631531 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1784412391.510:10232): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1784412391.510:10232): proctitle=6375726C002D73002D6D3500687474703A2F2F6C6F63616C686F73743A31313433342F6170692F74616773",
+  "id": "1784412394.10790107",
+  "input": {
+    "type": "log"
+  },
+  "location": "/var/log/audit/audit-merged.log",
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "rule": {
+    "description": "Network fetch (curl/wget) retrieving a script/executable to a suspicious path - possible external tool/payload retrieval",
+    "firedtimes": 2,
+    "groups": [
+      "local",
+      "pfa_custom",
+      "audit_command",
+      "pfa_phishing"
+    ],
+    "id": "100099",
+    "level": 8,
+    "mail": false
+  },
+  "timestamp": "2026-07-18T22:06:34.146+0000"
+}

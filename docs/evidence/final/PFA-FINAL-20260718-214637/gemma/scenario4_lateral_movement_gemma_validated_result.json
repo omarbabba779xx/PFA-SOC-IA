@@ -1,0 +1,8 @@
+{
+  "incident_type": "Sudo elevation to root shortly after an SSH login",
+  "criticite": "haute",
+  "mitre_tactic": "Lateral Movement",
+  "mitre_technique": "T1021.004",
+  "resume": "Elevation de privil\u00e8ges \u00e0 root peu apr\u00e8s une connexion SSH sur le m\u00eame h\u00f4te.",
+  "recommandation": "Investigate the SSH login and the subsequent sudo command to determine if they are legitimate or malicious."
+}

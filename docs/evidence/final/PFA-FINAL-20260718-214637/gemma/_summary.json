@@ -1,0 +1,74 @@
+[
+  {
+    "run_id": "PFA-FINAL-20260718-214637",
+    "wazuh_alert_id": "A9RHd58BPpYiiyppOegr",
+    "alert_sha256": "107f977b0aa072e4a4da6405e429c59aa591440e06930d162e56fca3e4a38dec",
+    "scenario": "scenario1_ssh_bruteforce",
+    "model": "gemma2:9b-instruct-q4_0",
+    "keep_alive": "0",
+    "duration_sec": 105.67,
+    "valid_output": true,
+    "date_utc": "2026-07-18T22:16:46Z",
+    "python_version": "3.10.12"
+  },
+  {
+    "run_id": "PFA-FINAL-20260718-214637",
+    "wazuh_alert_id": "ZdREd58BPpYiiyppXObu",
+    "alert_sha256": "59e00ea1bf483f670a9577a7feabafbee24cc663af7239308a30f71a26c99ebc",
+    "scenario": "scenario2_suspicious_download",
+    "model": "gemma2:9b-instruct-q4_0",
+    "keep_alive": "0",
+    "duration_sec": 135.14,
+    "valid_output": true,
+    "date_utc": "2026-07-18T22:19:01Z",
+    "python_version": "3.10.12"
+  },
+  {
+    "run_id": "PFA-FINAL-20260718-214637",
+    "wazuh_alert_id": "sdREd58BPpYiiyppgOYf",
+    "alert_sha256": "245e47739023a6e4e4df2fb36eeecd3d76634206d221cd281ddaedfde10234a4",
+    "scenario": "scenario3_powershell_encoded",
+    "model": "gemma2:9b-instruct-q4_0",
+    "keep_alive": "0",
+    "duration_sec": 126.16,
+    "valid_output": true,
+    "date_utc": "2026-07-18T22:21:07Z",
+    "python_version": "3.10.12"
+  },
+  {
+    "run_id": "PFA-FINAL-20260718-214637",
+    "wazuh_alert_id": "fNRGd58BPpYiiyppy-eZ",
+    "alert_sha256": "0f7e81ac8e659d98cb5f6516d35d83c96f9e6c06d0f390ba8e5a7661339d9002",
+    "scenario": "scenario4_lateral_movement",
+    "model": "gemma2:9b-instruct-q4_0",
+    "keep_alive": "0",
+    "duration_sec": 105.41,
+    "valid_output": true,
+    "date_utc": "2026-07-18T22:22:53Z",
+    "python_version": "3.10.12"
+  },
+  {
+    "run_id": "PFA-FINAL-20260718-214637",
+    "wazuh_alert_id": "VNRCd58BPpYiiypp8OU5",
+    "alert_sha256": "ca6dc65b28d9b9d13e046250557cac63b93b2242b723cdfa8e7087d367724a40",
+    "scenario": "scenario5_c2_beaconing",
+    "model": "gemma2:9b-instruct-q4_0",
+    "keep_alive": "0",
+    "duration_sec": 117.2,
+    "valid_output": true,
+    "date_utc": "2026-07-18T22:24:50Z",
+    "python_version": "3.10.12"
+  },
+  {
+    "run_id": "PFA-FINAL-20260718-214637",
+    "wazuh_alert_id": "gNRGd58BPpYiiyppy-eZ",
+    "alert_sha256": "e51ccd22f5d99bc4536458527fe00cd5772becc6b5078528287237c114582532",
+    "scenario": "scenario6_network_recon",
+    "model": "gemma2:9b-instruct-q4_0",
+    "keep_alive": "0",
+    "duration_sec": 117.76,
+    "valid_output": true,
+    "date_utc": "2026-07-18T22:26:48Z",
+    "python_version": "3.10.12"
+  }
+]

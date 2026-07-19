@@ -1,0 +1,1 @@
+{"_type":"org.thp.thehive.dto.v1.OutputLicenseCurrentNotFound","fallback":{"_id":"","_createdAt":1784417052718,"_createdBy":"","_type":"License","id":"no-license","customer":"no-license","plan":"No","kind":"Regular","validFrom":1784415536427,"expiresAt":1784415536427,"current":true,"capabilities":[],"quotas":{}},"notFound":true}

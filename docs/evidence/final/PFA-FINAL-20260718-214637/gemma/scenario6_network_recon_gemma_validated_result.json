@@ -1,0 +1,8 @@
+{
+  "incident_type": "Network probing tool executed",
+  "criticite": "moyenne",
+  "mitre_tactic": "Reconnaissance",
+  "mitre_technique": "T1046",
+  "resume": "Execution du programme nc (netcat) avec des arguments sugg\u00e9rant une tentative de scan de port ou de d\u00e9couverte de services.",
+  "recommandation": "Analyser les logs pour identifier la cible et le but du scan. Bloquer les connexions suspectes vers les ports ouverts."
+}

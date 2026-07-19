@@ -1,0 +1,273 @@
+[
+    {
+        "Id": "08c93db920d9cf40b9eb12b4df7059ef8921428b08dc142495ea52453c960284",
+        "Created": "2026-07-05T01:30:21.828190697Z",
+        "Path": "/opt/thehive/entrypoint",
+        "Args": [
+            "--cql-hostnames",
+            "cassandra",
+            "--index-backend",
+            "elasticsearch",
+            "--es-hostnames",
+            "elasticsearch",
+            "--no-config-cortex",
+            "--secret",
+            "REDACTED-secret-excluded-from-evidence"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 707684,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-07-18T22:58:04.760694243Z",
+            "FinishedAt": "2026-07-18T22:58:04.440028062Z"
+        },
+        "Image": "sha256:ba3212a89be79de6ec8e6e66b84f3c0801c3b8d726aacc767ad6257030df7a13",
+        "ResolvConfPath": "/var/lib/docker/containers/08c93db920d9cf40b9eb12b4df7059ef8921428b08dc142495ea52453c960284/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/08c93db920d9cf40b9eb12b4df7059ef8921428b08dc142495ea52453c960284/hostname",
+        "HostsPath": "/var/lib/docker/containers/08c93db920d9cf40b9eb12b4df7059ef8921428b08dc142495ea52453c960284/hosts",
+        "LogPath": "/var/lib/docker/containers/08c93db920d9cf40b9eb12b4df7059ef8921428b08dc142495ea52453c960284/08c93db920d9cf40b9eb12b4df7059ef8921428b08dc142495ea52453c960284-json.log",
+        "Name": "/thehive",
+        "RestartCount": 0,
+        "Driver": "overlayfs",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": [
+                "thehive_thehive-data:/opt/thp/thehive/files:rw"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "thehive_thehive-net",
+            "PortBindings": {
+                "9000/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "9000"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": [],
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/acpi",
+                "/proc/asound",
+                "/proc/interrupts",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/sys/devices/virtual/powercap",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "Storage": {
+            "RootFS": {
+                "Snapshot": {
+                    "Name": "overlayfs"
+                }
+            }
+        },
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "thehive_thehive-data",
+                "Source": "/var/lib/docker/volumes/thehive_thehive-data/_data",
+                "Destination": "/opt/thp/thehive/files",
+                "Driver": "local",
+                "Mode": "rw",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+        "Config": {
+            "Hostname": "08c93db920d9",
+            "Domainname": "",
+            "User": "thehive",
+            "AttachStdin": false,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "ExposedPorts": {
+                "9000/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "JAVA_HOME=/usr/lib/jvm/java-11-amazon-corretto",
+                "LANG=C.UTF-8"
+            ],
+            "Cmd": [
+                "--cql-hostnames",
+                "cassandra",
+                "--index-backend",
+                "elasticsearch",
+                "--es-hostnames",
+                "elasticsearch",
+                "--no-config-cortex",
+                "--secret",
+                "REDACTED-secret-excluded-from-evidence"
+            ],
+            "Image": "strangebee/thehive:5.4",
+            "Volumes": null,
+            "WorkingDir": "/opt/thehive",
+            "Entrypoint": [
+                "/opt/thehive/entrypoint"
+            ],
+            "Labels": {
+                "com.docker.compose.config-hash": "7eac762f13c6a708e3c7b4b5c6a37250c90eef486633c1ea9efa5cc8c7d358cf",
+                "com.docker.compose.container-number": "1",
+                "com.docker.compose.depends_on": "elasticsearch:service_started:false,cassandra:service_started:false",
+                "com.docker.compose.image": "sha256:ba3212a89be79de6ec8e6e66b84f3c0801c3b8d726aacc767ad6257030df7a13",
+                "com.docker.compose.oneoff": "False",
+                "com.docker.compose.project": "thehive",
+                "com.docker.compose.project.config_files": "/home/soc/thehive/docker-compose.yml",
+                "com.docker.compose.project.working_dir": "/home/soc/thehive",
+                "com.docker.compose.service": "thehive",
+                "com.docker.compose.version": "5.2.0",
+                "org.opencontainers.image.authors": "contact@strangebee.com",
+                "org.opencontainers.image.created": "2026-01-18T01:58:53.129Z",
+                "org.opencontainers.image.description": "",
+                "org.opencontainers.image.licenses": "",
+                "org.opencontainers.image.revision": "61d5647542675ab3f0b8296f38bbb7f64caba9d1",
+                "org.opencontainers.image.source": "https://github.com/StrangeBee/TheHive",
+                "org.opencontainers.image.title": "TheHive",
+                "org.opencontainers.image.url": "https://github.com/StrangeBee/TheHive",
+                "org.opencontainers.image.vendor": "StrangeBee",
+                "org.opencontainers.image.version": "latest"
+            }
+        },
+        "NetworkSettings": {
+            "SandboxID": "ae6a61a5c2d8521bdc01b9631973f8c5819ce769cf8adc8cc551ec53b4cea47d",
+            "SandboxKey": "/var/run/docker/netns/ae6a61a5c2d8",
+            "Ports": {
+                "9000/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "9000"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "9000"
+                    }
+                ]
+            },
+            "Networks": {
+                "thehive_thehive-net": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": [
+                        "thehive",
+                        "thehive"
+                    ],
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "6900783f0a7376a6c87165cf24759dafa4c043260482519695235cd46f3befc7",
+                    "EndpointID": "8dcf432a77afad8045419ff5ee87d8a4d4d4c2ffa3a8a7ae2cbb6b8f33e20084",
+                    "Gateway": "172.19.0.1",
+                    "IPAddress": "172.19.0.4",
+                    "MacAddress": "56:82:49:ce:d1:1a",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": [
+                        "thehive",
+                        "08c93db920d9"
+                    ]
+                }
+            }
+        },
+        "ImageManifestDescriptor": {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:26d97124781a712a8730552f438b3c3da64cc465c3409e3247df3d1ff0f1cf5b",
+            "size": 2195,
+            "platform": {
+                "architecture": "amd64",
+                "os": "linux"
+            }
+        }
+    }
+]

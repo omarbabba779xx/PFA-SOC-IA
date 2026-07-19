@@ -51,13 +51,17 @@ import re
 import sqlite3
 import sys
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 import urllib3
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+UTC = timezone.utc  # datetime.UTC n'existe qu'a partir de Python 3.11 ; la VM du lab tourne
+                     # en 3.10 (confirme en executant reellement ce script dessus) -- timezone.utc
+                     # est l'equivalent portable disponible depuis Python 3.2 utilisee ici a la place.
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),

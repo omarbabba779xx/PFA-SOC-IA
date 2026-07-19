@@ -1,0 +1,73 @@
+{
+  "@timestamp": "2026-07-18T22:09:14.914Z",
+  "agent": {
+    "id": "001",
+    "ip": "127.0.0.1",
+    "name": "soc-lab"
+  },
+  "data": {
+    "audit": {
+      "arch": "c000003e",
+      "auid": "1000",
+      "command": "nc",
+      "cwd": "/home/soc",
+      "egid": "1000",
+      "euid": "1000",
+      "exe": "/usr/bin/nc",
+      "execve": {
+        "a0": "nc",
+        "a1": "-w2",
+        "a2": "127.0.0.1",
+        "a3": "8090"
+      },
+      "exit": "0",
+      "file": {
+        "inode": "2622261",
+        "mode": "0100755",
+        "name": "/usr/bin/nc"
+      },
+      "fsgid": "1000",
+      "fsuid": "1000",
+      "gid": "1000",
+      "id": "10536",
+      "key": "audit-wazuh-c",
+      "pid": "696130",
+      "ppid": "696125",
+      "session": "144",
+      "sgid": "1000",
+      "success": "yes",
+      "suid": "1000",
+      "syscall": "59",
+      "tty": "(none)",
+      "type": "SYSCALL",
+      "uid": "1000"
+    }
+  },
+  "decoder": {
+    "name": "auditd",
+    "parent": "auditd"
+  },
+  "full_log": "type=SYSCALL msg=audit(1784412550.717:10536): arch=c000003e syscall=59 success=yes exit=0 a0=55e4c03cc700 a1=55e4c03cc780 a2=55e4c03c7dd0 a3=1b6 items=2 ppid=696125 pid=696130 auid=1000 uid=1000 gid=1000 euid=1000 suid=1000 fsuid=1000 egid=1000 sgid=1000 fsgid=1000 tty=(none) ses=144 comm=\"nc\" exe=\"/usr/bin/nc.openbsd\" subj=unconfined key=\"audit-wazuh-c\"\u001dARCH=x86_64 SYSCALL=execve AUID=\"soc\" UID=\"soc\" GID=\"soc\" EUID=\"soc\" SUID=\"soc\" FSUID=\"soc\" EGID=\"soc\" SGID=\"soc\" FSGID=\"soc\" type=EXECVE msg=audit(1784412550.717:10536): argc=4 a0=\"nc\" a1=\"-w2\" a2=\"127.0.0.1\" a3=\"8090\" type=CWD msg=audit(1784412550.717:10536): cwd=\"/home/soc\" type=PATH msg=audit(1784412550.717:10536): item=0 name=\"/usr/bin/nc\" inode=2622261 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PATH msg=audit(1784412550.717:10536): item=1 name=\"/lib64/ld-linux-x86-64.so.2\" inode=2631532 dev=08:02 mode=0100755 ouid=0 ogid=0 rdev=00:00 nametype=NORMAL cap_fp=0 cap_fi=0 cap_fe=0 cap_fver=0 cap_frootid=0\u001dOUID=\"root\" OGID=\"root\" type=PROCTITLE msg=audit(1784412550.717:10536): proctitle=6E63002D7732003132372E302E302E310038303930",
+  "id": "1784412554.11338446",
+  "input": {
+    "type": "log"
+  },
+  "location": "/var/log/audit/audit-merged.log",
+  "manager": {
+    "name": "wazuh.manager"
+  },
+  "rule": {
+    "description": "Network probing tool executed (nc/ncat) - possible port scan / service discovery",
+    "firedtimes": 2,
+    "groups": [
+      "local",
+      "pfa_custom",
+      "audit_command",
+      "pfa_recon"
+    ],
+    "id": "100107",
+    "level": 6,
+    "mail": false
+  },
+  "timestamp": "2026-07-18T22:09:14.914+0000"
+}
