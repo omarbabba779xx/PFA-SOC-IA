@@ -1,0 +1,1 @@
+{"versions":{"Scalligraph":"5.2.16-1","TheHive":"5.2.16-1","Play":"2.8.x"},"config":{"protectDownloadsWith":"malware","authType":["key","session","basic","local"],"capabilities":["authByKey","changePassword","setPassword","mfa"],"ssoAutoLogin":false,"freeTagDefaultColour":"#000000"}}

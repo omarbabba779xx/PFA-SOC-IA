@@ -44,6 +44,7 @@ Variables d'environnement attendues :
   WAZUH_AI_TRIAGE_STATE_DB (defaut: ~/.wazuh_ai_triage_state.sqlite3) -- fichier d'idempotence
 """
 
+import hashlib
 import json
 import logging
 import os
@@ -79,6 +80,18 @@ OLLAMA_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "0")
 
 THEHIVE_URL = os.environ.get("THEHIVE_URL", "http://127.0.0.1:9000")
 THEHIVE_API_KEY = os.environ.get("THEHIVE_API_KEY", "")
+THEHIVE_ORGANISATION = os.environ.get("THEHIVE_ORGANISATION", "soc-lab")
+
+# Couche de compatibilite TheHive : "source_ref" utilise le champ natif Case.sourceRef et
+# l'endpoint /api/v1/case/_search (disponible sur TheHive >= 5.4, confirme sur 5.4.11-1).
+# "tag" utilise un tag deterministe (voir build_source_ref_tag) recherche via /api/v1/query,
+# necessaire sur TheHive 5.2.16-1 ou sourceRef n'existe pas dans le modele Case (confirme via
+# une AttributeCheckingError reelle listant les attributs disponibles -- voir
+# docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/API_COMPATIBILITY_FINDINGS.md) et ou
+# /api/v1/case/_search repond 404. Pas de detection automatique de version : une valeur absente
+# ou invalide arrete le script explicitement plutot que de deviner silencieusement.
+THEHIVE_DEDUP_MODE = os.environ.get("THEHIVE_DEDUP_MODE", "source_ref")
+_VALID_DEDUP_MODES = ("source_ref", "tag")
 
 CRITICALITY_ORDER = ["basse", "moyenne", "haute", "critique"]
 CRITICALITY_NORMALIZE = {
@@ -207,6 +220,10 @@ def validate_configuration() -> None:
     if CRITICALITY_THRESHOLD not in CRITICALITY_ORDER:
         log.error("CRITICALITY_THRESHOLD invalide : %r (attendu %s)", CRITICALITY_THRESHOLD, CRITICALITY_ORDER)
         sys.exit(1)
+    if THEHIVE_DEDUP_MODE not in _VALID_DEDUP_MODES:
+        log.error("THEHIVE_DEDUP_MODE invalide : %r (attendu %s) -- pas de detection automatique "
+                   "de version TheHive, valeur explicite obligatoire", THEHIVE_DEDUP_MODE, _VALID_DEDUP_MODES)
+        sys.exit(1)
     if missing:
         log.error("Variable(s) d'environnement obligatoire(s) manquante(s) : %s", ", ".join(missing))
         sys.exit(1)
@@ -259,6 +276,73 @@ def baseline_criticality(alert: dict) -> str:
     if level >= 5:
         return "moyenne"
     return "basse"
+
+
+def _thehive_headers() -> dict:
+    """En-tetes communs pour toutes les requetes TheHive. Ne journalise jamais
+    Authorization -- verifie qu'aucun appelant ne loggue ce dict directement."""
+    return {
+        "Authorization": f"Bearer {THEHIVE_API_KEY}",
+        "Content-Type": "application/json",
+        "X-Organisation": THEHIVE_ORGANISATION,
+    }
+
+
+def build_source_ref_tag(alert_id: str) -> str:
+    """Construit un tag TheHive deterministe a partir du _es_id Elasticsearch d'une
+    alerte, pour l'idempotence en mode THEHIVE_DEDUP_MODE=tag (TheHive 5.2.16-1, qui
+    n'a pas de champ Case.sourceRef -- voir docs/evidence/.../thehive52/API_COMPATIBILITY_FINDINGS.md).
+    SHA-256 plutot que le _es_id brut : longueur stable compatible avec la limite des
+    tags TheHive, aucun probleme de caracteres speciaux, et deterministe (meme alerte
+    => meme tag, alertes differentes => tags differents avec collision negligeable)."""
+    if not alert_id:
+        raise ValueError("alert_id vide : impossible de construire un tag d'idempotence")
+    digest = hashlib.sha256(alert_id.encode("utf-8")).hexdigest()
+    return f"source-ref-sha256:{digest}"
+
+
+def find_existing_case_by_tag(tag: str) -> str | None:
+    """Equivalent de find_existing_case_by_source_ref() pour TheHive 5.2.16-1 : recherche
+    un cas portant EXACTEMENT ce tag via /api/v1/query (le seul endpoint de recherche
+    reellement valide sur cette version -- /api/v1/case/_search renvoie 404, confirme).
+    Meme contrat fail-closed : toute anomalie leve TheHiveVerificationError plutot que de
+    supposer l'absence de cas existant."""
+    try:
+        resp = _post_with_retry(
+            f"{THEHIVE_URL}/api/v1/query",
+            params={"name": "case-dedup-tag-search"},
+            headers=_thehive_headers(),
+            json={"query": [
+                {"_name": "listCase"},
+                {"_name": "filter", "_field": "tags", "_value": tag},
+            ]},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        results = resp.json()
+        if not isinstance(results, list):
+            raise TheHiveVerificationError(
+                f"Reponse inattendue (pas une liste) pour la recherche par tag {tag!r} : {results!r}"
+            )
+        if results:
+            return results[0].get("_id")
+    except requests.RequestException as exc:
+        raise TheHiveVerificationError(
+            f"Verification par tag TheHive echouee pour {tag!r} : {exc}"
+        ) from exc
+    except (KeyError, ValueError, json.JSONDecodeError) as exc:
+        raise TheHiveVerificationError(
+            f"Reponse TheHive invalide lors de la recherche par tag {tag!r} : {exc}"
+        ) from exc
+    return None
+
+
+def find_existing_case(alert_id: str) -> str | None:
+    """Point d'entree unique de la verification pre-creation, dispatche selon
+    THEHIVE_DEDUP_MODE (aucune detection automatique de version -- voir sa definition)."""
+    if THEHIVE_DEDUP_MODE == "tag":
+        return find_existing_case_by_tag(build_source_ref_tag(alert_id))
+    return find_existing_case_by_source_ref(alert_id)
 
 
 def _post_with_retry(url: str, **kwargs) -> requests.Response:
@@ -352,7 +436,7 @@ def find_existing_case_by_source_ref(source_ref: str) -> str | None:
     try:
         resp = _post_with_retry(
             f"{THEHIVE_URL}/api/v1/case/_search",
-            headers={"Authorization": f"Bearer {THEHIVE_API_KEY}"},
+            headers=_thehive_headers(),
             json={"query": [{"_name": "getCase"}, {"_name": "filter", "sourceRef": source_ref}]},
             timeout=15,
         )
@@ -372,17 +456,28 @@ def create_thehive_case(alert: dict, triage: TriageResult, criticite: str) -> di
     (approche hybride) ; le LLM fournit uniquement le mapping MITRE et le
     contexte narratif (resume, recommandation).
     Verifie d'abord aupres de TheHive (source de verite) qu'aucun cas n'existe
-    deja pour ce sourceRef, au cas ou un run precedent aurait cree le cas puis
-    ete interrompu avant de marquer l'alerte comme traitee localement.
+    deja pour cette alerte, au cas ou un run precedent aurait cree le cas puis
+    ete interrompu avant de marquer l'alerte comme traitee localement. Le mecanisme
+    de verification depend de THEHIVE_DEDUP_MODE (voir sa definition) : champ natif
+    sourceRef sur les instances qui le supportent, tag deterministe sinon.
 
     Retourne {"case_id": str, "created": bool} -- "created" distingue un cas
     nouvellement cree d'un cas deja existant reutilise, pour que l'appelant puisse
-    compter separement les vrais cas crees et les doublons locaux evites."""
-    existing = find_existing_case_by_source_ref(alert.get("_es_id", ""))
+    compter separement les vrais cas crees et les doublons locaux evites.
+
+    Limite connue et documentee : la sequence recherche puis creation n'est pas une
+    transaction atomique. Ce pipeline est concu et documente pour une execution
+    mono-worker (un seul lancement du script a la fois) -- il fournit une idempotence
+    applicative a deux niveaux (SQLite local + recherche cote TheHive) dans ce mode
+    d'execution, pas une garantie "exactly once" distribuee sous execution parallele."""
+    alert_id = alert.get("_es_id", "")
+    existing = find_existing_case(alert_id)
     if existing:
-        log.warning("Cas TheHive deja existant pour sourceRef=%s (id=%s) -- pas de doublon cree", alert.get("_es_id"), existing)
+        log.warning("Cas TheHive deja existant pour l'alerte %s (mode=%s, id=%s) -- pas de doublon cree",
+                    alert_id, THEHIVE_DEDUP_MODE, existing)
         return {"case_id": existing, "created": False}
     rule = alert.get("rule", {})
+    tags = ["wazuh", "triage-ia", triage.mitre_technique, f"rule-{rule.get('id', 'unknown')}"]
     payload = {
         "title": f"[{criticite.upper()}] {triage.incident_type}",
         "description": (
@@ -396,17 +491,22 @@ def create_thehive_case(alert: dict, triage: TriageResult, criticite: str) -> di
             f"**Horodatage** : {alert.get('timestamp', 'N/A')}\n"
             f"**Modele** : {OLLAMA_MODEL}\n"
             f"**Traitement** : hybride (criticite = baseline `rule.level`, mapping MITRE = LLM)\n"
-            f"**Alert ID (Elasticsearch)** : `{alert.get('_es_id', 'N/A')}`\n\n"
+            f"**Alert ID (Elasticsearch)** : `{alert_id or 'N/A'}`\n\n"
             f"Genere automatiquement depuis l'alerte Wazuh."
         ),
         "severity": {"basse": 1, "moyenne": 2, "haute": 3, "critique": 4}.get(criticite, 2),
-        "tags": ["wazuh", "triage-ia", triage.mitre_technique, f"rule-{rule.get('id', 'unknown')}"],
+        "tags": tags,
         "source": "wazuh-ai-triage",
-        "sourceRef": alert.get("_es_id", ""),
     }
+    if THEHIVE_DEDUP_MODE == "tag":
+        # Pas de champ sourceRef (absent du modele Case sur TheHive 5.2.16-1) : le tag
+        # deterministe porte l'idempotence, le _es_id original reste dans la description.
+        payload["tags"] = tags + [build_source_ref_tag(alert_id)]
+    else:
+        payload["sourceRef"] = alert_id
     resp = _post_with_retry(
         f"{THEHIVE_URL}/api/v1/case",
-        headers={"Authorization": f"Bearer {THEHIVE_API_KEY}"},
+        headers=_thehive_headers(),
         json=payload,
         timeout=15,
     )
