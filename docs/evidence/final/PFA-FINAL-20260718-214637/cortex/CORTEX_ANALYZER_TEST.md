@@ -49,6 +49,16 @@ tout le fonctionnement réel de bout en bout de l'intégration Cortex : soumissi
 exécution par le worker Docker, appel API sortant réel vers VirusTotal, réception et
 persistance du résultat, récupération via `GET /api/job/{id}/report`.
 
+## Captures d'écran (vérifiées, hashées)
+
+Prises par l'utilisateur, vérifiées champ par champ contre les preuves brutes ci-dessus.
+
+| Fichier | Contenu |
+|---|---|
+| `screenshots/cortex_01_job_list.png` | Jobs History Cortex, job `VirusTotal_GetReport_3_1` sur `c2-integration-test[.]example[.]invalid`, statut `Success` |
+| `screenshots/cortex_02_job_report_detail.png` | Détail du job, rapport complet identique au JSON brut (`InvalidArgumentError`) |
+| `screenshots/03_case_40984808_observable.png` | Onglet Observables du cas `~40984808` dans TheHive, observable `fqdn` avec "No report(s) available" — confirme honnêtement que l'intégration TheHive→Cortex n'a pas été câblée dans cette passe (test effectué directement via l'API Cortex) |
+
 ## Sécurité
 
 Les clés API tierces (AbuseIPDB, VirusTotal) présentes dans la configuration des analyseurs
