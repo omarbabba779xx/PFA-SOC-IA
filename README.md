@@ -195,7 +195,9 @@ C2 synthétique `.invalid`).
 </table>
 
 Détail complet : [`misp/MISP_EVENT_TEST.md`](docs/evidence/final/PFA-FINAL-20260718-214637/misp/MISP_EVENT_TEST.md).
-Aucune publication externe (`Published: No`), laboratoire isolé.
+Événement publié (`Published: Yes`, vérifié via API) après contrôle préalable : 0 serveur de
+synchronisation configuré sur cette instance MISP, distribution restée "Your organisation
+only" — publication purement locale, aucune donnée n'a quitté le laboratoire.
 
 ## 7 — Shuffle : automatisation SOAR
 
@@ -244,11 +246,7 @@ run et recoupés indépendamment par requêtes OpenSearch brutes :
 | Répartition par criticité | 10 niveaux `rule.level` distincts |
 | Techniques MITRE ATT&CK | 18 techniques distinctes, `T1071` confirmé à 2 466 occurrences (cohérent avec le scénario C2 beaconing de ce run) |
 
-> **Limite honnête** : le mécanisme d'export de capture d'écran vers fichier a échoué
-> (timeout confirmé sur 2 tentatives), aucune capture `.png` du dashboard n'a pu être produite
-> dans cette passe. La preuve brute, recoupée valeur par valeur avec ce qui était affiché à
-> l'écran, en tient lieu :
-> [`dashboard/raw_verification_opensearch_aggregations.json`](docs/evidence/final/PFA-FINAL-20260718-214637/dashboard/raw_verification_opensearch_aggregations.json).
+<img src="docs/evidence/final/PFA-FINAL-20260718-214637/dashboard/screenshots/soc_dashboard_indicateurs.png" width="820"><br><sub>Export PNG natif du tableau de bord complet (Reporting → Download PNG)</sub>
 
 Détail complet : [`dashboard/DASHBOARD.md`](docs/evidence/final/PFA-FINAL-20260718-214637/dashboard/DASHBOARD.md).
 
@@ -308,7 +306,8 @@ Dashboard SOC : T1071 visible dans le tableau MITRE (2 466 occurrences réelles/
 | `sourceRef`/`_search` absents | TheHive 5.2.16-1 | Mode `THEHIVE_DEDUP_MODE=tag`, 17 tests |
 | Champ `start` non recalculé | Shuffle | Reconstruction du graphe sans appel API |
 | En-tête `Accept` manquant | Shuffle → MISP | En-tête ajouté, ré-exécution réussie |
-| Export capture d'écran bloqué | Outillage (dashboard) | Documenté honnêtement, preuve brute à la place |
+| Export capture d'écran bloqué | Outillage générique de capture (dashboard) | Fonctionnalité native "Reporting → Download PNG" utilisée à la place, export réel obtenu |
+| Événement MISP non publié | Prudence excessive initiale | Vérifié 0 serveur de sync configuré, publié sans risque |
 
 ## Principes de cette validation
 
