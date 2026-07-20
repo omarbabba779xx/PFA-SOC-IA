@@ -58,17 +58,22 @@ Preuve brute complète : `raw_verification_opensearch_aggregations.json`.
 
 ## Captures d'écran
 
-**Note honnête** : le tableau de bord complet (les 4 panneaux) a été visuellement vérifié
-dans le navigateur pendant cette session — mêmes valeurs exactes que celles listées ci-dessus,
-recoupées en direct avec les requêtes OpenSearch brutes pendant que la page était affichée.
-Comme pour la correction du workflow 3 Shuffle documentée dans
-`../shuffle/SHUFFLE_WORKFLOWS.md`, l'export du rendu visuel en fichier `.png` local via les
-outils disponibles dans cette passe a échoué silencieusement (le mécanisme de capture a
-enregistré une page obsolète sans rapport, pas la vue réellement affichée) — limite d'outillage
-constatée et documentée honnêtement plutôt que masquée ou remplacée par une capture
-fabriquée. La preuve brute vérifiée (`raw_verification_opensearch_aggregations.json`), dont
-chaque valeur a été recoupée un par un avec ce qui était visible à l'écran au moment de la
-capture, fait foi à sa place.
+**Note honnête, corrigée après signalement par l'utilisateur** : le tableau de bord complet
+(les 4 panneaux) a été affiché et visuellement vérifié à plusieurs reprises dans le navigateur
+pendant cette session — mêmes valeurs exactes que celles listées ci-dessus, recoupées en
+direct avec les requêtes OpenSearch brutes pendant que la page était affichée à l'écran.
+Cause racine précise de l'échec d'export identifiée après investigation supplémentaire : la
+fonction d'export d'écran vers fichier disponible dans cette passe (`save_to_disk`) se bloque
+et expire systématiquement (`timeout`, aucun fichier produit), reproduit deux fois sur deux
+onglets fraîchement rechargés du même tableau de bord — ce n'est **pas** un cas de capture
+d'une page obsolète comme indiqué par erreur dans une version précédente de cette note, mais
+un blocage pur et simple de l'outil d'export local dans cet environnement. Le rendu à l'écran
+lui-même (capture d'aperçu, pas d'export fichier) a fonctionné normalement et affiché les
+données réelles et à jour à chaque tentative (ex. `290 569` incidents lors d'une deuxième
+vérification quelques minutes après la première, cohérent avec le flux continu d'alertes).
+La preuve brute vérifiée (`raw_verification_opensearch_aggregations.json`), dont chaque
+valeur a été recoupée un par un avec ce qui était visible à l'écran, fait foi à la place du
+fichier `.png` qui n'a pas pu être produit dans cette passe.
 
 ## Ce qui n'a PAS été fait
 
