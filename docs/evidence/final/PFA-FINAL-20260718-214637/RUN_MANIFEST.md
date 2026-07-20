@@ -221,7 +221,23 @@ Gestion RAM séquentielle appliquée : piles MISP et Shuffle arrêtées avant de
 l'indexeur et le tableau de bord Wazuh (tous deux avaient été arrêtés pour libérer de la RAM
 pendant les phases précédentes).
 
+### Phase 10-11 — Dataset final et évaluation LLM vs baseline : ✅ complétée
+
+Jeu de données labellisé construit par identifiant d'alerte exact (pas par fenêtre
+temporelle, contrairement à `scripts/build_labeled_dataset.py` — élimine le risque de
+contamination par bruit déjà documenté pour cette approche), couvrant les 6 alertes réelles
+de ce RUN_ID. Référence MITRE établie pour les 5 scénarios déjà connus du dépôt (table
+`scripts/build_advanced_dataset.py`) et pour le 6ᵉ (`network_recon`, introduit dans ce
+RUN_ID, sans précédent) directement depuis le référentiel MITRE ATT&CK Enterprise officiel.
+Prédictions Gemma2 9B réutilisées telles quelles depuis la Phase 4 (aucun nouvel appel LLM).
+
+**Résultat** : 6/6 (100 %) de correspondance exacte sur le code technique MITRE ; 5/6
+(83,3 %) sur le libellé de tactique (un écart honnête relevé : "Reconnaissance" au lieu de
+"Discovery" pour T1046, code technique correct, libellé de tactique imprécis) ; couverture
+MITRE native de Wazuh (`rule.mitre`) : 0/6 — sans le triage LLM, aucune de ces alertes
+n'aurait de technique MITRE associée automatiquement. Détail complet dans
+`evaluation/EVALUATION.md` et `evaluation/DATASET_FINAL.json`.
+
 ## Prochaine action
 
-Phases 10-13 (dataset final consolidé, évaluation LLM vs baseline, rapport de synthèse)
-restent à réaliser.
+Phase 13 (rapport de synthèse final) reste à réaliser.

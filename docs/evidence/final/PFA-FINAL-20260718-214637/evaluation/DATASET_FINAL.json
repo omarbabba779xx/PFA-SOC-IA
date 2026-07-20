@@ -1,0 +1,151 @@
+{
+  "run_id": "PFA-FINAL-20260718-214637",
+  "note": "Jeu de donnees labellise final pour ce RUN_ID : 6 alertes reelles (une par scenario), identifiees par leur wazuh_alert_id exact (pas une fenetre temporelle) pour eviter le probleme de contamination par bruit documente dans scripts/build_labeled_dataset.py (docs/evidence/archive-pre-final/README_pre_final_redo.md, section Dashboard/Evaluation). Chaque entree relie : l'alerte Wazuh reelle indexee, la reference MITRE etablie manuellement (ground truth), le comportement natif de Wazuh (baseline, rule.mitre du document brut), et la prediction reelle de Gemma2 9B deja executee pour ce RUN_ID (voir ../gemma/).",
+  "entries": [
+    {
+      "scenario": "scenario1_ssh_bruteforce",
+      "wazuh_rule_id": "5710",
+      "wazuh_alert_id": "A9RHd58BPpYiiyppOegr",
+      "wazuh_rule_level": 5,
+      "ground_truth": {
+        "mitre_tactic": "Credential Access",
+        "mitre_technique": "T1110.001",
+        "source": "Regle Wazuh standard 5710 (bruteforce SSH) ; reference etablie dans scripts/wazuh_ai_triage.py (exemple few-shot de la regle 5710) et scripts/relabel_per_alert.py"
+      },
+      "wazuh_native_baseline": {
+        "rule_mitre_field": null,
+        "note": "Le champ rule.mitre du document Wazuh brut est absent (regle standard non enrichie MITRE dans cette configuration) -- Wazuh seul ne fournit aucune technique MITRE pour cette alerte."
+      },
+      "gemma_prediction": {
+        "mitre_tactic": "Credential Access",
+        "mitre_technique": "T1110.001",
+        "criticite": "haute",
+        "duration_sec": 105.67
+      },
+      "exact_match": true,
+      "family_match": true,
+      "tactic_match": true
+    },
+    {
+      "scenario": "scenario2_suspicious_download",
+      "wazuh_rule_id": "100099",
+      "wazuh_alert_id": "ZdREd58BPpYiiyppXObu",
+      "wazuh_rule_level": 8,
+      "ground_truth": {
+        "mitre_tactic": "Command and Control",
+        "mitre_technique": "T1105",
+        "source": "scripts/build_advanced_dataset.py RULE_REFS['100099']"
+      },
+      "wazuh_native_baseline": {
+        "rule_mitre_field": null,
+        "note": "Regle personnalisee du laboratoire, aucun champ rule.mitre natif."
+      },
+      "gemma_prediction": {
+        "mitre_tactic": "Command and Control",
+        "mitre_technique": "T1105",
+        "criticite": "haute",
+        "duration_sec": 135.14
+      },
+      "exact_match": true,
+      "family_match": true,
+      "tactic_match": true
+    },
+    {
+      "scenario": "scenario3_powershell_encoded",
+      "wazuh_rule_id": "100101",
+      "wazuh_alert_id": "sdREd58BPpYiiyppgOYf",
+      "wazuh_rule_level": 12,
+      "ground_truth": {
+        "mitre_tactic": "Execution",
+        "mitre_technique": "T1059.001",
+        "source": "scripts/build_advanced_dataset.py RULE_REFS['100101']"
+      },
+      "wazuh_native_baseline": {
+        "rule_mitre_field": null,
+        "note": "Regle personnalisee du laboratoire, aucun champ rule.mitre natif."
+      },
+      "gemma_prediction": {
+        "mitre_tactic": "Execution",
+        "mitre_technique": "T1059.001",
+        "criticite": "critique",
+        "duration_sec": 126.16
+      },
+      "exact_match": true,
+      "family_match": true,
+      "tactic_match": true
+    },
+    {
+      "scenario": "scenario4_lateral_movement",
+      "wazuh_rule_id": "100105",
+      "wazuh_alert_id": "fNRGd58BPpYiiyppy-eZ",
+      "wazuh_rule_level": 10,
+      "ground_truth": {
+        "mitre_tactic": "Lateral Movement",
+        "mitre_technique": "T1021.004",
+        "source": "scripts/build_advanced_dataset.py RULE_REFS['100105']"
+      },
+      "wazuh_native_baseline": {
+        "rule_mitre_field": null,
+        "note": "Regle personnalisee du laboratoire, aucun champ rule.mitre natif."
+      },
+      "gemma_prediction": {
+        "mitre_tactic": "Lateral Movement",
+        "mitre_technique": "T1021.004",
+        "criticite": "haute",
+        "duration_sec": 105.41
+      },
+      "exact_match": true,
+      "family_match": true,
+      "tactic_match": true
+    },
+    {
+      "scenario": "scenario5_c2_beaconing",
+      "wazuh_rule_id": "100103",
+      "wazuh_alert_id": "VNRCd58BPpYiiypp8OU5",
+      "wazuh_rule_level": 10,
+      "ground_truth": {
+        "mitre_tactic": "Command and Control",
+        "mitre_technique": "T1071",
+        "source": "scripts/build_advanced_dataset.py RULE_REFS['100103']"
+      },
+      "wazuh_native_baseline": {
+        "rule_mitre_field": null,
+        "note": "Regle personnalisee du laboratoire, aucun champ rule.mitre natif."
+      },
+      "gemma_prediction": {
+        "mitre_tactic": "Command and Control",
+        "mitre_technique": "T1071",
+        "criticite": "haute",
+        "duration_sec": 117.2
+      },
+      "exact_match": true,
+      "family_match": true,
+      "tactic_match": true
+    },
+    {
+      "scenario": "scenario6_network_recon",
+      "wazuh_rule_id": "100107",
+      "wazuh_alert_id": "gNRGd58BPpYiiyppy-eZ",
+      "wazuh_rule_level": 6,
+      "ground_truth": {
+        "mitre_tactic": "Discovery",
+        "mitre_technique": "T1046",
+        "source": "AUCUNE reference pre-existante pour cette regle dans le depot (scenario introduit dans ce RUN_ID, absent de scripts/build_advanced_dataset.py). Etablie ici manuellement selon le referentiel MITRE ATT&CK Enterprise officiel : T1046 'Network Service Discovery', tactique 'Discovery' (TA0007) -- un scan de ports avec nc correspond exactement a cette technique/tactique dans le referentiel public."
+      },
+      "wazuh_native_baseline": {
+        "rule_mitre_field": null,
+        "note": "Regle personnalisee du laboratoire, aucun champ rule.mitre natif."
+      },
+      "gemma_prediction": {
+        "mitre_tactic": "Reconnaissance",
+        "mitre_technique": "T1046",
+        "criticite": "moyenne",
+        "duration_sec": 117.76
+      },
+      "exact_match": true,
+      "family_match": true,
+      "tactic_match": false,
+      "tactic_mismatch_note": "Code technique T1046 correct (identique a la reference), mais le libelle de tactique produit par Gemma ('Reconnaissance') ne correspond pas au libelle officiel MITRE ATT&CK Enterprise pour T1046 ('Discovery'). 'Reconnaissance' est un nom de tactique valide dans le referentiel MITRE (TA0043), mais associe a des techniques differentes (ex: T1595 Active Scanning), pas a T1046. Erreur de denomination de tactique, pas d'erreur de classification technique -- consignee honnetement plutot que comptee comme un succes total ou masquee."
+    }
+  ]
+}
