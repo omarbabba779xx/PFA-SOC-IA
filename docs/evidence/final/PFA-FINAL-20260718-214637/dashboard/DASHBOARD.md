@@ -66,7 +66,7 @@ réel produit et vérifié :
 
 | Fichier | Contenu |
 |---|---|
-| `screenshots/soc_dashboard_indicateurs.png` | Export PNG natif du tableau de bord complet (4 panneaux), généré via le menu "Reporting" de Wazuh/OpenSearch Dashboards — total `293 036` incidents (30j), répartition par type, camembert de criticité (10 niveaux), tableau des 18 techniques MITRE. Valeurs identiques à celles recoupées indépendamment avec les requêtes OpenSearch brutes (`T1105: 5243, T1078: 2719, T1071: 2466, T1021: 902, T1040: 553` — légères variations de comptage par rapport à la première vérification, cohérentes avec le flux continu d'alertes réelles entre les deux mesures). |
+| `screenshots/soc_dashboard_indicateurs.png` | Capture propre du tableau de bord complet (4 panneaux), prise directement par l'utilisateur depuis son propre navigateur (remplace la première capture générée via "Reporting", qui affichait la bannière de débogage Chrome liée à l'automatisation) — total `293 037` incidents (30j), répartition par type, camembert de criticité (10 niveaux), tableau des 18 techniques MITRE. Valeurs identiques à celles recoupées indépendamment avec les requêtes OpenSearch brutes (`T1105: 5243, T1078: 2719, T1071: 2466, T1021: 902, T1040: 553` — légères variations de comptage par rapport à la première vérification, cohérentes avec le flux continu d'alertes réelles entre les deux mesures). |
 
 Historique (pour traçabilité, n'affecte plus la preuve actuelle) : une première tentative
 d'export via un outil de capture d'écran générique (`save_to_disk`) se bloquait
