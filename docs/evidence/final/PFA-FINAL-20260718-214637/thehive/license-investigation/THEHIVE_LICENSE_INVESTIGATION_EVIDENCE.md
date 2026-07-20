@@ -136,26 +136,31 @@ verifie sur l'objet profil complet recupere via
 - `raw/thehive_status.json`
 - `raw/thehive_status_verbose.json`
 - (diagnostic complet egalement dans `../diagnostic/`)
+- `raw/thehive_status_relicensed.json` — `GET /api/v1/status` apres activation reelle de la licence Community (`isValid: true`).
+- `raw/case_2169_unblock_test.json` — cas reel `~163848328` (`#2169`) cree via `POST /api/v1/case` avec le compte `analyst@thehive.local`, preuve que le blocage `403 manageCase/create` est leve.
 
 ## Logs
 
 - `logs/thehive_capabilitysrv_full.log`
 
-## Ce qui n'a PAS ete fait dans cette passe
+## Ce qui n'a PAS ete fait
 
 - Aucun compte n'a ete supprime.
 - Aucune migration de schema n'a ete lancee.
-- Aucune activation de licence n'a ete tentee (en attente d'une licence
-  Community officielle a fournir par l'utilisateur via le portail
-  StrangeBee).
 - Aucune instance TheHive isolee de diagnostic (Phase 7 du protocole) n'a
-  ete montee — le lien de causalite schema/licence/CapabilitySrv reste donc
-  partiellement indetermine, honnetement signale comme tel ci-dessus.
-- Aucun compte administrateur n'a ete utilise pour contourner le controle
-  (tous les tests de creation de cas ont utilise les comptes reels
-  `soc-automation` et `analyst`, jamais `admin@thehive.local`).
+  ete montee — le lien de causalite schema/licence/CapabilitySrv observe
+  initialement reste donc partiellement indetermine (mais sans plus
+  d'impact operationnel, la licence etant desormais valide).
+- Le test de deblocage a utilise le compte reel `analyst@thehive.local`
+  (celui-la meme qui recevait le 403 documente plus haut), jamais
+  `admin@thehive.local`, pour prouver que le deblocage s'applique bien au
+  compte reellement bloque et pas seulement a un compte privilegie.
+- Aucune credential StrangeBee (email/mot de passe du portail) n'a
+  transite par un outil automatise ou un fichier de ce depot — le compte a
+  ete cree et la licence generee entierement par l'utilisateur, dans son
+  propre navigateur, hors de portee de l'assistant.
 
-## Conclusion actuelle
+## Conclusion initiale (avant deblocage)
 
 Les preuves API, logs et captures demontrent que l'instance TheHive
 utilisait une licence synthetique `no-license` invalide, avec des quotas
@@ -165,3 +170,56 @@ versions de schema ainsi qu'une recursion dans l'initialisation de
 CapabilitySrv ont egalement ete observes, cette derniere tracee jusqu'a un
 echec de connexion Cassandra au demarrage. Aucune suppression, migration ou
 activation de licence n'avait encore ete realisee au moment de ces captures.
+
+## Mise a jour — licence obtenue et activee reellement (2026-07-20)
+
+L'utilisateur a cree un compte StrangeBee personnel (`portal.apps.strangebee.com`,
+`omar.babba@emsi-edu.ma`) et genere une licence Community reelle depuis le
+portail officiel — aucun contournement, aucun patch binaire, aucune
+falsification. Deroulement reel :
+
+1. VM (`SOC-Lab`) redemarree (elle etait arretee au debut de cette phase).
+2. Pile `thehive` (5.4.11-1 + Cassandra + Elasticsearch) redemarree
+   (`docker compose start`, projet `/home/soc/thehive`) apres avoir libere de
+   la RAM (arret de `tenzir-node`, non necessaire pour cette phase).
+3. Connexion au compte super-admin (`admin@thehive.local`), navigation vers
+   `Platform Management -> License -> Activate a license`.
+4. Le "challenge" (jeton signe, lie a cette instance precise) genere par
+   TheHive a ete copie via le bouton natif "Copy this challenge" (jamais
+   affiche/tape manuellement) et colle par l'utilisateur dans le champ
+   "License key activation challenge" du portail StrangeBee, sous la
+   licence Community deja creee (`Plan: Community`, `Status: Pending`).
+5. Apres soumission cote portail, un simple rechargement de la page
+   `Platform Management -> License` a suffi : la licence etait deja
+   appliquee automatiquement cote instance (mecanisme d'activation
+   asynchrone StrangeBee <-> instance, aucune cle a copier-coller
+   manuellement en retour).
+
+### Verification reelle post-activation
+
+- `GET /api/v1/status` (cle API du service, jamais affichee en clair) :
+  `license.isValid: true`, `license.plan: "Community"`,
+  `license.validFrom: 1784559376094` (2026-07-20T15:56:16Z),
+  `license.expiresAt: 1816041600000` (2027-07-20). Preuve brute complete :
+  `raw/thehive_status_relicensed.json`.
+- **Test direct de l'action precedemment bloquee** : connexion en tant que
+  `analyst@thehive.local` (compte reel de l'organisation `soc-lab`, celui-la
+  meme qui recevait le 403 documente plus haut), puis
+  `POST /api/v1/case` avec un titre explicite de verification ->
+  **`201 Created`**, cas reel `~163848328` (`#2169`), `userPermissions`
+  contient desormais `manageCase/create`. Preuve brute complete :
+  `raw/case_2169_unblock_test.json`.
+- Compteur de cas de l'organisation passe de 1975 a 1976 dans l'UI apres
+  creation — coherent avec un vrai cas ajoute, pas un artefact d'affichage.
+
+## Conclusion finale
+
+Le blocage de licence documente ci-dessus est **resolu reellement**, pas
+contourne. L'instance TheHive 5.4.11-1 dispose desormais d'une licence
+Community valide et fonctionnelle (expiration 2027-07-20), et l'action
+precisement bloquee a l'origine (`POST /api/v1/case` -> `403
+manageCase/create`) a ete retestee avec le meme compte et reussit
+desormais (`201 Created`). L'instance 5.2.16-1 isolee, deployee comme
+solution de contournement pendant que ce blocage etait actif, reste
+egalement operationnelle et n'a pas ete demantelee (aucune perte de
+traçabilite).

@@ -1,0 +1,64 @@
+[+] Metadonnees du run ecrites -> /home/soc/evaluation_results_v4_holdout_dedup_metadata.json
+[1/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (177.6s)
+[2/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (177.8s)
+[3/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (117.5s)
+[4/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (120.4s)
+[5/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (125.1s)
+[6/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (134.9s)
+[7/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (119.7s)
+[8/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (98.3s)
+[9/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (112.0s)
+[10/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (118.0s)
+[11/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (117.7s)
+[12/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (115.7s)
+[13/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (115.7s)
+[14/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (131.4s)
+[15/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (119.8s)
+[16/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (121.6s)
+[17/25] holdout_sudo_typo_then_success: baseline_gap=1 llm_gap=1 llm_mitre_exact=True llm_mitre_family=False (124.4s)
+[18/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=1 llm_mitre_exact=True llm_mitre_family=False (125.4s)
+[19/25] holdout_sudo_typo_then_success: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (105.3s)
+[20/25] holdout_user_onboarding: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (112.3s)
+[21/25] holdout_user_onboarding: baseline_gap=0 llm_gap=1 llm_mitre_exact=True llm_mitre_family=False (131.9s)
+[22/25] holdout_user_onboarding: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (108.6s)
+[23/25] holdout_user_onboarding: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (118.0s)
+[24/25] holdout_user_cleanup: baseline_gap=1 llm_gap=1 llm_mitre_exact=True llm_mitre_family=False (120.3s)
+[25/25] holdout_base64_benign: baseline_gap=0 llm_gap=0 llm_mitre_exact=True llm_mitre_family=False (177.9s)
+
+===== RESUME METRIQUES =====
+Nombre d'alertes evaluees                          : 25
+Ecart moyen de criticite (regles)                  : 0.08
+Ecart moyen de criticite (LLM)                     : 0.16
+MITRE exact match (regles)                         : 40.0%
+MITRE family match, sous-technique differente (regles) : 24.0%
+MITRE exact match (LLM)                            : 100.0%
+MITRE family match, sous-technique differente (LLM)    : 0.0%
+Temps moyen de triage LLM                          : 125.9s
+Taux d'erreurs de parsing JSON (LLM)                : 0.0%
+Taux de reponses necessitant une normalisation de langue (LLM) : 0.0%
+
+===== APPROCHE HYBRIDE (criticite=regles + MITRE=LLM) =====
+Ecart moyen de criticite (hybride = baseline)      : 0.08
+MITRE exact match (hybride = LLM)                  : 100.0%
+
+NOTE METHODOLOGIQUE : le taux 'exact match' ci-dessus est la seule mesure a citer comme taux de reussite MITRE. Le taux 'family match' compte les cas ou le modele identifie la bonne famille de technique (ex: T1110) sans la sous-technique exacte (ex: T1110.001 attendu) -- utile diagnostiquement, mais ce n'est PAS un succes.
+
+===== METRIQUES DE CLASSIFICATION (criticite) =====
+Couverture de sorties LLM exploitables (schema valide) : 100.0%
+Regles (baseline) -- precision macro=0.33 rappel macro=0.48 F1 macro=0.36
+    basse     precision=1.00 rappel=0.92 F1=0.96 (support=24)
+    moyenne   precision=0.33 rappel=1.00 F1=0.50 (support=1)
+    haute     precision=0.00 rappel=0.00 F1=0.00 (support=0)
+    critique  precision=0.00 rappel=0.00 F1=0.00 (support=0)
+LLM (sorties valides uniquement) -- precision macro=0.25 rappel macro=0.22 F1 macro=0.23
+    basse     precision=1.00 rappel=0.88 F1=0.93 (support=24)
+    moyenne   precision=0.00 rappel=0.00 F1=0.00 (support=1)
+    haute     precision=0.00 rappel=0.00 F1=0.00 (support=0)
+    critique  precision=0.00 rappel=0.00 F1=0.00 (support=0)
+LLM (bout en bout, invalide = erreur) -- precision macro=0.25 rappel macro=0.22 F1 macro=0.23
+    basse     precision=1.00 rappel=0.88 F1=0.93 (support=24)
+    moyenne   precision=0.00 rappel=0.00 F1=0.00 (support=1)
+    haute     precision=0.00 rappel=0.00 F1=0.00 (support=0)
+    critique  precision=0.00 rappel=0.00 F1=0.00 (support=0)
+
+Matrice de confusion et details par classe ecrits dans /home/soc/evaluation_results_v4_holdout_dedup.json (cle classification_metrics.criticite). Citer 'llm_end_to_end', pas 'llm_on_valid_outputs', comme mesure de performance reelle du pipeline.

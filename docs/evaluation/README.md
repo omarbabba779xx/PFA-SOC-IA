@@ -23,9 +23,9 @@ l'historique.
 mal labellisées (trafic d'infrastructure locale confondu avec phishing/C2, voir `legacy/README.md`).
 Aucun résultat de remplacement n'a encore été produit sur le dataset nettoyé (11 alertes).
 
-## ⚠️ Avertissement holdout : doublons inter-scénarios (dataset corrigé, résultat pas encore rejoué)
+## ✅ Résolu (2026-07-20) — holdout dédupliqué réévalué avec de nouveaux appels LLM
 
-Une relecture a révélé que `labeled_dataset_holdout.json` contenait **11 alertes dupliquées**
+Une relecture avait révélé que `labeled_dataset_holdout.json` contenait **11 alertes dupliquées**
 entre scénarios différents (le même `_id` d'alerte Elasticsearch apparaissait dans deux blocs
 de scénario distincts, par exemple `holdout_sudo_typo_then_success` et `holdout_user_onboarding`
 partageaient 5 des mêmes alertes). Sur les 36 alertes nominales du holdout, seules 25 étaient
@@ -33,13 +33,19 @@ réellement distinctes.
 
 Le fichier `labeled_dataset_holdout.json` a été dédupliqué le 2026-07-18 (36 → 25 alertes,
 version avec doublons archivée dans `legacy/labeled_dataset_holdout_with_duplicates.json`).
-**`evaluation_results_holdout.json` reste toutefois l'ancien résultat calculé sur les 36
-alertes avec doublons** (archivé aussi dans `legacy/evaluation_results_holdout_with_duplicates.json`
-pour traçabilité) : le chiffre de 94,4 % cité dans le README principal a donc été mesuré sur un
-jeu partiellement redondant, pas sur 25/36 alertes indépendantes. Aucune nouvelle évaluation
-n'a été relancée sur le jeu dédupliqué (nécessite Ollama + la VM, indisponibles pendant cette
-passe) — ne pas citer 94,4 % comme mesure de généralisation tant qu'un nouveau run sur le
-fichier dédupliqué n'a pas été produit.
+`evaluation_results_holdout.json` reste l'ancien résultat calculé sur les 36 alertes avec
+doublons (archivé aussi dans `legacy/evaluation_results_holdout_with_duplicates.json` pour
+traçabilité) — le chiffre de 94,4 % qu'il contient reste mesuré sur un jeu partiellement
+redondant, **ne plus le citer**.
+
+**Nouveau fichier officiel : `evaluation_results_v4_holdout_dedup.json`** (2026-07-20,
+`docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/`), produit par une exécution réelle
+de `scripts/evaluate_llm_vs_baseline.py` sur le jeu dédupliqué (25 alertes distinctes, hash
+`7cbc9963e3...`), avec de nouveaux appels Gemma2 9B (pas de réutilisation) — confirmé actif
+pendant toute la durée (~55 min, `llama-server` à ~720 % CPU). Résultat : **100,0 % de
+correspondance exacte MITRE** (baseline règles Wazuh : 40,0 %), 0 % d'erreur de parsing JSON,
+100 % de sorties exploitables. C'est la mesure à citer désormais pour ce dataset — voir
+`docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/EVALUATION.md` pour le détail complet.
 
 ## Fichiers de données (entrée des scripts ci-dessus)
 

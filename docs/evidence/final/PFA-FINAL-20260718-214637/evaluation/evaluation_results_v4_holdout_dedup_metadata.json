@@ -1,0 +1,17 @@
+{
+  "run_id": "20260720T135548Z-16016",
+  "run_started_at": "2026-07-20T13:55:48.473791+00:00",
+  "git_commit": "unknown",
+  "git_dirty": "unknown",
+  "ollama_model": "gemma2:9b-instruct-q4_0",
+  "ollama_model_digest": "unknown",
+  "temperature": 0.1,
+  "num_predict": 300,
+  "keep_alive": "0",
+  "dataset_file": "/home/soc/labeled_dataset_holdout.json",
+  "dataset_sha256": "7cbc9963e34b255e493c375b7dc8cc731723a0d37b4c03684c3c4fa5e0199a1a",
+  "n_alerts": 25,
+  "python_version": "3.10.12",
+  "platform": "Linux-5.15.0-185-generic-x86_64-with-glibc2.35",
+  "cpu_count": 8
+}

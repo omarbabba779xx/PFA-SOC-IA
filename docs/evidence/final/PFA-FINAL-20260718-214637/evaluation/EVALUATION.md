@@ -79,22 +79,62 @@ mais appliquée à un jeu de données minimal et déterministe plutôt qu'au gra
   6 scénarios réels générés sous ce RUN_ID, avec zéro appel LLM supplémentaire (réutilisation
   stricte des résultats déjà produits et vérifiés en Phase 4).
 
+## Mise à jour — ré-évaluation réelle sur le jeu holdout dédupliqué (2026-07-20)
+
+Pour dépasser la limite n=6 ci-dessus, une deuxième évaluation a été lancée avec de
+**nouveaux appels LLM réels** (pas de réutilisation) sur `docs/evaluation/labeled_dataset_holdout.json`
+— le jeu holdout de 25 alertes réelles, dédupliqué le 2026-07-18, mais **jamais réévalué
+depuis cette déduplication** (trou méthodologique explicitement signalé dans
+`docs/evaluation/README.md` : le chiffre de 94,4 % cité historiquement avait été mesuré
+*avant* dédup, sur 36 alertes dont 11 doublons).
+
+- VM redémarrée (elle était arrêtée), script `scripts/evaluate_llm_vs_baseline.py` et le
+  dataset dédupliqué (25 alertes, hash `7cbc9963e3...`, vérifié identique à la version du
+  dépôt) synchronisés vers la VM avant exécution.
+- Exécution réelle : `DATASET_FILE=labeled_dataset_holdout.json`,
+  `OUTPUT_FILE=evaluation_results_v4_holdout_dedup.json`, modèle `gemma2:9b-instruct-q4_0`,
+  température `0.1` — confirmé activement en cours d'exécution (processus `llama-server` à
+  ~720 % CPU pendant toute la durée), durée totale ~55 minutes (25 alertes × ~126 s/alerte
+  en moyenne).
+
+### Résultats (n=25, dataset dédupliqué, sans doublons)
+
+| Métrique | Baseline (règles Wazuh) | LLM (Gemma2 9B) |
+|---|---|---|
+| MITRE exact match | **40,0 %** | **100,0 %** |
+| MITRE family match (sous-technique différente) | 24,0 % | 0,0 % |
+| Écart moyen de criticité | 0,08 | 0,16 |
+| Taux d'erreur de parsing JSON | — | 0,0 % |
+| Couverture de sorties exploitables | — | 100,0 % |
+| Durée moyenne de triage | — | 125,9 s/alerte |
+
+**100 % de correspondance exacte MITRE sur les 25 alertes dédupliquées** — c'est, à ce jour,
+la mesure la plus rigoureuse produite dans ce projet : jeu sans doublons, appels LLM
+fraîchement exécutés (pas de réutilisation), et méthodologie stricte
+(`exact_match`/`family_match` séparés, jamais de correspondance par sous-chaîne). Ce chiffre
+remplace formellement le 94,4 % historique (mesuré sur un jeu contaminé) comme référence
+officielle pour ce dataset.
+
+Preuves brutes : `evaluation_results_v4_holdout_dedup.json` (résultat détaillé par alerte),
+`evaluation_results_v4_holdout_dedup_metadata.json` (paramètres exacts, hash du dataset,
+digest non disponible côté Ollama mais modèle et température consignés), `eval_v4_run.log`
+(sortie complète de l'exécution, résumé des métriques).
+
 ## Ce qui n'a PAS été fait
 
-- Aucun nouvel appel à Ollama/Gemma2 n'a été effectué pour cette phase — les prédictions
-  proviennent intégralement de la Phase 4 déjà réalisée et vérifiée.
-- Aucune régénération du grand jeu de données historique (`docs/evaluation/`) — celui-ci reste
-  inchangé, avec ses propres avertissements déjà documentés (déduplication du holdout, dataset
-  phishing nettoyé).
-- Le script `scripts/evaluate_llm_vs_baseline.py` n'a pas été exécuté tel quel (il nécessite
-  `labeled_dataset_per_alert.json` au format spécifique et un accès direct à Ollama depuis la
-  VM) — la même logique de comparaison (`exact_match`/`family_match`, pas de correspondance
-  par sous-chaîne) a été appliquée manuellement sur le jeu minimal de ce RUN_ID pour éviter une
-  réexécution coûteuse en RAM/temps alors que les résultats Gemma existaient déjà.
+- Le grand jeu de données historique (`docs/evaluation/`) au sens large n'a pas été
+  entièrement régénéré — seul le holdout dédupliqué (25 alertes) a été réévalué dans cette
+  passe, qui comblait le trou méthodologique le plus significatif et le plus explicitement
+  signalé.
+- Le script `scripts/evaluate_llm_vs_baseline.py` n'a pas été exécuté sur le jeu de 6 alertes
+  de ce RUN_ID (format `labeled_dataset_per_alert.json` différent) — la même logique de
+  comparaison a été appliquée manuellement sur ce jeu minimal (voir tableau plus haut),
+  suffisant vu sa petite taille.
 
 ## Preuves brutes
 
-- `DATASET_FINAL.json` — les 6 entrées complètes (référence, baseline, prédiction, verdicts).
-- Sources : `../raw/scenario*_alert_*.json` (baseline `rule.mitre`), `../gemma/scenario*_gemma_validated_result.json` (prédictions), `../scenario_alerts_index.csv` (identifiants et hashes).
+- `DATASET_FINAL.json` — les 6 entrées complètes du RUN_ID (référence, baseline, prédiction, verdicts).
+- `evaluation_results_v4_holdout_dedup.json`, `evaluation_results_v4_holdout_dedup_metadata.json`, `eval_v4_run.log` — ré-évaluation réelle du holdout dédupliqué (25 alertes, nouveaux appels LLM).
+- Sources : `../raw/scenario*_alert_*.json` (baseline `rule.mitre`), `../gemma/scenario*_gemma_validated_result.json` (prédictions du RUN_ID), `../scenario_alerts_index.csv` (identifiants et hashes).
 
-Hash dans `../thehive52/SHA256SUMS_thehive52.csv`.
+Hash dans `../SHA256SUMS_ALL.csv`.
