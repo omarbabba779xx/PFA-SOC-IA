@@ -1,0 +1,37 @@
+{
+  "note": "Deux executions reelles du workflow 3 (Enrichissement periodique MISP), secrets exclus.",
+  "workflow_id": "7a38cc1b-0989-4d05-a507-f58a975789d6",
+  "executions": [
+    {
+      "execution_id": "7c4bcb8b-e6f9-4c5c-b94b-9bad32cb588a",
+      "status": "FINISHED",
+      "started": "2026-07-20T00:37:00",
+      "outcome": "ECHEC REEL (documente honnetement, non masque)",
+      "node_result": {
+        "label": "http_2",
+        "status": "SUCCESS (noeud execute, mais reponse applicative en echec)",
+        "result_success": false,
+        "exception": "ConnectionError - HTTPSConnectionPool(host='127.0.0.1', port=8444): Max retries exceeded with url: /users/login (Connection refused)"
+      },
+      "root_cause": "MISP a redirige la requete vers /users/login (flux de connexion HTML) car l'en-tete 'Accept: application/json' etait absent : sans cet en-tete, l'API MISP considere la requete comme un acces navigateur et renvoie une redirection HTML vers la page de connexion, dont l'URL relative se resout vers l'hote de base configure de MISP (127.0.0.1), injoignable depuis le reseau Docker de Shuffle."
+    },
+    {
+      "execution_id": "43c6b4ea-5152-4199-ab23-b8ecd4ac4fcc",
+      "status": "FINISHED",
+      "started": "2026-07-20T01:39:00",
+      "finished": "2026-07-20T01:39:24",
+      "outcome": "SUCCES REEL",
+      "node_result": {
+        "label": "http_2",
+        "status": "SUCCESS",
+        "http_status": 200,
+        "event_id": "5",
+        "event_uuid": "143bd01f-ab9e-4b96-b733-997f80c4e7af",
+        "info": "PFA-FINAL-20260718-214637 - C2 beaconing (regle Wazuh 100103), cas TheHive ~40984808",
+        "attribute_count": 3,
+        "body_field_count_event": 31,
+        "note": "Correspond exactement a l'evenement MISP reel documente dans ../../misp/MISP_EVENT_TEST.md et raw/event_5_full.json (meme UUID, meme nombre d'attributs)"
+      }
+    }
+  ]
+}

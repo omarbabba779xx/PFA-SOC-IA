@@ -88,6 +88,68 @@ resté replié — `{...} 4 items` — sur toutes les captures retenues).
   `~40984808` (26 champs), URL confirmée dans la réponse
 - Aucun secret visible dans les captures retenues (section `headers` toujours repliée)
 
+## Mise à jour — workflow 3 (Enrichissement periodique MISP) corrigé, même méthode
+
+Le workflow 3 utilisait initialement uniquement le nœud par défaut `repeat_back_to_me`
+derrière un trigger `Schedule`. Correction appliquée avec les mêmes gestes fiables que pour
+le workflow 2, adaptés à une topologie plus simple :
+
+1. Un nœud HTTP réel a été glissé-déposé **directement sur la ligne de connexion existante**
+   `Schedule_1 → Change_Me`, produisant temporairement `Schedule → Http → Change_Me` (le
+   `start` restait sur `Change_Me`, geste volontairement utilisé cette fois pour insérer le
+   nœud HTTP *avant* le nœud par défaut).
+2. Le nœud `Change_Me` (désormais en aval, sans rôle) a été supprimé entièrement. Résultat
+   vérifié via `GET /api/v1/workflows/{id}` : topologie à un seul nœud, `start` = l'ID propre
+   du nœud HTTP restant (`3a714568-8b47-452e-8c3d-0780b3869634`, label `http_2`),
+   `branches: []` — topologie valide et plus simple que celle du workflow 2 (le trigger
+   Schedule invoque directement le nœud `start`).
+3. Le nœud HTTP a été configuré : URL `https://172.21.0.1:8444/events/view/5` (passerelle
+   Docker du réseau Shuffle vers le port publié de MISP `2.5.42` sur l'hôte VM, événement réel
+   `#5` créé précédemment, voir `../misp/MISP_EVENT_TEST.md`), en-têtes `Content-Type:
+   application/json` et `Authorization: <clé API MISP dédiée>` (sans préfixe `Bearer`,
+   contrairement à TheHive — spécificité de l'authentification MISP), `Verify: False` (adapté
+   au certificat auto-signé de MISP). Saisie directe dans le champ Headers par l'utilisateur
+   (jamais scripté, jamais loggé, jamais affiché en clair dans une capture retenue), pour la
+   même raison que le workflow 2 : l'app `Http` ne propose aucun mécanisme de credentials
+   dédié dans cette version de Shuffle.
+
+### Premier test réel — échec honnête, cause identifiée et documentée
+
+Le trigger `Schedule` nécessite une activation explicite (bouton "Start" dans son panneau, un
+`Schedule` fraîchement créé reste `uninitialized`). Démarré une première fois avec le cron par
+défaut (`*/25 * * * *`) : aucune exécution n'a été observée après plusieurs minutes d'attente,
+la syntaxe cron à 5 champs correspondant en réalité à "toutes les 25 minutes" (et non "25
+secondes" comme le suggérait le libellé de l'UI). Le cron a été temporairement changé à
+`* * * * *` (chaque minute) pour obtenir un cycle d'exécution rapide et vérifiable dans le
+budget de cette session — changement honnêtement documenté, sans impact sur la validité de la
+topologie corrigée.
+
+- **Execution ID** : `7c4bcb8b-e6f9-4c5c-b94b-9bad32cb588a`
+- **Statut** : `FINISHED`, mais résultat applicatif en échec :
+  `{"success": false, "exception": "ConnectionError ... host='127.0.0.1', port=8444 ...
+  url: /users/login ..."}`
+- **Cause racine identifiée** : l'en-tête `Accept: application/json` était absent. Sans lui,
+  MISP traite la requête comme un accès navigateur classique et répond par une redirection
+  HTML vers `/users/login`, dont l'URL relative se résout vers l'hôte de base configuré de
+  MISP (`127.0.0.1`), injoignable depuis le réseau Docker de Shuffle (d'où le nom d'hôte
+  différent de celui appelé, `172.21.0.1`, visible dans le message d'erreur).
+
+### Correction et second test réel — succès
+
+Un en-tête `Accept: application/json` a été ajouté (texte non sensible, tapé directement),
+puis le workflow sauvegardé et le trigger Schedule redémarré.
+
+- **Execution ID** : `43c6b4ea-5152-4199-ab23-b8ecd4ac4fcc`
+- **Statut** : `FINISHED` (début 20/07/2026 00:59:00, fin 00:59:24)
+- `http_2` : `SUCCESS`, `status: 200`, `success: true`
+- Corps de réponse réel de l'événement MISP `#5` : `uuid 143bd01f-ab9e-4b96-b733-997f80c4e7af`,
+  `info` identique à celui saisi lors de la création de l'événement, `3` attributs — cohérent
+  à l'identique avec `../misp/raw/event_5_full.json` et `../misp/MISP_EVENT_TEST.md`
+- Le trigger Schedule a été arrêté (`Stop`) immédiatement après cette exécution réussie pour
+  revenir à un état sûr côté RAM/CPU du laboratoire (une seule exécution voulue, pas de
+  répétition continue laissée active) ; seules 2 exécutions au total existent pour ce
+  workflow (l'échec et le succès ci-dessus), vérifié via l'API.
+
 ## Captures d'écran (vérifiées, hashées)
 
 | Fichier | Contenu |
@@ -95,24 +157,32 @@ resté replié — `{...} 4 items` — sur toutes les captures retenues).
 | `screenshots/shuffle_workflows_list.png` | Page "Org Workflows" : les 3 nouveaux workflows visibles à côté de l'ancien workflow de l'itération précédente (non modifié, conservé pour traçabilité) |
 | `screenshots/shuffle_wf2_execution_result.png` | Exécution réelle complète du workflow 2 : graphe `Webhook → Start Passthrough → http 1`, statut `FINISHED`, résultat HTTP `200` réel, aucun secret visible |
 
+**Note honnête sur workflow 3** : le panneau de détails de l'exécution réussie
+(`43c6b4ea-...`) a été visuellement vérifié dans le navigateur pendant cette session — statut
+`FINISHED`, `status: 200`, URL réelle, `success: true`, sections `headers`/`cookies` repliées
+(aucun secret visible) — mais n'a pas pu être exporté en fichier `.png` local via les outils
+disponibles dans cette passe (contrainte d'outillage, pas un refus de vérification). La preuve
+brute complète (JSON, secrets exclus) fait foi à sa place : `raw/workflow3_real_execution.json`.
+
 ## Ce qui n'a PAS été fait
 
-- Les workflows 1 et 3 utilisent encore uniquement le nœud par défaut `repeat_back_to_me`
-  (workflow 1 a un nœud HTTP réel fonctionnel dès sa création initiale, voir plus haut dans ce
-  document ; workflow 3 reste à corriger avec la même méthode que le workflow 2).
 - Le champ `description` saisi dans l'UI à la création n'a pas persisté côté serveur (vérifié
   via l'API : `description: ""` pour au moins un des workflows) — anomalie honnêtement
   constatée, non corrigée dans cette passe, sans impact sur la validité des workflows
   eux-mêmes (nom, trigger, structure).
 - Le workflow de l'itération précédente (`SOC PFA - Triage automatise Wazuh...`) n'a pas été
   modifié ni supprimé, conformément à la règle de non-destruction des preuves historiques.
+- Le cron du workflow 3 a été laissé à l'état `stopped` après le test réel (pas d'exécution
+  périodique continue active), pour rester cohérent avec la gestion RAM séquentielle du
+  laboratoire.
 
 ## Preuves brutes
 
 - `raw/three_workflows_api.json` — extraction structurée (id, nom, actions, triggers,
-  branches, timestamps) des 3 workflows via l'API Shuffle (état initial, avant la correction
-  du workflow 2).
+  branches, timestamps) des 3 workflows via l'API Shuffle (état initial, avant correction).
 - `raw/workflow2_real_execution.json` — résultat de l'exécution réelle du workflow 2 corrigé
   (`GET /api/v1/streams/results`), secrets exclus.
+- `raw/workflow3_real_execution.json` — les deux exécutions réelles du workflow 3 (échec
+  diagnostiqué puis succès), secrets exclus.
 
 Hash de tous les fichiers dans `../thehive52/SHA256SUMS_thehive52.csv`.
