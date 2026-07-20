@@ -186,8 +186,42 @@ volumes conservés) comme archive en lecture seule, non supprimée.
 ✅ **Débloqué** sur l'instance 5.2.16-1 isolée (voir ci-dessus). L'instance 5.4.11-1
 reste bloquée par licence invalide (non résolu, archivée en lecture seule).
 
+## Mise à jour — Cortex, MISP, Shuffle, dashboard (2026-07-19/20)
+
+### Phase 6 — Cortex : ✅ complétée
+
+Analyzer réel testé contre Cortex `3.1.9` (`http://127.0.0.1:9001`). Détail complet dans
+`cortex/CORTEX_ANALYZER_TEST.md`.
+
+### Phase 7 — MISP : ✅ complétée
+
+MISP `2.5.42` déployé (`https://127.0.0.1:8444`), événement réel `#5` créé via API,
+lié explicitement au cas TheHive `~40984808` de ce RUN_ID. Détail complet dans
+`misp/MISP_EVENT_TEST.md`.
+
+### Phase 8 — Shuffle : ✅ complétée (3 workflows réels)
+
+3 workflows créés puis corrigés (bug réel de câblage `start`/branches découvert, documenté
+et corrigé sans appel API pour le workflow 2, puis avec la même méthode pour le workflow 3 ;
+un second bug réel — en-tête `Accept` manquant provoquant une redirection MISP — trouvé et
+corrigé sur le workflow 3). Les 3 workflows ont chacun une exécution réelle complète prouvée
+(statuts `FINISHED`, réponses HTTP 200 réelles contre Shuffle, TheHive et MISP
+respectivement). Détail complet, bugs et preuves dans `shuffle/SHUFFLE_WORKFLOWS.md`.
+
+### Phase 9 — Dashboard SOC : ✅ complétée
+
+Tableau de bord "SOC PFA - Dashboard indicateurs" (4 indicateurs : total incidents 30j,
+répartition par type, répartition par criticité, techniques MITRE ATT&CK), retrouvé intact
+d'une itération précédente, revérifié avec des données fraîches incluant ce RUN_ID, et
+recoupé indépendamment valeur par valeur avec des requêtes OpenSearch brutes (18 techniques
+MITRE distinctes sur 30 jours, T1071 confirmé à 2466 occurrences réelles cohérent avec le
+scénario C2 beaconing de ce RUN_ID). Détail complet dans `dashboard/DASHBOARD.md`.
+
+Gestion RAM séquentielle appliquée : piles MISP et Shuffle arrêtées avant de redémarrer
+l'indexeur et le tableau de bord Wazuh (tous deux avaient été arrêtés pour libérer de la RAM
+pendant les phases précédentes).
+
 ## Prochaine action
 
-Section 8 du plan de secours (vérification de compatibilité API complète pour tous les
-endpoints du pipeline) et Section 17 (rapport de synthèse) restent à finaliser avant de
-reprendre Cortex, MISP puis Shuffle dans cet ordre.
+Phases 10-13 (dataset final consolidé, évaluation LLM vs baseline, rapport de synthèse)
+restent à réaliser.

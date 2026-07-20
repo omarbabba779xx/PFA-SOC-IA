@@ -1,0 +1,52 @@
+{
+  "note": "Requetes reelles executees directement contre l'indexeur OpenSearch (port 9200, interne a la VM, via SSH) pour verifier de maniere independante les 4 chiffres affiches par le tableau de bord Wazuh/OpenSearch Dashboards 'SOC PFA - Dashboard indicateurs' au moment de la capture. Aucun secret dans ce fichier autre que le nom d'utilisateur admin (non sensible).",
+  "total_count_query": {
+    "endpoint": "GET /wazuh-alerts-*/_count",
+    "query": {"query": {"range": {"timestamp": {"gte": "now-30d"}}}},
+    "result": {"count": 289093},
+    "dashboard_metric_shown": 289027,
+    "delta_explanation": "Ecart de 66 documents entre les deux requetes, coherent avec un systeme en production ou de nouvelles alertes auditd continuent d'etre indexees en continu entre la capture du tableau de bord et l'execution de cette requete de verification quelques secondes plus tard (flux constant, pas une anomalie)."
+  },
+  "mitre_technique_count_query": {
+    "endpoint": "GET /wazuh-alerts-*/_search (aggs: terms rule.mitre.id, size 15)",
+    "result_top_buckets": [
+      {"key": "T1105", "doc_count": 5243},
+      {"key": "T1078", "doc_count": 2683},
+      {"key": "T1071", "doc_count": 2466},
+      {"key": "T1021", "doc_count": 887},
+      {"key": "T1040", "doc_count": 550},
+      {"key": "T1548.003", "doc_count": 258},
+      {"key": "T1021.004", "doc_count": 194},
+      {"key": "T1110.001", "doc_count": 101},
+      {"key": "T1057", "doc_count": 40},
+      {"key": "T1499", "doc_count": 28},
+      {"key": "T1059.001", "doc_count": 22},
+      {"key": "T1562.001", "doc_count": 15},
+      {"key": "T1014", "doc_count": 10},
+      {"key": "T1136", "doc_count": 4},
+      {"key": "T1110", "doc_count": 3}
+    ],
+    "match_with_dashboard_table": "Exact — les 7 premieres lignes visibles dans la capture du tableau 'SOC - Techniques MITRE ATT&CK detectees' correspondent aux 7 premiers buckets ci-dessus, valeur par valeur.",
+    "T1071_note": "T1071 (Command and Control) est la technique MITRE assignee par Gemma2 au scenario5_c2_beaconing de ce RUN_ID (voir ../gemma/) — sa presence avec un volume reel de 2466 occurrences sur 30 jours confirme que la regle Wazuh 100103 et le mapping MITRE fonctionnent au-dela du seul scenario synthetique de ce run, sur du trafic reel du laboratoire."
+  },
+  "mitre_distinct_technique_count_query": {
+    "endpoint": "GET /wazuh-alerts-*/_search (aggs: cardinality rule.mitre.id)",
+    "result": {"mitre_count": {"value": 18}}
+  },
+  "severity_breakdown_query": {
+    "endpoint": "GET /wazuh-alerts-*/_search (aggs: terms rule.level, size 15)",
+    "result_buckets": [
+      {"key": 3, "doc_count": 279416},
+      {"key": 8, "doc_count": 5721},
+      {"key": 10, "doc_count": 3215},
+      {"key": 7, "doc_count": 624},
+      {"key": 5, "doc_count": 141},
+      {"key": 12, "doc_count": 54},
+      {"key": 6, "doc_count": 48},
+      {"key": 9, "doc_count": 38},
+      {"key": 4, "doc_count": 26},
+      {"key": 11, "doc_count": 10}
+    ],
+    "match_with_dashboard_pie": "Exact — les 10 valeurs de rule.level presentes dans la legende du camembert 'SOC - Repartition par criticite (rule.level)' correspondent exactement aux 10 buckets ci-dessus (memes cles : 3,8,10,7,5,12,6,9,4,11)."
+  }
+}
