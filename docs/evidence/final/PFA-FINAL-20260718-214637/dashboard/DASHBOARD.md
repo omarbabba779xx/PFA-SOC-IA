@@ -58,22 +58,22 @@ Preuve brute complète : `raw_verification_opensearch_aggregations.json`.
 
 ## Captures d'écran
 
-**Note honnête, corrigée après signalement par l'utilisateur** : le tableau de bord complet
-(les 4 panneaux) a été affiché et visuellement vérifié à plusieurs reprises dans le navigateur
-pendant cette session — mêmes valeurs exactes que celles listées ci-dessus, recoupées en
-direct avec les requêtes OpenSearch brutes pendant que la page était affichée à l'écran.
-Cause racine précise de l'échec d'export identifiée après investigation supplémentaire : la
-fonction d'export d'écran vers fichier disponible dans cette passe (`save_to_disk`) se bloque
-et expire systématiquement (`timeout`, aucun fichier produit), reproduit deux fois sur deux
-onglets fraîchement rechargés du même tableau de bord — ce n'est **pas** un cas de capture
-d'une page obsolète comme indiqué par erreur dans une version précédente de cette note, mais
-un blocage pur et simple de l'outil d'export local dans cet environnement. Le rendu à l'écran
-lui-même (capture d'aperçu, pas d'export fichier) a fonctionné normalement et affiché les
-données réelles et à jour à chaque tentative (ex. `290 569` incidents lors d'une deuxième
-vérification quelques minutes après la première, cohérent avec le flux continu d'alertes).
-La preuve brute vérifiée (`raw_verification_opensearch_aggregations.json`), dont chaque
-valeur a été recoupée un par un avec ce qui était visible à l'écran, fait foi à la place du
-fichier `.png` qui n'a pas pu être produit dans cette passe.
+**Résolu** : le mécanisme de capture d'écran générique (`save_to_disk`) utilisé initialement
+se bloquait systématiquement (voir historique ci-dessous). La fonctionnalité native
+"Reporting → Download PNG" de Wazuh/OpenSearch Dashboards a été utilisée à la place — export
+serveur du tableau de bord complet, indépendant de l'outil de capture d'écran externe. Fichier
+réel produit et vérifié :
+
+| Fichier | Contenu |
+|---|---|
+| `screenshots/soc_dashboard_indicateurs.png` | Export PNG natif du tableau de bord complet (4 panneaux), généré via le menu "Reporting" de Wazuh/OpenSearch Dashboards — total `293 036` incidents (30j), répartition par type, camembert de criticité (10 niveaux), tableau des 18 techniques MITRE. Valeurs identiques à celles recoupées indépendamment avec les requêtes OpenSearch brutes (`T1105: 5243, T1078: 2719, T1071: 2466, T1021: 902, T1040: 553` — légères variations de comptage par rapport à la première vérification, cohérentes avec le flux continu d'alertes réelles entre les deux mesures). |
+
+Historique (pour traçabilité, n'affecte plus la preuve actuelle) : une première tentative
+d'export via un outil de capture d'écran générique (`save_to_disk`) se bloquait
+systématiquement (`timeout`, aucun fichier produit, reproduit deux fois). Plutôt que de
+persister avec cet outil, la fonctionnalité d'export native du dashboard lui-même a été
+utilisée — une solution plus directe et plus fiable, puisqu'elle ne dépend d'aucun outillage
+externe au produit testé.
 
 ## Ce qui n'a PAS été fait
 
@@ -91,5 +91,6 @@ fichier `.png` qui n'a pas pu être produit dans cette passe.
 - `raw_verification_opensearch_aggregations.json` — 4 requêtes d'agrégation OpenSearch
   exécutées directement (total, criticité, techniques MITRE top-15, cardinalité MITRE),
   recoupées valeur par valeur avec l'UI.
+- `screenshots/soc_dashboard_indicateurs.png` — export PNG natif du tableau de bord complet.
 
 Hash dans `../thehive52/SHA256SUMS_thehive52.csv`.

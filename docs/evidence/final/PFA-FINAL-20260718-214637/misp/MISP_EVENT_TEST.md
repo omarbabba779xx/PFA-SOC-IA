@@ -43,15 +43,32 @@ Création via `POST /events/add` (API réelle, réponse complète dans
 La clé API MISP générée pour ce test n'a pas été committée en clair dans le dépôt — stockée
 uniquement dans `CREDENTIALS.md` local (hors dépôt Git, `soc-lab/CREDENTIALS.md`).
 
+## Mise à jour — événement publié (2026-07-20)
+
+L'événement a été publié (`Publish (no email)`, sans envoi de notification) après
+vérification préalable que cela ne représente aucun risque de fuite de données :
+- **0 serveur de synchronisation configuré** (`/servers/index`, vérifié avant publication) —
+  aucun MISP distant vers lequel l'événement pourrait être poussé.
+- **Distribution inchangée** : `Your organisation only` (valeur numérique `0`), qui de toute
+  façon exclut cet événement des mécanismes de synchronisation même si des serveurs existaient.
+
+Résultat vérifié via l'API (`GET /events/view/5`, avec la clé API du run, réponse complète
+dans `raw/event_5_published.json`) : `published: true`, `publish_timestamp: 1784556704`
+(2026-07-20T14:11:44Z), `distribution: "0"` — publication purement locale, aucune donnée n'a
+quitté cette instance MISP isolée.
+
 ## Ce qui n'a PAS été fait
 
-- Aucune publication de l'événement (`Published: No`) — reste en brouillon, conforme au
-  principe de ne pas partager de données de laboratoire au-delà de l'organisation locale.
 - Aucun connecteur TheHive→MISP n'a été configuré ou testé dans cette passe (l'événement a
   été créé directement via l'API MISP, pas depuis un cas TheHive).
 - Aucun objet MISP (MISP Object) n'a été utilisé, uniquement des attributs simples.
+- Aucun serveur de synchronisation MISP n'a été ajouté ni configuré — la publication reste
+  strictement locale à cette instance de laboratoire.
 
 ## Preuves brutes
 
-`raw/event_5_full.json` — réponse complète de `GET /events/view/5`, hash dans
-`../thehive52/SHA256SUMS_thehive52.csv`.
+- `raw/event_5_full.json` — réponse complète de `GET /events/view/5` avant publication
+  (`published: false`), hash dans `../thehive52/SHA256SUMS_thehive52.csv`.
+- `raw/event_5_published.json` — réponse complète après publication (`published: true`),
+  récupérée directement via l'API MISP (clé API en en-tête de requête, jamais dans le corps
+  de la réponse sauvegardée — vérifié absent avant commit).
