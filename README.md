@@ -113,7 +113,7 @@ Requête, réponse brute et résultat validé pour chaque scénario :
 
 ## 4 — TheHive : gestion de cas
 
-### 4.1 Instance `5.4.11-1` : bloquée par licence invalide
+### 4.1 Instance `5.4.11-1` : licence invalide, puis débloquée réellement
 
 `POST /api/v1/case` retournait systématiquement `403 manageCase/create`, pour le compte de
 service **et** le compte humain, malgré un profil `analyst` correctement assigné.
@@ -130,10 +130,21 @@ service **et** le compte humain, malgré un profil `analyst` correctement assign
 </tr>
 </table>
 
-Investigation complète (11 captures, réponses API brutes, logs) :
+**Mise à jour — licence obtenue et activée réellement** : l'utilisateur a créé son propre
+compte StrangeBee et généré une licence Community réelle depuis le portail officiel — aucun
+contournement, aucun patch binaire. Le challenge d'activation (jeton signé, lié à cette
+instance) a été copié via le bouton natif "Copy this challenge" de TheHive (jamais tapé
+manuellement) et soumis côté portail par l'utilisateur ; l'instance a récupéré la licence
+automatiquement. Vérifié à la fois via `GET /api/v1/status` (`isValid: true`) **et** en
+retestant l'action précisément bloquée, avec le compte précisément bloqué
+(`analyst@thehive.local`) : `POST /api/v1/case` → **`201 Created`**, cas réel `~163848328`
+(`#2169`), `userPermissions` contient désormais `manageCase/create`.
+
+Investigation complète (blocage initial + déblocage réel, 11 captures + preuves API
+avant/après) :
 [`thehive/license-investigation/THEHIVE_LICENSE_INVESTIGATION_EVIDENCE.md`](docs/evidence/final/PFA-FINAL-20260718-214637/thehive/license-investigation/THEHIVE_LICENSE_INVESTIGATION_EVIDENCE.md).
-**Aucune action destructive** n'a été effectuée (aucun compte supprimé, aucune migration
-lancée, aucune activation de licence tentée) ; l'instance reste archivée en lecture seule.
+**Aucune action destructive** n'a été effectuée à aucun moment (aucun compte supprimé, aucune
+migration lancée).
 
 ### 4.2 Instance `5.2.16-1` isolée : débloquée et opérationnelle
 
@@ -265,6 +276,22 @@ MITRE établie manuellement, baseline native Wazuh (`rule.mitre`), prédiction G
 | Couverture MITRE native de Wazuh seul (`rule.mitre`) | **0/6 (0 %)** |
 | Durée moyenne d'inférence Gemma2 9B | 117,9 s/alerte |
 
+**Mise à jour — ré-évaluation réelle sur le holdout dédupliqué (n=25)** : pour dépasser la
+limite du petit échantillon ci-dessus, `scripts/evaluate_llm_vs_baseline.py` a été exécuté
+réellement (nouveaux appels Ollama, pas de réutilisation, ~55 min, confirmé actif via charge
+CPU) sur `docs/evaluation/labeled_dataset_holdout.json` — le jeu de 25 alertes réelles
+dédupliqué le 2026-07-18 mais jamais réévalué depuis (trou méthodologique explicitement
+signalé dans `docs/evaluation/README.md`).
+
+| Métrique (n=25, dédupliqué) | Baseline (règles Wazuh) | LLM (Gemma2 9B) |
+|---|---|---|
+| Correspondance exacte MITRE | 40,0 % | **100,0 %** |
+| Erreurs de parsing JSON | — | 0,0 % |
+
+Ce chiffre remplace formellement le 94,4 % historique (mesuré sur un jeu contaminé par des
+doublons, jamais recalculé après correction) comme référence officielle pour ce dataset.
+Détail complet : [`evaluation/EVALUATION.md`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/EVALUATION.md).
+
 Sans le triage LLM, ces 6 alertes réelles n'auraient **aucune** technique MITRE associée
 automatiquement — la baseline Wazuh native est structurellement vide pour les règles
 personnalisées de ce laboratoire. Détail complet, méthodologie, table de correspondance
@@ -302,7 +329,7 @@ Dashboard SOC : T1071 visible dans le tableau MITRE (2 466 occurrences réelles/
 | Bug | Composant | Résolution |
 |---|---|---|
 | Blocage SSH VM | Infrastructure | Identifiants locaux retrouvés |
-| Licence TheHive invalide | TheHive 5.4.11-1 | Instance 5.2.16-1 isolée déployée |
+| Licence TheHive invalide | TheHive 5.4.11-1 | Instance 5.2.16-1 isolée déployée en attendant, puis licence Community réelle obtenue et activée sur 5.4.11-1 elle-même |
 | `sourceRef`/`_search` absents | TheHive 5.2.16-1 | Mode `THEHIVE_DEDUP_MODE=tag`, 17 tests |
 | Champ `start` non recalculé | Shuffle | Reconstruction du graphe sans appel API |
 | En-tête `Accept` manquant | Shuffle → MISP | En-tête ajouté, ré-exécution réussie |
