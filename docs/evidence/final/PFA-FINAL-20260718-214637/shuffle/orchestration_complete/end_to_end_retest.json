@@ -1,0 +1,30 @@
+{
+  "note": "Nouveau test complet de bout en bout demande par l'utilisateur, apres la correction du branchement severite (baseline Wazuh au lieu du LLM).",
+  "test_1_baseline_moyenne": {
+    "execution_id": "42e17341-2929-45da-9a65-1140180acdd4",
+    "rule_level": 8,
+    "baseline_attendue": "moyenne",
+    "gemma2_criticite_autoproclamee": "High",
+    "resultat": "Le branchement a correctement suivi la baseline (moyenne), pas l'avis du LLM (High) : http_misp_event=SKIPPED, http_low_severity_tag=SUCCESS. Confirme que le fix precedent fonctionne.",
+    "probleme_transitoire_trouve": {
+      "description": "http_5 (creation du cas TheHive) a recu une reponse HTTP 500 de TheHive ('Sink.asPublisher(fanout = false) only supports one subscriber', bug interne Play Framework/Akka Streams cote TheHive, probablement du a la charge concurrente des tests repetes), mais Shuffle a quand meme marque le noeud 'SUCCESS' - Shuffle ne verifie que l'aboutissement de la requete HTTP, pas le code de statut logique de la reponse. Aucun nouveau cas TheHive n'a donc ete cree pour cette execution, sans que le workflow ne le signale.",
+      "verification": "Retry manuel via curl immediatement apres : 201 Created, succes. Confirme transitoire (charge, pas un bug de configuration).",
+      "lecon": "Un noeud Http Shuffle marque SUCCESS ne garantit pas que l'action distante a reellement reussi - seul le code de statut HTTP (200/201 vs 4xx/5xx) contenu dans le corps du resultat fait foi. A verifier explicitement plutot que de se fier au seul champ 'status' du noeud Shuffle."
+    }
+  },
+  "test_2_baseline_critique_propre": {
+    "execution_id": "48297155-9f5c-412e-90d8-3c9b08f3773b",
+    "rule_level": 12,
+    "baseline_attendue": "critique",
+    "scenario": "Escalade de privileges (modification non autorisee du groupe sudoers)",
+    "resultats_verifies": {
+      "http_1_gemma2": "SUCCESS - triage coherent (Privilege Escalation, MITRE T1059)",
+      "http_5_thehive_case": "SUCCESS, HTTP 201, cas reel ~28720",
+      "http_6_cortex": "SUCCESS, HTTP 200, job_status=Success (AbuseIPDB reel)",
+      "http_misp_event": "SUCCESS, HTTP 200, evenement MISP reel id 11",
+      "http_low_severity_tag": "SKIPPED (correct, severite critique donc branche haute)",
+      "http_notification": "SUCCESS, HTTP 200, notification recue et journalisee independamment dans notifications.log"
+    },
+    "conclusion": "Test complet de bout en bout reussi sans aucune anomalie sur ce run. Chaine entierement fonctionnelle : Webhook -> Gemma2 -> TheHive -> Cortex -> branchement severite baseline -> MISP -> notification."
+  }
+}
