@@ -1,0 +1,29 @@
+{
+  "note": "Correction de deux ecarts identifies par l'utilisateur apres la premiere implementation des 5 points d'amelioration : (1) le canal de notification reutilisait TheHive au lieu d'etre un canal distinct, (2) il n'y avait pas de branche basse-severite faisant une action reellement differente.",
+  "fix_1_notification_channel": {
+    "probleme": "http_notification postait un commentaire sur le meme cas TheHive deja utilise pour l'audit trail - pas un canal externe distinct.",
+    "solution": "Service systemd reel et persistant (notify-receiver.service) sur la VM du labo, ecoute HTTP sur 0.0.0.0:9090, ecrit chaque notification recue avec horodatage dans /home/soc/notifications.log. Simule un webhook Slack/Teams externe, absent de ce laboratoire isole (aucun relais SMTP configure, verifie).",
+    "verification": "5 notifications reelles recues et journalisees independamment de TheHive, voir notifications.log ci-joint. Chaque entree contient le triage Gemma2 complet de l'execution correspondante."
+  },
+  "fix_2_low_severity_branch": {
+    "probleme": "L'operateur de negation reconstruit par deduction (not_contains, puis 'not contains') n'est pas reconnu par le backend Shuffle, qui echoue silencieusement (SKIPPED sans erreur) plutot que d'echouer bruyamment - les deux branches (MISP et tag bas) restaient SKIPPED sur une alerte de faible criticite, ce qui n'avait pas ete detecte lors des premiers tests (tous a criticite High).",
+    "decouverte": "Detecte en testant explicitement un scenario de faible criticite (connexion SSH legitime, execution_id f918640b puis b3a25d4f) : http_misp_event=SKIPPED ET http_low_severity_tag=SKIPPED simultanement, incoherent (une des deux aurait du s'executer).",
+    "solution": "Abandon de la negation. Branches multiples utilisant uniquement l'operateur 'contains' deja verifie fiable, une par libelle de criticite non-haute effectivement observe en sortie de Gemma2 (Moyenne, Medium, Basse, Low, Faible, Moderee).",
+    "verification_bidirectionnelle": [
+      {
+        "execution_id": "028e7f0e-5926-4abe-a762-bfa5a3b6f389",
+        "scenario": "Alerte C2 beaconing reelle, criticite Gemma2 = High",
+        "http_misp_event": "SUCCESS",
+        "http_low_severity_tag": "SKIPPED"
+      },
+      {
+        "execution_id": "1ca48c8f-687c-473a-9790-6c1f30d8fcf4",
+        "scenario": "Alerte connexion SSH legitime, criticite Gemma2 = Moyenne",
+        "http_misp_event": "SKIPPED",
+        "http_low_severity_tag": "SUCCESS",
+        "case_tags_apres_execution": ["shuffle-auto", "PFA-FINAL-20260718-214637", "auto-triage-low"]
+      }
+    ],
+    "conclusion": "Les deux branches sont desormais reellement mutuellement exclusives et fonctionnelles dans les deux sens, verifie par deux scenarios independants avec des criticites opposees."
+  }
+}

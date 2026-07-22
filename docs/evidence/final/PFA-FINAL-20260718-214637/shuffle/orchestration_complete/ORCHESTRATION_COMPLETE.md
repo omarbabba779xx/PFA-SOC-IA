@@ -145,16 +145,37 @@ réellement signalé comme malveillant dans la base AbuseIPDB, ce qui confirme
 que le scénario synthétique correspond à un indicateur réellement
 dangereux dans le monde réel.
 
-### Branchement conditionnel par sévérité
+### Branchement conditionnel par sévérité (bidirectionnel, vraiment exclusif)
 
-Un nœud a une branche conditionnelle Shuffle (`conditions` sur le lien
-`http_6 -> http_misp_event`, opérateur `contains`, source
-`$http_1.body.response`, valeur `"High"`). Vérifié dans les **deux sens** :
-- Lors d'une exécution où Gemma2 a expiré (timeout, charge CPU élevée
-  pendant les tests), le texte source était vide → la branche MISP a été
-  correctement marquée `SKIPPED` par Shuffle.
-- Lors des exécutions où Gemma2 a répondu avec `"criticite": "High"`, la
-  branche MISP s'est déclenchée et a réussi (`SUCCESS`).
+`http_6` porte deux familles de branches conditionnelles Shuffle vers deux
+nœuds différents :
+- `http_6 -> http_misp_event` : `contains` / `$http_1.body.response` /
+  `"High"`
+- `http_6 -> http_low_severity_tag` : une branche `contains` par libellé de
+  criticité non-haute effectivement observé en sortie de Gemma2 (`Moyenne`,
+  `Medium`, `Basse`, `Low`, `Faible`, `Moderee`) — Gemma2 répond tantôt en
+  français tantôt en anglais selon les exemples few-shot, donc plusieurs
+  libellés sont couverts plutôt qu'un seul.
+
+**Bug trouvé et corrigé** : la première version utilisait un opérateur de
+négation reconstruit par déduction (`not_contains`, puis `not contains`) —
+ni l'un ni l'autre n'est reconnu par le backend Shuffle, qui **échoue en
+silence** (branche marquée `SKIPPED` sans erreur visible) plutôt que
+d'échouer bruyamment. Détecté en testant explicitement une alerte de faible
+criticité (connexion SSH légitime) : les deux branches (MISP et tag bas)
+étaient `SKIPPED`, alors que l'une des deux aurait dû s'exécuter. Corrigé en
+abandonnant la négation au profit de conditions positives multiples,
+utilisant uniquement l'opérateur `contains` déjà validé empiriquement à
+plusieurs reprises.
+
+**Vérifié bidirectionnellement avec deux scénarios réels distincts** :
+- Alerte C2 beaconing (`criticite: "High"`) → `http_misp_event` = `SUCCESS`,
+  `http_low_severity_tag` = `SKIPPED`
+- Alerte connexion SSH légitime (`criticite: "Moyenne"`) →
+  `http_misp_event` = `SKIPPED`, `http_low_severity_tag` = `SUCCESS`
+
+Les deux branches sont donc réellement mutuellement exclusives et
+fonctionnelles dans les deux sens, pas seulement démontrées côté succès.
 
 ### Création MISP conditionnelle (réelle)
 
@@ -164,14 +185,34 @@ uuid `7d2df529-031a-4219-88dc-e315f97c993d`, avec un attribut réel
 indépendamment via `curl` avant l'intégration Shuffle (un événement de test,
 id `6`, a d'abord été créé pour valider l'API et les identifiants).
 
-### Notification (inconditionnelle)
+### Branche basse/moyenne sévérité (action réelle distincte, pas "ne rien faire")
 
-Un commentaire réel est posté sur le cas TheHive
-(`POST /api/v1/case/{id}/comment`) à chaque exécution, résumant les actions
-effectuées (triage Gemma2, analyse Cortex, création MISP). Choix assumé :
-pas de canal externe (Slack/e-mail) disponible dans ce laboratoire isolé —
-poster un commentaire d'audit sur le ticket lui-même est une interprétation
-légitime d'une notification dans un contexte SOAR.
+`http_low_severity_tag` (`PATCH /api/v1/case/{id}`) ajoute réellement le tag
+`auto-triage-low` au cas TheHive — vérifié en relisant le cas après
+exécution (`tags: ["shuffle-auto", "PFA-FINAL-20260718-214637",
+"auto-triage-low"]`). C'est une action concrète et différente de la
+branche haute sévérité (pas de création MISP), ce qui remplace le "ne rien
+faire d'explicite" de la version précédente.
+
+### Notification (canal réellement distinct de TheHive, inconditionnel)
+
+**Écart corrigé** : la version précédente reposait sur un commentaire posté
+sur le cas TheHive lui-même comme "notification" — ce n'est pas un canal
+distinct, juste une deuxième écriture dans le même système déjà utilisé pour
+le cas. Pas de Slack/e-mail disponible dans ce laboratoire isolé (aucun
+relais SMTP configuré sur la VM, vérifié).
+
+Solution propre retenue : un petit récepteur HTTP local a été déployé comme
+**service systemd réel et persistant** (`notify-receiver.service`,
+`/home/soc/notify_receiver.py`, écoute sur `0.0.0.0:9090`, écrit chaque
+notification reçue dans `/home/soc/notifications.log` avec horodatage). Il
+simule un canal Slack/Teams/webhook externe — un pattern courant et honnête
+en environnement de laboratoire isolé sans accès à un vrai service de
+messagerie tiers. `http_notification` (branche inconditionnelle) poste
+désormais vers `http://172.21.0.1:9090/notify` au lieu du cas TheHive.
+Vérifié en relisant `/home/soc/notifications.log` après exécution : la
+notification contenant le triage complet de Gemma2 y est bien arrivée,
+horodatée, dans un système entièrement séparé de TheHive.
 
 ## Limitations connues (version finale)
 
@@ -185,8 +226,15 @@ légitime d'une notification dans un contexte SOAR.
   contournable via l'automatisation du navigateur (CDP ne peut pas
   interagir avec cette page privilégiée). Remplacée par la réponse JSON
   complète de l'API, déjà vérifiée indépendamment via `curl`.
-- La configuration exacte de la syntaxe des conditions de branche Shuffle
-  (`conditions: [{condition, source, destination}]`) a été reconstruite par
-  déduction (aucun exemple existant dans les workflows précédents du
-  labo) — son bon fonctionnement a cependant été vérifié empiriquement dans
-  les deux sens (SKIPPED et SUCCESS observés selon le contenu réel).
+- La couverture des libellés de criticité non-haute (`Moyenne`, `Medium`,
+  `Basse`, `Low`, `Faible`, `Moderee`) reste une liste finie déduite de
+  l'observation empirique des sorties réelles de Gemma2, pas une négation
+  logique générale — un libellé inattendu (ex. `Élevé` au lieu de `High`,
+  ou une faute d'orthographe du modèle) échapperait aux deux branches. Risque
+  jugé faible vu la stabilité observée du prompt sur plusieurs dizaines
+  d'exécutions du projet, mais reste une dette technique explicite plutôt
+  qu'un branchement booléen propre.
+- Le récepteur de notification (`notify-receiver.service`, port 9090) est
+  un service minimal développé pour ce laboratoire, sans authentification ni
+  chiffrement — acceptable dans ce réseau isolé, à ne pas répliquer tel quel
+  en production.
