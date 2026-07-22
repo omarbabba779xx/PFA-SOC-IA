@@ -86,6 +86,18 @@ De même, le corps de la requête TheHive référençait initialement
 
 Preuve brute complète : `execution_result.json` (secrets/API keys retirés).
 
+## Captures d'écran
+
+| Fichier | Contenu |
+|---|---|
+| `screenshots/01_shuffle_execution_finished_debug.png` | Vue Debug de Shuffle pour l'exécution `696a1a8e-3c3d-42b9-8a48-b02d8b768a80` — statut `FINISHED`, horodatages, chaîne des 3 nœuds avec la ligne de connexion `Webhook_1 -> Http 1 -> Http 2` mise en surbrillance verte (chemin réellement emprunté par l'exécution), payload `$exec` réel visible |
+| `screenshots/02_thehive_case9_gemma_output.png` | Cas TheHive `#9` (`~40980624`) ouvert dans l'UI TheHive — créé par `SOC Pipeline 5.2 Service Account`, description contenant la sortie brute réelle de Gemma2 sur l'alerte C2 beaconing |
+
+Captures prises via capture d'écran de la fenêtre Chrome réelle (PowerShell,
+`Graphics.CopyFromScreen` + recadrage), pas via le mécanisme `save_to_disk`
+intégré à l'outil de navigateur (qui n'écrit aucun fichier accessible dans
+cet environnement).
+
 ## Ce qui n'a PAS été fait
 
 - Le nœud Cortex (`http_6`) liste les analyseurs disponibles mais ne
