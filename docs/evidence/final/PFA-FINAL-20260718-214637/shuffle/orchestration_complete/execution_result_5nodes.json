@@ -1,0 +1,68 @@
+{
+  "workflow_name": "PFA-FINAL-20260718-214637 - Orchestration complete SOC-IA",
+  "workflow_id": "8362f220-e5a1-4c18-b009-9d646f519e27",
+  "note": "Version finale a 5 noeuds, implementant les 5 points d'amelioration convenus. Execution execution_id b8f3f27a-4fb8-4d74-ae4b-758a77aa625b, apres correction du bug HTTP/HTTPS sur le noeud MISP (voir ORCHESTRATION_COMPLETE.md).",
+  "execution_id": "b8f3f27a-4fb8-4d74-ae4b-758a77aa625b",
+  "status": "FINISHED",
+  "started_at": 1784752542,
+  "completed_at": 1784752671,
+  "chain": [
+    "Webhook_1 (trigger)",
+    "http_1  -> POST http://172.21.0.1:11434/api/generate           (Ollama / Gemma2 9B, triage IA)",
+    "http_5  -> POST http://172.21.0.1:9020/api/v1/case             (TheHive 5.2.16-1, creation de cas)",
+    "http_6  -> POST http://172.21.0.1:9001/api/analyzer/{id}/run   (Cortex, declenchement REEL d'un job d'analyse AbuseIPDB sur l'IP de l'alerte)",
+    "http_misp_event -> POST https://172.21.0.1:8444/events         (MISP, branche CONDITIONNELLE: uniquement si criticite Gemma2 == 'High')",
+    "http_notification -> POST http://172.21.0.1:9020/api/v1/case/{id}/comment (notification: commentaire poste sur le cas TheHive, branche inconditionnelle)"
+  ],
+  "results": {
+    "http_1_gemma2_triage": {
+      "status": "SUCCESS",
+      "http_status": 200,
+      "response_parsed": {
+        "incident_type": "C2 Communication",
+        "criticite": "High",
+        "mitre_tactic": "Command and Control",
+        "mitre_technique": "T1040 - C2 Beaconing",
+        "resume": "Le Wazuh agent 'wazuh-agent-lab01' a détecté 14 connexions répétées au même serveur externe (185.220.101.7:8443) dans un laps de temps de 5 minutes. Cela pourrait indiquer une activité de communication C2.",
+        "recommandation": "Investigate the connections to 185.220.101.7:8443, analyze network traffic and logs for suspicious activity. Consider blocking the connection or isolating the affected host."
+      }
+    },
+    "http_5_thehive_case": {
+      "status": "SUCCESS",
+      "http_status": 201,
+      "note": "Cas TheHive cree, description contenant la sortie brute de Gemma2 (voir cas #9, ~40980624, capture d'ecran screenshots/02_thehive_case9_gemma_output.png)"
+    },
+    "http_6_cortex_real_job": {
+      "status": "SUCCESS",
+      "http_status": 200,
+      "job_id": "x5OIi58BU8sZRVad5BXC",
+      "job_status": "Success",
+      "analyzer": "AbuseIPDB_2_0",
+      "data_analysee": "185.220.101.7",
+      "note": "Job Cortex REEL declenche par Shuffle (POST /api/analyzer/{id}/run), pas une simple liste d'analyseurs comme dans la version precedente. Resultat AbuseIPDB reel (verifie separement via curl le 2026-07-22): abuseConfidenceScore=100, isTor=true, 69 signalements, IP confirmee noeud de sortie Tor connu."
+    },
+    "http_misp_event_conditional": {
+      "status": "SUCCESS",
+      "http_status": 200,
+      "condition_evaluee": "$http_1.body.response contains 'High' -> VRAI (criticite Gemma2 = High)",
+      "event_id": "7",
+      "event_uuid": "7d2df529-031a-4219-88dc-e315f97c993d",
+      "event_info": "[SHUFFLE-AUTO] Triage automatise - PFA-FINAL-20260718-214637",
+      "attribute_count": "1",
+      "attributes": [
+        { "type": "ip-dst", "value": "185.220.101.7", "category": "Network activity" }
+      ],
+      "note": "Test de non-regression effectue: une premiere execution avec Gemma2 en timeout (charge CPU trop elevee) a bien produit un SKIPPED sur cette branche (condition evaluee a faux car le texte source etait vide), confirmant que le branchement conditionnel fonctionne dans les deux sens."
+    },
+    "http_notification": {
+      "status": "SUCCESS",
+      "http_status": 201,
+      "note": "Commentaire reel poste sur le cas TheHive #9 (~40980624) via POST /api/v1/case/{id}/comment. Branche inconditionnelle (execute a chaque run, contrairement a la creation MISP)."
+    }
+  },
+  "limitations_connues": [
+    "L'IP analysee (185.220.101.7) est actuellement codee en dur dans le noeud Cortex plutot qu'extraite dynamiquement du texte de l'alerte via regex - le pipeline Python existant (scripts/wazuh_ai_triage.py) sait deja faire cette extraction, ce n'est pas implemente au niveau du noeud Shuffle pour cette iteration.",
+    "Le noeud de notification cible TheHive (commentaire sur le cas) plutot qu'un canal externe (Slack/email) qui n'existe pas dans ce laboratoire isole - interpretation jugee valide d'une notification a l'analyste dans le contexte d'un SOAR.",
+    "La capture d'ecran de l'evenement MISP dans son interface web n'a pas pu etre prise (interstitiel de securite Chrome bloquant sur certificat auto-signe HTTPS, non contournable via l'automatisation du navigateur) - preuve remplacee par la reponse JSON complete de l'API MISP, deja verifiee independamment via curl (voir ORCHESTRATION_COMPLETE.md)."
+  ]
+}
