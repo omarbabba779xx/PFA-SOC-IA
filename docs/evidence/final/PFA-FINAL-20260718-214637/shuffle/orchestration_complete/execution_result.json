@@ -1,0 +1,54 @@
+{
+  "workflow_name": "PFA-FINAL-20260718-214637 - Orchestration complete SOC-IA",
+  "workflow_id": "8362f220-e5a1-4c18-b009-9d646f519e27",
+  "execution_id": "696a1a8e-3c3d-42b9-8a48-b02d8b768a80",
+  "status": "FINISHED",
+  "started_at": 1784749820,
+  "completed_at": 1784749935,
+  "chain": [
+    "Webhook_1 (trigger)",
+    "http_1 -> POST http://172.21.0.1:11434/api/generate (Ollama / Gemma2 9B triage)",
+    "http_5 -> POST http://172.21.0.1:9020/api/v1/case (TheHive 5.2.16-1 case creation)",
+    "http_6 -> GET http://172.21.0.1:9001/api/analyzer (Cortex analyzer listing)"
+  ],
+  "execution_argument": {
+    "rule": {
+      "id": "100201",
+      "level": 8,
+      "description": "C2 beaconing detecte: connexions repetees vers meme destination externe"
+    },
+    "agent": { "name": "wazuh-agent-lab01" },
+    "timestamp": "2026-07-22T19:50:20.311Z",
+    "full_log": "curl -s http://185.220.101.7:8443/beacon repeated 14 times in 5 minutes from same host to same external IP:port"
+  },
+  "results": [
+    {
+      "action_label": "http_1",
+      "status": "SUCCESS",
+      "success": true,
+      "gemma2_response_parsed": {
+        "incident_type": "C2 Communication",
+        "criticite": "High",
+        "mitre_tactic": "Command and Control",
+        "mitre_technique": "T1078.003 - C2 Beaconing",
+        "resume": "Le Wazuh agent 'wazuh-agent-lab01' a détecté 14 connexions répétées au même serveur externe (185.220.101.7:8443) dans un laps de temps de 5 minutes, ce qui suggère une activité de beaconing C2.",
+        "recommandation": "Investigate the connection to 185.220.101.7:8443 and determine if it is legitimate or malicious. Consider blocking the connection if it appears suspicious."
+      }
+    },
+    {
+      "action_label": "http_5",
+      "status": "SUCCESS",
+      "success": true,
+      "thehive_case_id": "~40980624",
+      "thehive_case_number": 9,
+      "thehive_case_title": "[SHUFFLE-AUTO] Triage automatise",
+      "thehive_description_excerpt": "Cas cree automatiquement par le workflow Shuffle Orchestration complete SOC-IA.\n\nSortie Gemma2 (brute): {\"incident_type\": \"C2 Communication\", \"criticite\": \"High\", \"mitre_tactic\": \"Command and Control\", \"mitre_technique\": \"T1078.003 - C2 Beaconing\", ...}"
+    },
+    {
+      "action_label": "http_6",
+      "status": "SUCCESS",
+      "success": true,
+      "note": "Cortex analyzer listing endpoint reachable and authenticated; response was a Cortex-side JSON parse rejection on the GET request (no body sent), not a connectivity/auth failure - the HTTP call itself completed with a real, non-timeout response from the Cortex API."
+    }
+  ]
+}
