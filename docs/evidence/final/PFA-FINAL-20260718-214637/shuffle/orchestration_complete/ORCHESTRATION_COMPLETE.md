@@ -145,45 +145,66 @@ réellement signalé comme malveillant dans la base AbuseIPDB, ce qui confirme
 que le scénario synthétique correspond à un indicateur réellement
 dangereux dans le monde réel.
 
-### Branchement conditionnel par sévérité (bidirectionnel, vraiment exclusif)
+### Branchement conditionnel par sévérité — sur la baseline Wazuh, pas sur le LLM
 
-`http_6` porte deux familles de branches conditionnelles Shuffle vers deux
-nœuds différents :
-- `http_6 -> http_misp_event` : `contains` / `$http_1.body.response` /
-  `"High"`
-- `http_6 -> http_low_severity_tag` : une branche `contains` par libellé de
-  criticité non-haute effectivement observé en sortie de Gemma2 (`Moyenne`,
-  `Medium`, `Basse`, `Low`, `Faible`, `Moderee`) — Gemma2 répond tantôt en
-  français tantôt en anglais selon les exemples few-shot, donc plusieurs
-  libellés sont couverts plutôt qu'un seul.
+**Erreur de conception trouvée et corrigée** : la première version branchait
+sur `$http_1.body.response` (la criticité **auto-déclarée par Gemma2**).
+C'est en contradiction directe avec le principe hybride documenté ailleurs
+dans le projet (`scripts/wazuh_ai_triage.py`, `baseline_criticality()`) :
+la criticité qui pilote une action réelle (ici la création MISP) doit
+provenir de la **baseline Wazuh** (`rule.level`, déterministe), pas de la
+classification du LLM — dont l'évaluation du projet a mesuré un F1 macro de
+seulement 0,23 sur cette tâche précise, contre 100 % de correspondance MITRE
+correcte. Utiliser la sortie de Gemma2 pour cette décision aurait reproduit
+exactement le point faible que le reste du projet évite consciemment.
 
-**Bug trouvé et corrigé** : la première version utilisait un opérateur de
-négation reconstruit par déduction (`not_contains`, puis `not contains`) —
-ni l'un ni l'autre n'est reconnu par le backend Shuffle, qui **échoue en
-silence** (branche marquée `SKIPPED` sans erreur visible) plutôt que
-d'échouer bruyamment. Détecté en testant explicitement une alerte de faible
-criticité (connexion SSH légitime) : les deux branches (MISP et tag bas)
-étaient `SKIPPED`, alors que l'une des deux aurait dû s'exécuter. Corrigé en
-abandonnant la négation au profit de conditions positives multiples,
-utilisant uniquement l'opérateur `contains` déjà validé empiriquement à
-plusieurs reprises.
+Illustration concrète du problème : l'alerte de test C2 beaconing utilisait
+`rule.level: 8`. D'après le barème baseline du projet
+(`level >= 9 → haute`), c'est en réalité une criticité **"moyenne"** — alors
+que Gemma2 avait répondu `"criticite": "High"`. Brancher sur la sortie du
+LLM aurait donc déclenché un événement MISP sur une alerte que la baseline
+du projet ne considère pas comme haute priorité.
 
-**Vérifié bidirectionnellement avec deux scénarios réels distincts** :
-- Alerte C2 beaconing (`criticite: "High"`) → `http_misp_event` = `SUCCESS`,
-  `http_low_severity_tag` = `SKIPPED`
-- Alerte connexion SSH légitime (`criticite: "Moyenne"`) →
+**Corrigé** : `http_6` branche désormais sur `$exec.rule.level` (le niveau
+Wazuh brut, disponible dans le payload webhook, pas une valeur du LLM) :
+- `http_6 -> http_misp_event` : opérateur `larger than`, seuil `8`
+  (`rule.level > 8`, équivalent à `>= 9`, seuil "haute" du projet)
+- `http_6 -> http_low_severity_tag` : opérateur `less than`, seuil `9`
+  (`rule.level < 9`)
+
+**Deuxième bug trouvé en corrigeant le premier** : l'opérateur de négation
+initialement utilisé pour la branche basse (`not_contains`, puis
+`not contains`, puis `smaller than`) n'était à chaque fois **pas reconnu**
+par le backend Shuffle, qui échoue silencieusement (`SKIPPED` sans erreur)
+plutôt que de remonter une erreur de configuration. La liste réelle des
+opérateurs supportés a été retrouvée en extrayant le bundle JavaScript du
+frontend Shuffle (`equals`, `does not equal`, `startswith`, `endswith`,
+`contains`, `contains_any_of`, `matches regex`, `larger than`, `less than`,
+`is empty`) — `less than` est le nom correct, pas `smaller than`.
+
+**Vérifié bidirectionnellement avec deux scénarios réels indépendants, sur
+la baseline Wazuh cette fois** :
+- Alerte avec `rule.level: 8` (baseline = moyenne) →
   `http_misp_event` = `SKIPPED`, `http_low_severity_tag` = `SUCCESS`
+  (execution_id `42342cd1-542c-4e31-b052-f2f6fd7fdcd4`)
+- Alerte avec `rule.level: 12` (baseline = critique) →
+  `http_misp_event` = `SUCCESS` (événement MISP réel id `10`),
+  `http_low_severity_tag` = `SKIPPED`
+  (execution_id `19830316-c450-44bc-9804-4ffcf1a556cb`)
 
-Les deux branches sont donc réellement mutuellement exclusives et
-fonctionnelles dans les deux sens, pas seulement démontrées côté succès.
+Le branchement est donc désormais cohérent avec l'architecture hybride
+documentée dans tout le reste du projet : la sévérité qui déclenche une
+action réelle vient de la règle Wazuh, pas du LLM.
 
 ### Création MISP conditionnelle (réelle)
 
-Événement MISP réellement créé (`https://172.21.0.1:8444/events`) : id `7`,
-uuid `7d2df529-031a-4219-88dc-e315f97c993d`, avec un attribut réel
-(`ip-dst`, `185.220.101.7`, catégorie `Network activity`). Vérifié
-indépendamment via `curl` avant l'intégration Shuffle (un événement de test,
-id `6`, a d'abord été créé pour valider l'API et les identifiants).
+Événement MISP réellement créé (`https://172.21.0.1:8444/events`), déclenché
+uniquement sur la baseline `rule.level > 8` : id `10` (execution_id
+`19830316-c450-44bc-9804-4ffcf1a556cb`), avec un attribut réel (`ip-dst`,
+`185.220.101.7`, catégorie `Network activity`). Un premier événement de
+test (id `6`) puis un événement lié à l'ancien branchement sur le LLM
+(id `7`) ont précédé ce résultat final ; vérifiés indépendamment via `curl`
+avant l'intégration Shuffle.
 
 ### Branche basse/moyenne sévérité (action réelle distincte, pas "ne rien faire")
 
@@ -226,14 +247,6 @@ horodatée, dans un système entièrement séparé de TheHive.
   contournable via l'automatisation du navigateur (CDP ne peut pas
   interagir avec cette page privilégiée). Remplacée par la réponse JSON
   complète de l'API, déjà vérifiée indépendamment via `curl`.
-- La couverture des libellés de criticité non-haute (`Moyenne`, `Medium`,
-  `Basse`, `Low`, `Faible`, `Moderee`) reste une liste finie déduite de
-  l'observation empirique des sorties réelles de Gemma2, pas une négation
-  logique générale — un libellé inattendu (ex. `Élevé` au lieu de `High`,
-  ou une faute d'orthographe du modèle) échapperait aux deux branches. Risque
-  jugé faible vu la stabilité observée du prompt sur plusieurs dizaines
-  d'exécutions du projet, mais reste une dette technique explicite plutôt
-  qu'un branchement booléen propre.
 - Le récepteur de notification (`notify-receiver.service`, port 9090) est
   un service minimal développé pour ce laboratoire, sans authentification ni
   chiffrement — acceptable dans ce réseau isolé, à ne pas répliquer tel quel

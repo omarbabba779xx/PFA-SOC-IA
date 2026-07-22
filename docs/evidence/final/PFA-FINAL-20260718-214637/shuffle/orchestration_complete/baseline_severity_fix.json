@@ -1,0 +1,34 @@
+{
+  "note": "Correction d'une erreur de conception signalee par l'utilisateur : le branchement severite reposait sur la criticite auto-declaree par Gemma2 ($http_1.body.response) au lieu de la baseline Wazuh (rule.level), en contradiction avec le principe hybride documente dans scripts/wazuh_ai_triage.py (baseline_criticality) et justifie par l'evaluation du projet (F1 macro 0.23 pour la criticite LLM contre 100% de correspondance MITRE).",
+  "probleme_illustre": "L'alerte de test C2 beaconing utilisait rule.level=8. Selon le bareme baseline du projet (level>=9 -> haute), c'est en realite une criticite 'moyenne'. Gemma2 avait pourtant repondu criticite='High'. Brancher sur la sortie LLM aurait donc declenche MISP sur une alerte que la baseline ne considere pas comme haute priorite.",
+  "correction": {
+    "avant": "source=$http_1.body.response (Gemma2), operateur 'contains', valeur 'High' (+ branches multiples pour les libelles non-haute)",
+    "apres": "source=$exec.rule.level (baseline Wazuh brute), operateur 'larger than' seuil 8 pour MISP (equivaut a rule.level>=9, seuil haute du projet), operateur 'less than' seuil 9 pour le tag bas severite"
+  },
+  "bug_operateur_supplementaire": {
+    "probleme": "Les operateurs de negation devines (not_contains, 'not contains', puis 'smaller than') ne sont reconnus par aucune version du backend Shuffle, qui echoue silencieusement (SKIPPED) sans erreur de configuration visible.",
+    "decouverte": "Extraction directe du bundle JavaScript frontend de Shuffle (index-D88K8Y95.js) pour retrouver la liste exacte des operateurs supportes.",
+    "liste_reelle_operateurs": ["equals", "does not equal", "startswith", "endswith", "contains", "contains_any_of", "matches regex", "larger than", "less than", "is empty"],
+    "correction": "'less than' est le nom correct, pas 'smaller than'."
+  },
+  "verification_bidirectionnelle_finale": [
+    {
+      "execution_id": "42342cd1-542c-4e31-b052-f2f6fd7fdcd4",
+      "rule_level": 8,
+      "baseline_attendue": "moyenne",
+      "http_misp_event": "SKIPPED",
+      "http_low_severity_tag": "SUCCESS",
+      "http_notification": "SUCCESS"
+    },
+    {
+      "execution_id": "19830316-c450-44bc-9804-4ffcf1a556cb",
+      "rule_level": 12,
+      "baseline_attendue": "critique",
+      "http_misp_event": "SUCCESS",
+      "misp_event_id": "10",
+      "http_low_severity_tag": "SKIPPED",
+      "http_notification": "SUCCESS"
+    }
+  ],
+  "conclusion": "Le branchement severite est desormais coherent avec l'architecture hybride documentee dans tout le reste du projet : la severite qui declenche une action reelle (creation MISP) vient de la regle Wazuh (deterministe), pas du LLM (dont la criticite est documentee comme peu fiable)."
+}
