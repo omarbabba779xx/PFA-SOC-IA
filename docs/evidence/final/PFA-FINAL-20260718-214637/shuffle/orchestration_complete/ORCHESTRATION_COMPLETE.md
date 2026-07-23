@@ -286,6 +286,37 @@ puis restauré) :
   comportement normal
 
 Détail complet et identifiants d'exécution dans `http_status_gate_fix.json`.
-Cette garde ne couvre que `http_5` (seul échec réellement observé en
-conditions réelles) ; le même pattern serait reproductible sur les autres
-nœuds Http si un cas d'échec concret le justifiait.
+
+## Extension de la garde de statut HTTP à tous les nœuds
+
+Le même mécanisme a ensuite été répliqué sur les 5 autres nœuds Http du
+workflow (`http_1`, `http_6`, `http_misp_event`, `http_low_severity_tag`,
+`http_notification`) — chacun a désormais un nœud d'échec correspondant
+(`http_gemma2_failed`, `http_cortex_failed`, `http_misp_failed`,
+`http_low_tag_failed`, `http_notification_failed`) qui alerte le récepteur
+de notification avec la réponse d'erreur réelle.
+
+Distinction importante entre garde **bloquante** et **non-bloquante** :
+- `http_1` (Gemma2) est **bloquant** — sans triage valide, aucune des
+  étapes suivantes n'a de sens ; un échec y interrompt toute la chaîne.
+- `http_6` (Cortex) est **non-bloquant** — les branches de sévérité
+  dépendent de `$exec.rule.level` (la baseline Wazuh), pas de la sortie de
+  Cortex ; un échec Cortex déclenche une alerte en parallèle sans empêcher
+  MISP/notification de s'exécuter normalement.
+- Les 3 nœuds terminaux (`http_misp_event`, `http_low_severity_tag`,
+  `http_notification`) ont une alerte parallèle, sans rien à protéger en
+  aval.
+
+**Vérifié avec une nouvelle panne réellement provoquée** sur `http_1`
+(modèle Ollama inexistant, confirmé `404` réel via `curl` avant le test
+Shuffle) : `http_gemma2_failed` = `SUCCESS` (alerte reçue et journalisée),
+et **toute la chaîne en aval** (`http_5` jusqu'à la notification finale)
+correctement `SKIPPED` — contrairement à la garde non-bloquante de
+`http_6`. Deux tests de non-régression sur les deux branches de sévérité
+(critique et basse) confirment que rien n'est cassé côté chemin normal, où
+les 6 nouvelles gardes restent toutes `SKIPPED` comme attendu.
+
+Détail complet et identifiants d'exécution dans
+`http_status_gate_all_nodes.json`. Les 6 nœuds Http du workflow ont
+désormais tous une garde de statut HTTP réelle et vérifiée — aucun code
+d'erreur 4xx/5xx ne peut plus être silencieusement traité comme un succès.

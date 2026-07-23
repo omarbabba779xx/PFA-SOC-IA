@@ -1,0 +1,30 @@
+{
+  "note": "Extension de la garde de statut HTTP (voir http_status_gate_fix.json) a tous les noeuds Http du workflow, a la demande de l'utilisateur.",
+  "noeuds_ajoutes": [
+    {"label": "http_gemma2_failed", "cible": "http_1 (Gemma2/Ollama)", "bloquant": true, "raison": "si Gemma2 echoue, toute la suite (case, cortex, misp, notification) est bloquee - aucune de ces etapes n'a de sens sans triage valide"},
+    {"label": "http_cortex_failed", "cible": "http_6 (Cortex)", "bloquant": false, "raison": "les branches severite dependent de $exec.rule.level (baseline Wazuh), pas de la sortie Cortex - un echec Cortex n'empeche donc pas MISP/notification de continuer normalement, juste une alerte parallele"},
+    {"label": "http_misp_failed", "cible": "http_misp_event", "bloquant": false, "raison": "noeud terminal, rien en aval a proteger"},
+    {"label": "http_low_tag_failed", "cible": "http_low_severity_tag", "bloquant": false, "raison": "noeud terminal, rien en aval a proteger"},
+    {"label": "http_notification_failed", "cible": "http_notification", "bloquant": false, "raison": "noeud terminal, rien en aval a proteger"}
+  ],
+  "mecanisme": "Meme schema que pour http_5 : deux branches sur $http_X.status (larger than 299 -> noeud d'echec vers le recepteur de notification ; less than 300 -> poursuite normale pour les noeuds bloquants).",
+  "verification": [
+    {
+      "test": "Chemin normal complet, severite critique (rule.level=12)",
+      "execution_id": "accffb43-b514-4506-8060-7950a15d65df",
+      "resultat": "6 etapes reelles SUCCESS, 6 gardes d'echec toutes SKIPPED"
+    },
+    {
+      "test": "Panne injectee sur http_1 (modele Ollama inexistant -> 404 reel confirme via curl)",
+      "execution_id": "4af0437b-2c09-409f-a08e-e33ebe6468f7",
+      "http_1_status": 404,
+      "resultat": "http_gemma2_failed=SUCCESS (alerte reelle recue et journalisee), TOUTE la suite (http_5 a http_notification) correctement SKIPPED - confirme que la garde sur http_1 bloque bien toute la chaine en aval, contrairement a la garde non-bloquante sur http_6"
+    },
+    {
+      "test": "Re-verification apres restauration du modele Gemma2 correct, severite basse (rule.level=4)",
+      "execution_id": "e882cb69-2707-4c20-84f1-334ee78d3a25",
+      "resultat": "6 etapes reelles SUCCESS (branche basse severite), 6 gardes d'echec toutes SKIPPED - comportement normal confirme sur les deux branches de severite"
+    }
+  ],
+  "conclusion": "Les 6 noeuds Http du workflow (http_1, http_5, http_6, http_misp_event, http_low_severity_tag, http_notification) ont desormais tous une garde de statut HTTP reelle et verifiee. Aucun code d'erreur 4xx/5xx ne peut plus etre silencieusement traite comme un succes."
+}
