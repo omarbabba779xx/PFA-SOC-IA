@@ -251,3 +251,41 @@ horodatée, dans un système entièrement séparé de TheHive.
   un service minimal développé pour ce laboratoire, sans authentification ni
   chiffrement — acceptable dans ce réseau isolé, à ne pas répliquer tel quel
   en production.
+
+## Correction : Shuffle ignorait les codes HTTP d'erreur (4xx/5xx)
+
+**Bug trouvé pendant le test complet de bout en bout** (voir
+`end_to_end_retest.json`) : un nœud Http Shuffle est marqué `SUCCESS` dès
+que la requête HTTP aboutit, **indépendamment du code de statut renvoyé par
+le serveur distant**. Une réponse `500` ou `401` est donc traitée
+exactement comme un `201` — le workflow continuait sa chaîne (Cortex, MISP,
+notification) même quand la création du cas TheHive avait réellement
+échoué, sans qu'aucun signal ne le révèle.
+
+**Corrigé** : une porte de validation a été ajoutée après `http_5`
+(création du cas), la seule étape dont l'échec avait été observé en
+conditions réelles. Deux branches conditionnelles sur `$http_5.status` (le
+code HTTP réel contenu dans le résultat, pas le statut du nœud Shuffle) :
+- `status < 300` → poursuite normale vers `http_6`
+- `status > 299` → nouveau nœud `http_case_creation_failed`, qui poste une
+  alerte `ERROR` distincte sur le récepteur de notification, avec la
+  réponse brute d'erreur incluse, et précise qu'aucune suite du traitement
+  n'a été exécutée
+
+**Vérifié dans les deux sens avec une vraie panne provoquée** (jeton API
+temporairement invalidé sur `http_5` pour forcer un `401` réel de TheHive,
+puis restauré) :
+- Chemin normal (`201`) : `http_case_creation_failed` = `SKIPPED`, chaîne
+  complète exécutée normalement
+- Échec injecté (`401`) : `http_case_creation_failed` = `SUCCESS` (alerte
+  d'échec réellement reçue et journalisée), et surtout `http_6`,
+  `http_misp_event`, `http_low_severity_tag`, `http_notification` tous
+  correctement `SKIPPED` — plus aucune action n'est exécutée à tort après
+  un échec de création de cas
+- Re-test après restauration du jeton valide : retour confirmé au
+  comportement normal
+
+Détail complet et identifiants d'exécution dans `http_status_gate_fix.json`.
+Cette garde ne couvre que `http_5` (seul échec réellement observé en
+conditions réelles) ; le même pattern serait reproductible sur les autres
+nœuds Http si un cas d'échec concret le justifiait.

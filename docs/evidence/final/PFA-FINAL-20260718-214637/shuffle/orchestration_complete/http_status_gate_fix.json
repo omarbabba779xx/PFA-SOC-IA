@@ -1,0 +1,37 @@
+{
+  "note": "Correction du bug demande par l'utilisateur : Shuffle marque un noeud Http 'SUCCESS' des que la requete HTTP aboutit, quel que soit le code de statut logique renvoye par le serveur distant (4xx/5xx compris) - decouvert lors du test complet precedent (TheHive avait renvoye une erreur 500, invisible dans le statut du noeud Shuffle).",
+  "solution": "Ajout d'une porte de validation explicite apres http_5 (creation du cas TheHive), la seule etape dont l'echec avait ete observe en conditions reelles. Deux branches conditionnelles sur $http_5.status (le code HTTP reel contenu dans le resultat, pas le statut du noeud Shuffle) :",
+  "branches": [
+    "http_5 -> http_6 : condition 'less than' 300 sur $http_5.status (chemin normal, chaine complete)",
+    "http_5 -> http_case_creation_failed (nouveau noeud) : condition 'larger than' 299 sur $http_5.status (chemin d'echec)"
+  ],
+  "noeud_echec": {
+    "action": "http_case_creation_failed",
+    "cible": "http://172.21.0.1:9090/notify (meme recepteur de notification externe, canal distinct 'soc-alerts-erreurs')",
+    "contenu": "Alerte ERROR explicite avec la reponse brute de TheHive, precisant qu'aucune suite du traitement (Cortex/MISP/notification normale) n'a ete executee pour cette alerte"
+  },
+  "verification_bidirectionnelle": [
+    {
+      "test": "Chemin normal (jeton API valide)",
+      "execution_id": "2f5a7e4c-f0f3-4e2d-9d0e-252b2de89494",
+      "http_5_status": 201,
+      "http_case_creation_failed": "SKIPPED",
+      "http_6_misp_notification": "chaine complete executee normalement"
+    },
+    {
+      "test": "Echec injecte volontairement (jeton API invalide sur http_5, pour forcer un 401 reel de TheHive)",
+      "execution_id": "0310a888-9645-4ac3-8d82-dfbdd1d18f1f",
+      "http_5_status": 401,
+      "http_case_creation_failed": "SUCCESS - alerte d'echec reelle recue et journalisee (voir notifications.log)",
+      "http_6_misp_low_tag_notification": "tous correctement SKIPPED (aucune action a tort sur un echec de creation de cas)"
+    },
+    {
+      "test": "Re-verification apres restauration du vrai jeton API",
+      "execution_id": "b3edca71-403f-4142-a14a-1a969dc6e5e4",
+      "http_5_status": 201,
+      "http_case_creation_failed": "SKIPPED",
+      "conclusion": "Retour au comportement normal confirme, le fix ne casse rien"
+    }
+  ],
+  "limitation_restante": "Cette porte ne couvre que http_5 (le seul echec reellement observe en conditions reelles). Les autres noeuds Http du workflow (http_1, http_6, http_misp_event, http_notification, http_low_severity_tag) n'ont pas de garde equivalente - meme pattern reproductible si besoin, non implemente ici par manque de cas d'echec reel observe sur ces etapes pour justifier le temps d'implementation dans le cadre de ce projet."
+}
