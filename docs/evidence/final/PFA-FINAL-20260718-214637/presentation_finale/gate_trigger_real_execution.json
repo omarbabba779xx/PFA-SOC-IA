@@ -1,0 +1,23 @@
+{
+  "note": "Preuve que la garde http_case_creation_failed s'est reellement declenchee lors d'un test avec jeton API invalide (test de fiabilite du mecanisme de garde HTTP, session precedente). Requete refaite le 2026-07-23 sur l'API Shuffle pour recuperer les resultats bruts de cette execution historique.",
+  "execution_id": "0310a888-9645-4ac3-8d82-dfbdd1d18f1f",
+  "workflow": "PFA-FINAL-20260718-214637 - Orchestration complete SOC-IA",
+  "resultats_par_noeud": {
+    "http_1": "SUCCESS",
+    "http_5": "SUCCESS (au niveau transport Shuffle, mais code HTTP reel = 401)",
+    "http_case_creation_failed": "SUCCESS (la garde s'est bien declenchee)",
+    "http_6": "SKIPPED",
+    "http_misp_event": "SKIPPED",
+    "http_low_severity_tag": "SKIPPED",
+    "http_notification": "SKIPPED"
+  },
+  "http_5_reponse_brute": {
+    "status": 401,
+    "body": {
+      "type": "AuthenticationError",
+      "message": "Authentication failure"
+    },
+    "url": "http://172.21.0.1:9020/api/v1/case"
+  },
+  "conclusion": "Avec un jeton API TheHive volontairement invalide, TheHive a repondu 401. Shuffle a marque http_5 'SUCCESS' au sens transport (la requete HTTP a bien ete envoyee et une reponse recue), mais la garde de statut ($http_5.status larger than 299) a correctement route l'execution vers http_case_creation_failed au lieu de continuer vers Cortex/MISP/notification. Tous les noeuds en aval ont ete correctement SKIPPED. Preuve que le mecanisme de garde fonctionne reellement, pas seulement en theorie."
+}

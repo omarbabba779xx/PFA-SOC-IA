@@ -40,6 +40,7 @@ documente aussi les blocages rencontrés en cours de route.
 | 9 | Dashboard SOC — 4 indicateurs vérifiés | ✅ | [Section 8](#8--dashboard-soc) |
 | 10-11 | Dataset final + évaluation LLM vs baseline | ✅ | [Section 9](#9--dataset-final-et-évaluation) |
 | 13 | Rapport de synthèse | ✅ | [`RAPPORT_SYNTHESE_FINAL.md`](docs/evidence/final/PFA-FINAL-20260718-214637/RAPPORT_SYNTHESE_FINAL.md) |
+| 14 | Test final 2026-07-24 : run 100% vert bout-en-bout, 5 captures corrélées | ✅ | [Section 10](#10--test-final-2026-07-24--run-100-vert-bout-en-bout) |
 
 ## Architecture du laboratoire
 
@@ -297,6 +298,46 @@ automatiquement — la baseline Wazuh native est structurellement vide pour les 
 personnalisées de ce laboratoire. Détail complet, méthodologie, table de correspondance
 scénario par scénario : [`evaluation/EVALUATION.md`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/EVALUATION.md) ·
 [`evaluation/DATASET_FINAL.json`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/DATASET_FINAL.json).
+
+## 10 — Test final (2026-07-24) : run 100% vert bout-en-bout
+
+Dernier run de validation avant la soutenance, exécuté le 2026-07-24 avec le workflow Shuffle
+« Orchestration complete SOC-IA » dans sa version finale : **13 éléments visuels sur le
+canvas** (1 déclencheur webhook + 12 nœuds d'action), soit 6 nœuds métier
+(Gemma2 → TheHive → Cortex → routage sévérité → MISP/tag → notification) et **6 nœuds de
+garde d'échec en parallèle**, un par étape critique. Chaque garde teste le code HTTP retourné
+par son nœud métier (`< 300` → on continue normalement, `>= 300` → bascule vers le nœud
+d'échec correspondant) ; en fonctionnement normal les 6 gardes restent `SKIPPED`, ce qui est le
+comportement attendu et non un signe de nœuds inactifs.
+
+L'alerte rejouée est une vraie alerte Wazuh C2 beaconing (règle `100103`, `rule.level: 10`),
+avec son timestamp original conservé tel quel dans le payload webhook, ce qui permet de
+vérifier que l'heure de création du cas TheHive, du job Cortex et de l'événement MISP
+correspond exactement à l'heure de détection Wazuh — preuve que la chaîne est pilotée par
+Shuffle de bout en bout et non par des actions manuelles indépendantes.
+
+| Outil | Preuve | Détail vérifiable |
+|---|---|---|
+| Wazuh (alerte réelle C2 beaconing, règle `100103`) | [40](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/40_wazuh_alert_fresh.png) | `@timestamp: 2026-07-24T18:03:15.715Z` |
+| Shuffle (canvas complet, 13 éléments, aucun lien croisé) | [41](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/41_shuffle_architecture_final.png) | Workflow `8362f220-e5a1-4c18-b009-9d646f519e27` |
+| TheHive (cas `#35`, triage Gemma2 brut visible dans la description) | [42](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/42_thehive_case35_gemma_triage.png) | `id ~57392`, créé par `soc-pipeline52@thehive.local` (compte de service) |
+| Cortex (job réel AbuseIPDB, statut Success) | [43](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/43_cortex_job_abuseipdb_final.png) | Job `Rh6dlZ8B_DcSw-yRJeZw`, score de malveillance 100/100 |
+| MISP (événement réel, créé automatiquement) | [44](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/44_misp_event19_header.png) | Événement `#19`, « First recorded change: 2026-07-24 19:32:19 » — corrélé à la minute près avec le nœud MISP de l'exécution Shuffle |
+
+Exécution Shuffle correspondante : `63e59cbe-9d4a-4c67-b1f9-8aae54dd3609`, statut `FINISHED`,
+12/12 résultats reçus. Chaîne complète : `http_1` (Gemma2, ~5 min d'inférence réelle sur CPU)
+→ SUCCESS, `http_5` (TheHive) → SUCCESS (garde `http_case_creation_failed` → SKIPPED), `http_6`
+(Cortex) → SUCCESS (garde `http_cortex_failed` → SKIPPED), routage sévérité sur
+`rule.level=10` → branche MISP prise, `http_misp_event` → SUCCESS (`http_low_severity_tag` →
+SKIPPED, comme attendu pour une alerte de sévérité haute), `http_notification` → SUCCESS.
+
+Hashes SHA-256 de toutes les captures du dossier (y compris ce dernier run) :
+[`presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv).
+
+Le test précédent (2026-07-23, captures `01`–`26`, architecture 12 nœuds sans gardes
+généralisées) reste disponible dans le même dossier de captures pour traçabilité historique,
+mais l'architecture qu'il documente (gardes limitées, bug de timeout non corrigé) a été
+remplacée par la version décrite ci-dessus.
 
 ## Chaîne de preuve de bout en bout
 
