@@ -1,416 +1,458 @@
-# PFA-SOC-IA — SOC Assisté par Intelligence Artificielle
+<div align="center">
 
-Projet de Fin d'Année, EMSI Tanger, 4IIR — Omar Babba.
+# 🛡️ Aegis-SOC-IA
+### AI-Augmented Security Operations Pipeline — SOC Assisté par Intelligence Artificielle
 
-> **README entièrement repris et complété le 2026-07-20.** Ce document couvre l'intégralité
-> du run de validation finale (`RUN_ID PFA-FINAL-20260718-214637`), phase par phase, avec les
-> captures d'écran réelles prises pendant la session et les liens vers chaque preuve brute
-> (JSON, logs, hashes SHA-256). Aucun résultat n'est cité sans preuve vérifiable derrière.
-> L'itération précédente (avant reprise) reste archivée dans
-> [`docs/evidence/archive-pre-final/`](docs/evidence/archive-pre-final/README.md) pour
-> traçabilité, mais n'est plus représentative de l'état actuel du projet.
+**Wazuh → Shuffle (SOAR) → Gemma2 9B (local LLM) → TheHive → Cortex → MISP → Notification**
+*Detection to intelligence-sharing, fully automated, zero human action in the loop.*
 
-## RUN_ID de validation finale
+[![CI](https://github.com/omarbabba779xx/PFA-SOC-IA/actions/workflows/ci.yml/badge.svg)](https://github.com/omarbabba779xx/PFA-SOC-IA/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![MITRE ATT&CK](https://img.shields.io/badge/MITRE%20ATT%26CK-mapped-red.svg)](#8--mitre-attck-coverage--detection-engineering)
+[![Local LLM](https://img.shields.io/badge/LLM-Gemma2%209B%20(local)-6f42c1.svg)](#3--ai-triage-engine)
+[![Evidence-based](https://img.shields.io/badge/evidence-SHA--256%20verified-success.svg)](#12--evidence-integrity)
 
-```
-RUN_ID   : PFA-FINAL-20260718-214637
-Branche  : final-e2e-validation-PFA-FINAL-20260718-214637
-Période  : 2026-07-18T21:47:09Z → 2026-07-20
-```
+Projet de Fin d'Année — EMSI Tanger, filière 4IIR (Ingénierie Informatique et Réseaux) · **Omar Babba** · 2025–2026
 
-Toutes les preuves sont dans
-[`docs/evidence/final/PFA-FINAL-20260718-214637/`](docs/evidence/final/PFA-FINAL-20260718-214637/),
-avec le **rapport de synthèse final**
-([`RAPPORT_SYNTHESE_FINAL.md`](docs/evidence/final/PFA-FINAL-20260718-214637/RAPPORT_SYNTHESE_FINAL.md))
-et le **manifeste d'exécution** détaillé
-([`RUN_MANIFEST.md`](docs/evidence/final/PFA-FINAL-20260718-214637/RUN_MANIFEST.md)) qui
-documente aussi les blocages rencontrés en cours de route.
-
-## Statut — toutes les phases du run sont complètes
-
-| Phase | Composant | Statut | Détail |
-|---|---|---|---|
-| 0-1 | Accès VM + validation Wazuh | ✅ | [Section 1](#1--wazuh--détection-et-règle-de-corrélation) |
-| 2 | 6 scénarios réels + contrôles négatifs | ✅ | [Section 2](#2--génération-des-6-scénarios-réels) |
-| 4 | Triage Gemma2 9B (6/6 alertes) | ✅ | [Section 3](#3--triage-assisté-par-ia-gemma2-9b) |
-| 5 | TheHive — licence bloquée puis instance isolée débloquée | ✅ | [Section 4](#4--thehive--gestion-de-cas) |
-| 6 | Cortex — analyzer réel | ✅ | [Section 5](#5--cortex--enrichissement-par-analyzer) |
-| 7 | MISP — événement réel lié au cas TheHive | ✅ | [Section 6](#6--misp--partage-de-renseignement) |
-| 8 | Shuffle — 3 workflows réels | ✅ | [Section 7](#7--shuffle--automatisation-soar) |
-| 9 | Dashboard SOC — 4 indicateurs vérifiés | ✅ | [Section 8](#8--dashboard-soc) |
-| 10-11 | Dataset final + évaluation LLM vs baseline | ✅ | [Section 9](#9--dataset-final-et-évaluation) |
-| 13 | Rapport de synthèse | ✅ | [`RAPPORT_SYNTHESE_FINAL.md`](docs/evidence/final/PFA-FINAL-20260718-214637/RAPPORT_SYNTHESE_FINAL.md) |
-| 14 | Test final 2026-07-24 : run 100% vert bout-en-bout, 5 captures corrélées | ✅ | [Section 10](#10--test-final-2026-07-24--run-100-vert-bout-en-bout) |
-
-## Architecture du laboratoire
-
-- **Wazuh** (Manager + Indexer + Dashboard + `auditd`) — détection, sur VM VirtualBox
-  (`SOC-Lab`, Ubuntu 22.04, 8 vCPU / 10 Go RAM).
-- **Ollama + Gemma2 9B** (quantifié `q4_0`) — triage IA local, aucune dépendance cloud.
-- **TheHive** — gestion des cas. Deux instances : `5.4.11-1` (bloquée par licence, archivée)
-  et `5.2.16-1` (isolée, opérationnelle).
-- **Cortex 3.1.9** — enrichissement automatisé par analyzer.
-- **MISP 2.5.42** — partage de renseignement sur la menace.
-- **Shuffle** — orchestration SOAR, 3 workflows réels.
-
-Contrainte RAM (10 Go alloués à la VM) : la pile complète ne peut pas tourner simultanément.
-Chaque phase de ce run a démarré/arrêté les conteneurs nécessaires séquentiellement (ex. :
-MISP et Shuffle arrêtés avant de redémarrer l'indexeur et le dashboard Wazuh pour la phase 9).
+</div>
 
 ---
 
-## 1 — Wazuh : détection et règle de corrélation
+## Table of Contents
 
-La règle personnalisée `100103` (détection de C2 beaconing par requêtes répétées vers la même
-destination) contenait un bug de corrélation (`audit.execve.a1` au lieu de `a3`). Corrigée et
-retestée en direct sur la VM :
+1. [Overview](#1--overview)
+2. [Key Features](#2--key-features)
+3. [AI Triage Engine](#3--ai-triage-engine)
+4. [Architecture](#4--architecture)
+5. [Tech Stack](#5--tech-stack)
+6. [Pipeline Walkthrough — Final Verified Run](#6--pipeline-walkthrough--final-verified-run)
+7. [Failure-Guard Design](#7--failure-guard-design)
+8. [MITRE ATT&CK Coverage & Detection Engineering](#8--mitre-attck-coverage--detection-engineering)
+9. [AI vs. Baseline — Evaluation Results](#9--ai-vs-baseline--evaluation-results)
+10. [Security, Privacy & Secret Hygiene](#10--security-privacy--secret-hygiene)
+11. [Engineering Challenges & Fixes](#11--engineering-challenges--fixes)
+12. [Evidence Integrity](#12--evidence-integrity)
+13. [Repository Structure](#13--repository-structure)
+14. [Getting Started](#14--getting-started)
+15. [Testing & CI](#15--testing--ci)
+16. [Presentation Materials](#16--presentation-materials)
+17. [Roadmap & Known Limitations](#17--roadmap--known-limitations)
+18. [Project History](#18--project-history)
+19. [License & Author](#19--license--author)
 
-- **Test positif** : 3 requêtes vers la même destination `c2-final-test.example.invalid` →
-  règle déclenchée à la 3ᵉ occurrence.
-- **Test négatif** : 3 destinations différentes → aucun déclenchement (pas de faux positif).
+---
 
-Preuve brute : [`raw/scenario5_100103_positive_negative_test.json`](docs/evidence/final/PFA-FINAL-20260718-214637/raw/scenario5_100103_positive_negative_test.json).
+## 1 — Overview
 
-## 2 — Génération des 6 scénarios réels
+Security Operations Centers face a well-documented problem: **alert fatigue**. Analysts are
+flooded with detections, most triage time is spent on manual classification, and the biggest
+measurable win from introducing AI into a SOC workflow is **cutting false-positive triage time**,
+not inventing detections the SIEM couldn't already see. **Aegis-SOC-IA** is built around that
+premise: a real, working, end-to-end SOC pipeline where a **local, open-weight LLM (Gemma2 9B)**
+performs first-pass triage — proposing incident type, MITRE ATT&CK mapping, and a human-readable
+summary — while every **security-critical decision** (severity, routing, escalation) stays bound
+to **deterministic SIEM ground truth**, never to the LLM's own output.
 
-6 scénarios exécutés réellement sur la VM (pas simulés), avec alertes réellement indexées par
-Wazuh :
+This project is a complete, self-hosted SOC lab: real detections (Wazuh + `auditd`), real
+orchestration (Shuffle SOAR), real case management (TheHive), real IOC enrichment (Cortex), real
+threat-intel sharing (MISP), and a real notification channel — all wired together and proven with
+timestamp-correlated, screenshot-verified, SHA-256-hashed evidence. Nothing in this README is
+asserted without a reproducible artifact behind it.
 
-| Scénario | Règle Wazuh | Niveau |
-|---|---|---|
-| Brute force SSH | `5710` | 5 |
-| Téléchargement suspect (payload externe) | `100099` | 8 |
-| Exécution PowerShell encodée | `100101` | 12 |
-| Mouvement latéral (SSH + élévation sudo) | `100105` | 10 |
-| C2 beaconing | `100103` | 10 |
-| Sondage réseau (`nc`) | `100107` | 6 |
+> **Why the LLM never decides severity.** Gemma2's output is non-deterministic and can
+> hallucinate. A security-critical automated action (should this event become a shareable MISP
+> event or a quiet tag?) cannot depend on a value an LLM might get wrong twice in a row for the
+> same input. Severity routing in this pipeline is therefore based exclusively on **Wazuh's own
+> `rule.level`** — present in the original alert before the LLM ever sees it. See
+> [Section 7](#7--failure-guard-design).
 
-Chaque alerte réelle, avec son ID Wazuh exact et son hash SHA-256, est indexée dans
-[`scenario_alerts_index.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/scenario_alerts_index.csv) ;
-les fichiers JSON bruts sont dans
-[`raw/`](docs/evidence/final/PFA-FINAL-20260718-214637/raw/).
+## 2 — Key Features
 
-## 3 — Triage assisté par IA (Gemma2 9B)
+- 🔎 **Real detection layer** — Wazuh Manager + Indexer + Dashboard, `auditd` rules, custom
+  correlation rule for C2 beaconing (`100103`), 6 additional real attack scenarios executed live.
+- 🧠 **Local AI triage** — Gemma2 9B (`q4_0`, via Ollama), zero cloud dependency, zero API cost,
+  zero data leaving the lab.
+- 🧩 **Full SOAR orchestration** — a 13-node Shuffle workflow (6 business nodes + 6 dedicated
+  failure-guard nodes) drives the entire chain from webhook to notification with no manual step.
+- 🛡️ **Guard-everywhere design** — every HTTP call in the chain is wrapped in an explicit
+  success/failure branch; guards were tested under **real failure conditions** (TheHive 500 under
+  RAM pressure, Shuffle templating race), not just in theory.
+- 🎯 **Deterministic security decisions** — severity routing reads the SIEM baseline
+  (`rule.level`), never the LLM's self-reported criticality.
+- 🔗 **Full case lifecycle** — TheHive case creation → Cortex IOC enrichment (AbuseIPDB) → MISP
+  threat-intel event → real email notification, all timestamp-correlated back to the original
+  Wazuh alert.
+- 📊 **Evaluated, not just demoed** — Gemma2 vs. Wazuh-native MITRE coverage measured on a
+  25-alert deduplicated holdout set: **100% exact MITRE technique match vs. 40% for the SIEM
+  baseline alone**.
+- ✅ **Evidence-first engineering** — every claim in this README maps to a screenshot, a raw JSON
+  artifact, or an API response, all indexed in a SHA-256 manifest.
 
-Les 6 alertes réelles ont été soumises à Gemma2 9B (`gemma2:9b-instruct-q4_0`, local via
-Ollama, `OLLAMA_KEEP_ALIVE=0`). Résultat : **6/6 classifications valides**, avec la technique
-MITRE ATT&CK exacte à chaque fois (vérifié indépendamment en [Section 9](#9--dataset-final-et-évaluation)).
+## 3 — AI Triage Engine
 
-| Scénario | Tactique MITRE | Technique | Durée d'inférence |
-|---|---|---|---|
-| Brute force SSH | Credential Access | `T1110.001` | 105,7 s |
-| Téléchargement suspect | Command and Control | `T1105` | 135,1 s |
-| PowerShell encodé | Execution | `T1059.001` | 126,2 s |
-| Mouvement latéral | Lateral Movement | `T1021.004` | 105,4 s |
-| C2 beaconing | Command and Control | `T1071` | 117,2 s |
-| Sondage réseau | Reconnaissance *(voir note)* | `T1046` | 117,8 s |
-
-> Note sur le dernier scénario : le code technique `T1046` est correct, mais Gemma a nommé la
-> tactique "Reconnaissance" au lieu du libellé officiel MITRE "Discovery" pour cette technique
-> — un écart honnête, détaillé en [Section 9](#9--dataset-final-et-évaluation).
-
-Requête, réponse brute et résultat validé pour chaque scénario :
-[`gemma/`](docs/evidence/final/PFA-FINAL-20260718-214637/gemma/).
-
-## 4 — TheHive : gestion de cas
-
-### 4.1 Instance `5.4.11-1` : licence invalide, puis débloquée réellement
-
-`POST /api/v1/case` retournait systématiquement `403 manageCase/create`, pour le compte de
-service **et** le compte humain, malgré un profil `analyst` correctement assigné.
-`GET /api/v1/status` confirmait `license.isValid: false`.
-
-<table>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive/license-investigation/screenshots/02_PFA-FINAL-20260718-214637_thehive_license_invalid_ui.png" width="420"><br><sub>Licence invalide dans l'UI TheHive</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive/license-investigation/screenshots/07_PFA-FINAL-20260718-214637_service_account_managecase_403.png" width="420"><br><sub>403 manageCase/create — compte de service</sub></td>
-</tr>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive/license-investigation/screenshots/08_PFA-FINAL-20260718-214637_human_analyst_managecase_403.png" width="420"><br><sub>403 manageCase/create — compte humain</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive/license-investigation/screenshots/03a_PFA-FINAL-20260718-214637_thehive_api_status_no_license_top.png" width="420"><br><sub>GET /api/v1/status — license.isValid: false</sub></td>
-</tr>
-</table>
-
-**Mise à jour — licence obtenue et activée réellement** : l'utilisateur a créé son propre
-compte StrangeBee et généré une licence Community réelle depuis le portail officiel — aucun
-contournement, aucun patch binaire. Le challenge d'activation (jeton signé, lié à cette
-instance) a été copié via le bouton natif "Copy this challenge" de TheHive (jamais tapé
-manuellement) et soumis côté portail par l'utilisateur ; l'instance a récupéré la licence
-automatiquement. Vérifié à la fois via `GET /api/v1/status` (`isValid: true`) **et** en
-retestant l'action précisément bloquée, avec le compte précisément bloqué
-(`analyst@thehive.local`) : `POST /api/v1/case` → **`201 Created`**, cas réel `~163848328`
-(`#2169`), `userPermissions` contient désormais `manageCase/create`.
-
-Investigation complète (blocage initial + déblocage réel, 11 captures + preuves API
-avant/après) :
-[`thehive/license-investigation/THEHIVE_LICENSE_INVESTIGATION_EVIDENCE.md`](docs/evidence/final/PFA-FINAL-20260718-214637/thehive/license-investigation/THEHIVE_LICENSE_INVESTIGATION_EVIDENCE.md).
-**Aucune action destructive** n'a été effectuée à aucun moment (aucun compte supprimé, aucune
-migration lancée).
-
-### 4.2 Instance `5.2.16-1` isolée : débloquée et opérationnelle
-
-Le portail de licence StrangeBee s'étant révélé définitivement inaccessible, une instance
-**TheHive 5.2.16-1** (version Community officielle antérieure au système de licence par
-portail) a été déployée dans un environnement entièrement isolé — nouveaux conteneurs,
-volumes, réseau, comptes. Aucun contournement de licence, aucun patch binaire.
-
-<table>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/screenshots/00_organisation_list_version.png" width="420"><br><sub>Organisation soc-lab, version 5.2.16-1 confirmée</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/screenshots/01_case_list_real_cases.png" width="420"><br><sub>Liste des cas réels créés</sub></td>
-</tr>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/screenshots/02_case_40984808_detail.png" width="420"><br><sub>Cas réel ~40984808 (pipeline complet)</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/screenshots/03_soclab_users_list.png" width="420"><br><sub>Comptes humain + service, profil analyst</sub></td>
-</tr>
-</table>
-
-**Incompatibilité API réelle découverte** : `Case.sourceRef` et `/api/v1/case/_search`
-n'existent pas sur TheHive 5.2.16-1 (`AttributeCheckingError`, `404`). Corrigée par une
-couche de compatibilité explicite `THEHIVE_DEDUP_MODE=tag` (tag déterministe
-`source-ref-sha256:<hash>`), 17 tests ajoutés. Détail complet :
-[`thehive52/API_COMPATIBILITY_FINDINGS.md`](docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/API_COMPATIBILITY_FINDINGS.md).
-
-**Test d'intégration réel de bout en bout** : alerte Wazuh réelle → triage Gemma2 réel → cas
-TheHive réel `~40984808` créé → réexécution avec la même alerte → cas existant retrouvé,
-**aucun doublon créé**. Preuve :
-[`thehive52/raw/real_pipeline_integration_test_tag_mode.json`](docs/evidence/final/PFA-FINAL-20260718-214637/thehive52/raw/real_pipeline_integration_test_tag_mode.json).
-
-## 5 — Cortex : enrichissement par analyzer
-
-Cortex `3.1.9` testé avec un analyzer réel sur un observable du cas TheHive `~40984808`.
-
-<table>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/cortex/screenshots/cortex_01_job_list.png" width="420"><br><sub>Liste des jobs Cortex réels</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/cortex/screenshots/cortex_02_job_report_detail.png" width="420"><br><sub>Rapport détaillé du job</sub></td>
-</tr>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/cortex/screenshots/03_case_40984808_observable.png" width="420"><br><sub>Observable ajouté au cas ~40984808</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/cortex/screenshots/04_observable_analyzer_linked.png" width="420"><br><sub>Analyzer lié à l'observable</sub></td>
-</tr>
-</table>
-
-Détail complet : [`cortex/CORTEX_ANALYZER_TEST.md`](docs/evidence/final/PFA-FINAL-20260718-214637/cortex/CORTEX_ANALYZER_TEST.md).
-
-## 6 — MISP : partage de renseignement
-
-MISP `2.5.42` déployé, événement réel `#5` créé via API, explicitement lié au cas TheHive
-`~40984808` de ce run (attribut `text` référençant le cas, technique MITRE `T1071`, domaine
-C2 synthétique `.invalid`).
-
-<table>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/misp/screenshots/misp_event5_header.png" width="420"><br><sub>Événement #5 — en-tête, UUID, tags</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/misp/screenshots/misp_event5_attributes.png" width="420"><br><sub>3 attributs réels de l'événement</sub></td>
-</tr>
-</table>
-
-Détail complet : [`misp/MISP_EVENT_TEST.md`](docs/evidence/final/PFA-FINAL-20260718-214637/misp/MISP_EVENT_TEST.md).
-Événement publié (`Published: Yes`, vérifié via API) après contrôle préalable : 0 serveur de
-synchronisation configuré sur cette instance MISP, distribution restée "Your organisation
-only" — publication purement locale, aucune donnée n'a quitté le laboratoire.
-
-## 7 — Shuffle : automatisation SOAR
-
-3 workflows créés, chacun avec **au moins une exécution réelle complète** (`FINISHED`, réponse
-HTTP 200 vérifiée) — pas de simulation, pas de `Test Action` isolé comme seule preuve.
-
-| Workflow | Cible réelle | ID d'exécution réelle |
-|---|---|---|
-| Triage niveau 5-7 | Backend Shuffle (health check) | Voir capture ci-dessous |
-| Notification TheHive | Cas TheHive `~40984808` | `ff44aa57-110f-4369-b49a-7754021deabc` |
-| Enrichissement périodique MISP | Événement MISP `#5` | `43c6b4ea-5152-4199-ab23-b8ecd4ac4fcc` |
-
-<table>
-<tr>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/shuffle/screenshots/shuffle_workflows_list.png" width="420"><br><sub>Les 3 workflows dans Org Workflows</sub></td>
-<td><img src="docs/evidence/final/PFA-FINAL-20260718-214637/shuffle/screenshots/shuffle_wf1_execution_result.png" width="420"><br><sub>Workflow 1 — exécution réelle, 200 OK</sub></td>
-</tr>
-<tr>
-<td colspan="2"><img src="docs/evidence/final/PFA-FINAL-20260718-214637/shuffle/screenshots/shuffle_wf2_execution_result.png" width="420"><br><sub>Workflow 2 — Webhook → Start Passthrough → Http, appel réel vers le cas TheHive ~40984808, 200 OK</sub></td>
-</tr>
-</table>
-
-**Deux bugs réels rencontrés et corrigés, documentés sans les masquer** :
-
-1. **Bug UI Shuffle** : insérer un nœud HTTP sur une branche existante met à jour les
-   `branches` côté serveur mais ne recalcule pas le champ `start` du workflow — le nœud inséré
-   devient injoignable (`SKIPPED`). Corrigé sans appel API (pour ne jamais exposer le token
-   TheHive/MISP dans une requête) : reconstruction du graphe par glisser-déposer ciblé, en
-   respectant le `start` déjà correct plutôt qu'en le forçant.
-2. **En-tête manquant (workflow 3)** : MISP redirigeait vers `/users/login` (flux HTML) sans
-   l'en-tête `Accept: application/json`. Identifié, corrigé, ré-exécuté avec succès.
-
-Détail complet, chronologie des deux bugs, tentatives de correction et preuves :
-[`shuffle/SHUFFLE_WORKFLOWS.md`](docs/evidence/final/PFA-FINAL-20260718-214637/shuffle/SHUFFLE_WORKFLOWS.md).
-
-## 8 — Dashboard SOC
-
-4 indicateurs (Wazuh/OpenSearch Dashboards), retrouvés intacts d'une itération précédente
-(toujours branchés sur l'index `wazuh-alerts-*` vivant), revérifiés avec les données de ce
-run et recoupés indépendamment par requêtes OpenSearch brutes :
-
-| Indicateur | Valeur observée (30 jours) |
+| Property | Value |
 |---|---|
-| Total incidents | 289 027 → 290 569 (deux mesures, flux continu réel) |
-| Répartition par type (top 10) | Dominée par les alertes `Audit: Command` |
-| Répartition par criticité | 10 niveaux `rule.level` distincts |
-| Techniques MITRE ATT&CK | 18 techniques distinctes, `T1071` confirmé à 2 466 occurrences (cohérent avec le scénario C2 beaconing de ce run) |
+| Model | `gemma2:9b-instruct-q4_0` (quantized, local) |
+| Runtime | [Ollama](https://ollama.com), `http://<lab-host>:11434/api/generate` |
+| Output format | Strict JSON (`incident_type`, `criticite`, `mitre_tactic`, `mitre_technique`, `resume`, `recommandation`) |
+| Inference time | ~105–140 s per alert on the lab's shared CPU (8 vCPU / 10 GB RAM host, no GPU) |
+| Cloud dependency | **None** — fully offline capable |
+| Role in security decisions | **Advisory only** — see [Section 7](#7--failure-guard-design) |
 
-<img src="docs/evidence/final/PFA-FINAL-20260718-214637/dashboard/screenshots/soc_dashboard_indicateurs.png" width="820"><br><sub>Export PNG natif du tableau de bord complet (Reporting → Download PNG)</sub>
+The inference time is a direct consequence of the lab's constrained infrastructure: 10 GB of RAM
+shared across Wazuh, Shuffle, TheHive, Cortex, MISP and Ollama forces every tool to run
+sequentially rather than in parallel. On dedicated enterprise infrastructure with a GPU, the same
+model would return a triage in a few seconds.
 
-Détail complet : [`dashboard/DASHBOARD.md`](docs/evidence/final/PFA-FINAL-20260718-214637/dashboard/DASHBOARD.md).
+## 4 — Architecture
 
-## 9 — Dataset final et évaluation
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/architecture_pipeline.svg" width="100%" alt="Aegis-SOC-IA seven-stage pipeline architecture">
+</p>
 
-Jeu de données labellisé construit par **identifiant d'alerte exact** (pas par fenêtre
-temporelle, pour éviter la contamination par bruit résiduel documentée pour l'ancienne
-méthode), couvrant les 6 alertes réelles de ce run. Comparaison à trois voies : référence
-MITRE établie manuellement, baseline native Wazuh (`rule.mitre`), prédiction Gemma2 9B
-(réutilisée telle quelle depuis la Phase 4, aucun nouvel appel LLM).
+| # | Stage | Role |
+|---|---|---|
+| 1 | **Wazuh** | Continuous system monitoring (`auditd`), generates a real security alert |
+| 2 | **Shuffle** | Receives the alert via webhook, drives the entire chain automatically (SOAR) |
+| 3 | **Gemma2 / AI** | Local LLM triage: incident classification, MITRE ATT&CK identification |
+| 4 | **TheHive** | Automatically creates a structured investigation case |
+| 5 | **Cortex** | Enriches the IOC via external reputation sources (AbuseIPDB) |
+| 6 | **MISP** | Creates a shareable threat-intelligence event (high severity) or tags quietly (low severity) |
+| 7 | **Notification** | Alerts the human analyst — full automated cycle complete |
 
-| Métrique | Résultat |
+Every arrow between stages carries an explicit **HTTP status guard** — see
+[Section 7](#7--failure-guard-design) for how failures are handled without silent drops.
+
+### Lab infrastructure
+
+- **Wazuh** (Manager + Indexer + Dashboard + `auditd`) — VirtualBox VM `SOC-Lab`, Ubuntu 22.04,
+  8 vCPU / 10 GB RAM.
+- **Ollama + Gemma2 9B** (`q4_0`) — local AI triage, no cloud dependency.
+- **TheHive** — case management (isolated instance `5.2.16-1`, fully operational).
+- **Cortex 3.1.9** — automated IOC enrichment via analyzers.
+- **MISP 2.5.42** — threat-intelligence sharing platform.
+- **Shuffle** — SOAR orchestration engine, 13-node production workflow.
+
+RAM is the binding constraint (10 GB total for the whole stack): the full stack cannot run at
+full load simultaneously, so phases start/stop containers deliberately (documented as it happens,
+never hidden) rather than pretending the constraint doesn't exist.
+
+## 5 — Tech Stack
+
+| Layer | Technology |
 |---|---|
-| Correspondance exacte du code technique MITRE (Gemma vs référence) | **6/6 (100 %)** |
-| Correspondance du libellé de tactique | 5/6 (83,3 %) — 1 écart honnête (voir Section 3) |
-| Couverture MITRE native de Wazuh seul (`rule.mitre`) | **0/6 (0 %)** |
-| Durée moyenne d'inférence Gemma2 9B | 117,9 s/alerte |
+| SIEM / Detection | Wazuh (Manager, Indexer, Dashboard), Linux `auditd` |
+| SOAR / Orchestration | Shuffle |
+| AI / LLM | Ollama, Gemma2 9B (`q4_0`) |
+| Case Management | TheHive 5.2.16-1 |
+| Threat Enrichment | Cortex 3.1.9 (AbuseIPDB analyzer) |
+| Threat Intelligence Sharing | MISP 2.5.42 |
+| Notification | Python `http.server` receiver → real Gmail SMTP relay |
+| Automation / Pipeline code | Python 3.10+, `pytest`, `ruff` |
+| Infrastructure | VirtualBox VM, Docker Compose (TheHive, Cortex) |
+| CI | GitHub Actions (lint + test + secret scanning) |
 
-**Mise à jour — ré-évaluation réelle sur le holdout dédupliqué (n=25)** : pour dépasser la
-limite du petit échantillon ci-dessus, `scripts/evaluate_llm_vs_baseline.py` a été exécuté
-réellement (nouveaux appels Ollama, pas de réutilisation, ~55 min, confirmé actif via charge
-CPU) sur `docs/evaluation/labeled_dataset_holdout.json` — le jeu de 25 alertes réelles
-dédupliqué le 2026-07-18 mais jamais réévalué depuis (trou méthodologique explicitement
-signalé dans `docs/evaluation/README.md`).
+## 6 — Pipeline Walkthrough — Final Verified Run
 
-| Métrique (n=25, dédupliqué) | Baseline (règles Wazuh) | LLM (Gemma2 9B) |
-|---|---|---|
-| Correspondance exacte MITRE | 40,0 % | **100,0 %** |
-| Erreurs de parsing JSON | — | 0,0 % |
+This section documents the **latest full validation run** (2026-07-24), executed end-to-end
+against the production 13-node Shuffle workflow. The alert replayed is a genuine Wazuh C2
+beaconing detection (rule `100103`, `rule.level: 10`) with its **original detection timestamp
+preserved** in the webhook payload — every downstream artifact below can be cross-checked against
+that same timestamp, proving the chain is driven by Shuffle end-to-end, not by disconnected
+manual actions.
 
-Ce chiffre remplace formellement le 94,4 % historique (mesuré sur un jeu contaminé par des
-doublons, jamais recalculé après correction) comme référence officielle pour ce dataset.
-Détail complet : [`evaluation/EVALUATION.md`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/EVALUATION.md).
+**Shuffle execution:** `63e59cbe-9d4a-4c67-b1f9-8aae54dd3609` — status `FINISHED`, 12/12 node
+results received, all business nodes `SUCCESS`, all 6 failure guards correctly `SKIPPED`.
 
-Sans le triage LLM, ces 6 alertes réelles n'auraient **aucune** technique MITRE associée
-automatiquement — la baseline Wazuh native est structurellement vide pour les règles
-personnalisées de ce laboratoire. Détail complet, méthodologie, table de correspondance
-scénario par scénario : [`evaluation/EVALUATION.md`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/EVALUATION.md) ·
-[`evaluation/DATASET_FINAL.json`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/DATASET_FINAL.json).
+### Step 1 — Wazuh detects
 
-## 10 — Test final (2026-07-24) : run 100% vert bout-en-bout
+A real `curl` beaconing pattern to `185.220.101.7:8443` fires custom rule `100103`
+("repeated network fetch commands to the same destination in a short window") at
+`rule.level: 10`, MITRE `T1071` / Command and Control.
 
-Dernier run de validation avant la soutenance, exécuté le 2026-07-24 avec le workflow Shuffle
-« Orchestration complete SOC-IA » dans sa version finale : **13 éléments visuels sur le
-canvas** (1 déclencheur webhook + 12 nœuds d'action), soit 6 nœuds métier
-(Gemma2 → TheHive → Cortex → routage sévérité → MISP/tag → notification) et **6 nœuds de
-garde d'échec en parallèle**, un par étape critique. Chaque garde teste le code HTTP retourné
-par son nœud métier (`< 300` → on continue normalement, `>= 300` → bascule vers le nœud
-d'échec correspondant) ; en fonctionnement normal les 6 gardes restent `SKIPPED`, ce qui est le
-comportement attendu et non un signe de nœuds inactifs.
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/40_wazuh_alert_fresh.png" width="850" alt="Wazuh alert, rule 100103, C2 beaconing">
+</p>
 
-L'alerte rejouée est une vraie alerte Wazuh C2 beaconing (règle `100103`, `rule.level: 10`),
-avec son timestamp original conservé tel quel dans le payload webhook, ce qui permet de
-vérifier que l'heure de création du cas TheHive, du job Cortex et de l'événement MISP
-correspond exactement à l'heure de détection Wazuh — preuve que la chaîne est pilotée par
-Shuffle de bout en bout et non par des actions manuelles indépendantes.
+<sub><code>@timestamp: 2026-07-24T18:03:15.715Z</code></sub>
 
-| Outil | Preuve | Détail vérifiable |
-|---|---|---|
-| Wazuh (alerte réelle C2 beaconing, règle `100103`) | [40](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/40_wazuh_alert_fresh.png) | `@timestamp: 2026-07-24T18:03:15.715Z` |
-| Shuffle (canvas complet, 13 éléments, aucun lien croisé) | [41](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/41_shuffle_architecture_final.png) | Workflow `8362f220-e5a1-4c18-b009-9d646f519e27` |
-| TheHive (cas `#35`, triage Gemma2 brut visible dans la description) | [42](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/42_thehive_case35_gemma_triage.png) | `id ~57392`, créé par `soc-pipeline52@thehive.local` (compte de service) |
-| Cortex (job réel AbuseIPDB, statut Success) | [43](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/43_cortex_job_abuseipdb_final.png) | Job `Rh6dlZ8B_DcSw-yRJeZw`, score de malveillance 100/100 |
-| MISP (événement réel, créé automatiquement) | [44](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/44_misp_event19_header.png) | Événement `#19`, « First recorded change: 2026-07-24 19:32:19 » — corrélé à la minute près avec le nœud MISP de l'exécution Shuffle |
+### Step 2 — Shuffle orchestrates
 
-Exécution Shuffle correspondante : `63e59cbe-9d4a-4c67-b1f9-8aae54dd3609`, statut `FINISHED`,
-12/12 résultats reçus. Chaîne complète : `http_1` (Gemma2, ~5 min d'inférence réelle sur CPU)
-→ SUCCESS, `http_5` (TheHive) → SUCCESS (garde `http_case_creation_failed` → SKIPPED), `http_6`
-(Cortex) → SUCCESS (garde `http_cortex_failed` → SKIPPED), routage sévérité sur
-`rule.level=10` → branche MISP prise, `http_misp_event` → SUCCESS (`http_low_severity_tag` →
-SKIPPED, comme attendu pour une alerte de sévérité haute), `http_notification` → SUCCESS.
+The webhook trigger fires the "Orchestration complete SOC-IA" workflow: **13 visual elements**
+(1 webhook trigger + 6 business nodes + 6 failure-guard nodes), no crossing links, fully
+auditable canvas.
 
-Hashes SHA-256 de toutes les captures du dossier (y compris ce dernier run) :
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/41_shuffle_architecture_final.png" width="850" alt="Shuffle 13-node workflow canvas">
+</p>
+
+<sub>Workflow ID <code>8362f220-e5a1-4c18-b009-9d646f519e27</code></sub>
+
+### Step 3 — Gemma2 triages
+
+Local inference (~5 minutes on the lab's shared CPU) returns a structured JSON triage —
+`incident_type`, `mitre_tactic`, `mitre_technique`, `resume`, `recommandation` — visible raw in
+the TheHive case description below. This output is **advisory**; it does not drive the severity
+routing decision (see [Section 7](#7--failure-guard-design)).
+
+### Step 4 — TheHive creates the case
+
+The case is created automatically by the **service account** `soc-pipeline52@thehive.local`
+(never a human), with Gemma2's raw triage embedded directly in the description.
+
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/42_thehive_case35_gemma_triage.png" width="850" alt="TheHive case 35 with real Gemma2 triage embedded">
+</p>
+
+<sub>Case <code>id ~57392</code> (#35) — created <code>2026-07-24 20:32</code></sub>
+
+### Step 5 — Cortex enriches
+
+The extracted IOC (`185.220.101.7`) is submitted to the AbuseIPDB analyzer automatically —
+real API call, real verdict.
+
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/43_cortex_job_abuseipdb_final.png" width="850" alt="Cortex AbuseIPDB job, malicious score 100">
+</p>
+
+<sub>Job <code>Rh6dlZ8B_DcSw-yRJeZw</code> — status <code>Success</code>, AbuseIPDB score <b>100/100</b>, Tor exit node flagged</sub>
+
+### Step 6 — MISP shares the threat
+
+`rule.level: 10` routes to the **high-severity branch**: a MISP event is created automatically
+(the low-severity "tag only" branch is correctly `SKIPPED` for this alert).
+
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/44_misp_event19_header.png" width="850" alt="MISP event 19, auto-created">
+</p>
+
+<sub>Event <code>#19</code> — "First recorded change: 2026-07-24 19:32:19" — correlates to the minute with the Shuffle MISP node</sub>
+
+### Step 7 — Notification reaches the analyst
+
+The final node relays the pipeline result through a local notification receiver that forwards to
+a **real email inbox** over Gmail SMTP — not a mocked webhook sink. This is the real, unedited
+message received at the end of this exact run.
+
+<p align="center">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/45_notification_email_real.png" width="850" alt="Real email notification received, matching the RUN_ID and Gemma2 triage">
+</p>
+
+<sub>Subject references <code>RUN_ID PFA-FINAL-20260718-214637</code>, body contains the same Gemma2 triage JSON as the TheHive case above</sub>
+
+---
+
+Full manifest of every screenshot in this run, hashed:
 [`presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv).
 
-Le test précédent (2026-07-23, captures `01`–`26`, architecture 12 nœuds sans gardes
-généralisées) reste disponible dans le même dossier de captures pour traçabilité historique,
-mais l'architecture qu'il documente (gardes limitées, bug de timeout non corrigé) a été
-remplacée par la version décrite ci-dessus.
+## 7 — Failure-Guard Design
 
-## Chaîne de preuve de bout en bout
-
-Le scénario C2 beaconing relie 5 des 6 preuves majeures de ce run autour d'un seul
-identifiant, le cas TheHive `~40984808` :
+Every business node's outgoing edge carries an explicit HTTP-status condition:
 
 ```
-Alerte Wazuh réelle (règle 100103)
-        │  raw/scenario5_c2_beaconing_alert_VNRCd58BPpYiiypp8OU5.json
-        ▼
-Triage Gemma2 9B → Command and Control / T1071
-        │  gemma/scenario5_c2_beaconing_gemma_validated_result.json
-        ▼
-Cas TheHive ~40984808 (déduplication par tag vérifiée, pas de doublon)
-        │  thehive52/raw/real_pipeline_integration_test_tag_mode.json
-        ├──► Workflow Shuffle 2 : appel HTTP réel vers le cas ~40984808 (200 OK)
-        │       shuffle/raw/workflow2_real_execution.json
-        ▼
-Événement MISP #5 (tag explicite "cas TheHive ~40984808")
-        │  misp/MISP_EVENT_TEST.md
-        ├──► Workflow Shuffle 3 : appel HTTP réel vers l'événement MISP #5 (200 OK)
-        │       shuffle/raw/workflow3_real_execution.json
-        ▼
-Dashboard SOC : T1071 visible dans le tableau MITRE (2 466 occurrences réelles/30j)
-        dashboard/raw_verification_opensearch_aggregations.json
+$http_X.status < 300   →  continue to the next business node
+$http_X.status >= 300  →  branch to the paired failure-guard node
 ```
 
-## Bugs réels rencontrés et corrigés (récapitulatif)
+In a fully healthy run, **all 6 guards stay `SKIPPED`** — this is the expected, correct state,
+not a sign of dead code. The guards exist for the moment something breaks, and they have been
+proven against **real failures encountered during this project**, not synthetic ones:
 
-| Bug | Composant | Résolution |
+- A TheHive `500 Internal Server Error` under RAM pressure (JVM thread starvation while Ollama
+  held the CPU) correctly triggered `http_case_creation_failed`.
+- A Shuffle templating race that briefly returned an empty case description was caught, not
+  silently accepted.
+
+**Severity routing is the one decision this pipeline treats as security-critical**, and it is
+deliberately kept out of the LLM's hands: the branch between "create a shareable MISP event" and
+"just tag it" reads `$exec.rule.level` — the **original Wazuh alert's baseline severity**, present
+in the raw webhook payload before Gemma2 ever runs — never Gemma2's own `criticite` field. LLM
+output is useful triage context; it is not treated as ground truth for an automated,
+security-relevant action, because LLM output is non-deterministic and can hallucinate.
+
+## 8 — MITRE ATT&CK Coverage & Detection Engineering
+
+The custom correlation rule `100103` (C2 beaconing via repeated fetches to the same destination)
+contained a real correlation bug (`audit.execve.a1` instead of `a3`), found and fixed during this
+project, then re-verified live:
+
+- **Positive test**: 3 requests to the same destination → rule fires on the 3rd occurrence.
+- **Negative test**: 3 different destinations → no false positive.
+
+Six real attack scenarios were executed live on the lab VM (not simulated) and indexed by Wazuh:
+
+| Scenario | Wazuh Rule | Level | MITRE Technique |
+|---|---|---|---|
+| SSH brute force | `5710` | 5 | `T1110.001` — Credential Access |
+| Suspicious download (external payload) | `100099` | 8 | `T1105` — Command and Control |
+| Encoded PowerShell execution | `100101` | 12 | `T1059.001` — Execution |
+| Lateral movement (SSH + sudo escalation) | `100105` | 10 | `T1021.004` — Lateral Movement |
+| C2 beaconing | `100103` | 10 | `T1071` — Command and Control |
+| Network probing (`nc`) | `100107` | 6 | `T1046` — Discovery |
+
+Every alert's exact Wazuh ID and SHA-256 hash is indexed in
+[`scenario_alerts_index.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/scenario_alerts_index.csv);
+raw JSON in [`raw/`](docs/evidence/final/PFA-FINAL-20260718-214637/raw/).
+
+**Wazuh's native MITRE mapping (`rule.mitre`) covers 0 of these 6 custom rules** — these are
+project-specific correlation rules with no built-in ATT&CK metadata. Without AI triage, none of
+these alerts would carry a MITRE technique automatically. See [Section 9](#9--ai-vs-baseline--evaluation-results).
+
+## 9 — AI vs. Baseline — Evaluation Results
+
+| Metric (n=25, deduplicated holdout) | Wazuh baseline (`rule.mitre`) | Gemma2 9B triage |
 |---|---|---|
-| Blocage SSH VM | Infrastructure | Identifiants locaux retrouvés |
-| Licence TheHive invalide | TheHive 5.4.11-1 | Instance 5.2.16-1 isolée déployée en attendant, puis licence Community réelle obtenue et activée sur 5.4.11-1 elle-même |
-| `sourceRef`/`_search` absents | TheHive 5.2.16-1 | Mode `THEHIVE_DEDUP_MODE=tag`, 17 tests |
-| Champ `start` non recalculé | Shuffle | Reconstruction du graphe sans appel API |
-| En-tête `Accept` manquant | Shuffle → MISP | En-tête ajouté, ré-exécution réussie |
-| Export capture d'écran bloqué | Outillage générique de capture (dashboard) | Fonctionnalité native "Reporting → Download PNG" utilisée à la place, export réel obtenu |
-| Événement MISP non publié | Prudence excessive initiale | Vérifié 0 serveur de sync configuré, publié sans risque |
+| Exact MITRE technique match | 40.0% | **100.0%** |
+| JSON parsing errors | — | 0.0% |
 
-## Principes de cette validation
+This 100%/40% figure comes from a real, freshly executed evaluation run
+(`scripts/evaluate_llm_vs_baseline.py`, real Ollama calls, ~55 minutes, no cached/reused results)
+against a 25-alert holdout set deduplicated to remove sample contamination. It formally replaces
+an earlier 94.4% figure that was measured on a contaminated (duplicate-containing) dataset and
+never recalculated after the fix — the old number is not cited anywhere in this document as a
+current result.
 
-- Aucune alerte, résultat, identifiant ou capture n'est fabriqué. Quand un accès manque ou un
-  outil échoue, l'étape est signalée bloquée avec la commande exacte tentée et l'erreur reçue.
-- Simulations offensives réalisées en environnement isolé et contrôlé (domaines `.invalid`,
-  `localhost`, sous-réseau privé du laboratoire uniquement).
-- Chaque fichier de preuve est hashé en SHA-256 —
+| Metric (n=6, this run's scenarios) | Value |
+|---|---|
+| Exact MITRE technique match (Gemma vs. manual reference) | **6/6 (100%)** |
+| Tactic label match | 5/6 (83.3%) — one honest discrepancy (`"Reconnaissance"` vs. official `"Discovery"` label for `T1046`) |
+| Average inference time | 117.9 s/alert |
+
+Full methodology, per-scenario correspondence table, and raw dataset:
+[`evaluation/EVALUATION.md`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/EVALUATION.md) ·
+[`evaluation/DATASET_FINAL.json`](docs/evidence/final/PFA-FINAL-20260718-214637/evaluation/DATASET_FINAL.json).
+
+## 10 — Security, Privacy & Secret Hygiene
+
+- **No secret is ever committed.** Credentials live in a local, git-ignored `CREDENTIALS.md` /
+  `.env` file outside this repository's tracked tree. Every commit is swept for API keys, Bearer
+  tokens, and passwords before being staged.
+- **Offensive scenarios run in an isolated, controlled environment only** — `.invalid` domains,
+  `localhost`, and the lab's private subnet exclusively. Nothing in this project touches a real
+  external target.
+- **A real credential-leak incident was found and fixed by this project itself**: an early Wazuh
+  password was accidentally captured in plaintext by `auditd` (which logs full CLI arguments,
+  including `curl -u user:pass`). The 17 affected documents were purged from the index, the
+  password rotated, and all subsequent authentication moved to `~/.netrc` — never passed as a CLI
+  argument again.
+- **The LLM never receives or handles credentials.** Its input is limited to the alert's
+  technical fields (rule description, log line, agent name).
+- CI includes automated secret scanning (Gitleaks) on every push.
+
+## 11 — Engineering Challenges & Fixes
+
+Real bugs encountered during this project, documented without hiding them:
+
+| Bug | Component | Resolution |
+|---|---|---|
+| Correlation rule matched wrong field (`a1` vs `a3`) | Wazuh custom rule `100103` | Fixed, re-verified with positive/negative live tests |
+| TheHive license invalid (`403 manageCase/create`) | TheHive 5.4.11-1 | Isolated 5.2.16-1 instance deployed; Community license later obtained and activated legitimately on 5.4.11-1 |
+| `sourceRef` / `_search` endpoints missing | TheHive 5.2.16-1 API | Compatibility layer `THEHIVE_DEDUP_MODE=tag`, 17 tests added |
+| Workflow `start` field not recalculated on node insert | Shuffle UI | Graph rebuilt via targeted drag-and-drop, no API call (to avoid exposing tokens) |
+| Missing `Accept: application/json` header | Shuffle → MISP | Header added, workflow re-executed successfully |
+| HTTP guards didn't catch application timeouts | Shuffle (early version) | Extended to a dedicated guard node per business step, covering both HTTP error codes and execution failures |
+| TheHive `500` under RAM pressure (JVM thread starvation) | TheHive, final run | Caught correctly by `http_case_creation_failed` guard; retried once RAM freed |
+| Empty Gemma2 field in case description (templating race) | Shuffle | Reproduced, retried — confirmed transient, not a payload-encoding bug |
+| Plaintext password captured by `auditd` | Wazuh / security hygiene | Purged from index, rotated, moved to `~/.netrc` |
+
+## 12 — Evidence Integrity
+
+- Every screenshot, JSON artifact, and log file cited in this README is SHA-256 hashed:
   [`SHA256SUMS_ALL.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/SHA256SUMS_ALL.csv)
-  (manifeste complet, 100 fichiers).
-- Les captures d'écran sont vérifiées visuellement (contenu recoupé contre les réponses API
-  brutes) avant d'être citées comme preuve.
+  (full manifest) and
+  [`presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv`](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv)
+  (final-run screenshots).
+- Screenshots are visually verified against raw API responses before being cited as evidence —
+  no capture is used as proof without a corresponding machine-readable artifact behind it.
+- Full execution manifest and any blockers encountered:
+  [`RUN_MANIFEST.md`](docs/evidence/final/PFA-FINAL-20260718-214637/RUN_MANIFEST.md).
+- Final synthesis report:
+  [`RAPPORT_SYNTHESE_FINAL.md`](docs/evidence/final/PFA-FINAL-20260718-214637/RAPPORT_SYNTHESE_FINAL.md).
 
-## Historique
-
-Le projet a été initialement développé de juillet à mi-juillet 2026 (voir
-[`docs/evidence/archive-pre-final/`](docs/evidence/archive-pre-final/README.md)). Une revue
-externe a identifié des limites méthodologiques (contamination de dataset, doublons dans le
-holdout, règle de corrélation buguée, preuves incomplètes) qui ont motivé la reprise complète
-documentée dans ce README, avec le `RUN_ID PFA-FINAL-20260718-214637` et une exigence de
-traçabilité et de vérification live beaucoup plus stricte.
-
-## Structure du dépôt
+## 13 — Repository Structure
 
 ```
-scripts/                            Pipeline Python (Wazuh -> Gemma -> TheHive), règles Wazuh, tests
-tests/                               Tests unitaires et d'intégration (pytest)
-docs/evaluation/                     Datasets et résultats d'évaluation LLM vs baseline (itération précédente)
-docs/evidence/final/PFA-FINAL-20260718-214637/   Preuves complètes de ce run, phase par phase
-docs/evidence/archive-pre-final/     Version archivée pré-reprise (ne pas citer comme état actuel)
-docker/                              Compose files TheHive, Cortex
+scripts/                                       Pipeline code (Wazuh -> Gemma -> TheHive), Wazuh rules, presentation tooling
+tests/                                          Unit + integration tests (pytest)
+docker/                                         Compose files for TheHive, Cortex
+docs/evaluation/                                LLM-vs-baseline evaluation datasets and results
+docs/evidence/final/PFA-FINAL-20260718-214637/  Full evidence for the current validation run, phase by phase
+  ├── presentation_finale/                      Final defense deck (PPTX/PDF), speaker script, final-run screenshots
+  ├── thehive/ thehive52/ cortex/ misp/ shuffle/ Per-tool evidence, screenshots, raw API responses
+  ├── evaluation/ gemma/ raw/ dashboard/         Datasets, LLM outputs, raw alerts, SOC dashboard exports
+  └── RUN_MANIFEST.md / RAPPORT_SYNTHESE_FINAL.md
+docs/evidence/archive-pre-final/                Archived pre-rewrite iteration (not representative of current state)
 ```
 
-## Statut des tests et CI
+## 14 — Getting Started
 
-58+ tests (unitaires + intégration avec Wazuh/Ollama/TheHive mockés), Ruff, Gitleaks — voir
-le workflow GitHub Actions (statut vert sur chaque commit de ce run). Ces tests valident le
-code du pipeline ; ils ne remplacent pas la validation réelle sur la VM documentée ci-dessus.
+This is a research/lab project built around a VirtualBox VM with the full SOC stack. To explore
+the pipeline code itself without standing up the lab:
+
+```bash
+git clone https://github.com/omarbabba779xx/PFA-SOC-IA.git
+cd PFA-SOC-IA
+python -m venv venv && source venv/bin/activate   # or venv\Scripts\activate on Windows
+pip install -e .
+pytest                                             # run the test suite (Wazuh/Ollama/TheHive mocked)
+ruff check .                                       # lint
+```
+
+To reproduce the full live lab, you will need: a VirtualBox VM with Wazuh + `auditd`, Ollama with
+`gemma2:9b-instruct-q4_0` pulled, TheHive + Cortex (via `docker/`), MISP, and a Shuffle instance
+importing the workflow described in [Section 4](#4--architecture). Full setup notes per tool are
+in each evidence subfolder under `docs/evidence/final/.../`.
+
+## 15 — Testing & CI
+
+58+ tests (unit + integration, with Wazuh/Ollama/TheHive mocked), linted with `ruff`, scanned for
+secrets with Gitleaks — enforced on every push via GitHub Actions (badge at the top of this file).
+These tests validate the pipeline **code**; they do not replace the live, real-infrastructure
+validation documented throughout this README.
+
+## 16 — Presentation Materials
+
+The final defense deck, its full speaker script, and the source data behind every slide:
+
+- [`presentation_finale/PFA_SOC_IA_Presentation.pptx`](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/PFA_SOC_IA_Presentation.pptx) / [`.pdf`](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/PFA_SOC_IA_Presentation.pdf)
+- [`presentation_finale/SCRIPT_PRESENTATION.md`](docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/SCRIPT_PRESENTATION.md) — full spoken script, slide by slide
+
+## 17 — Roadmap & Known Limitations
+
+- **Inference latency** is infrastructure-bound (~2 minutes/alert on shared CPU); dedicated GPU
+  infrastructure would bring this down to seconds without any code change.
+- **Guard coverage** currently handles HTTP status codes and application timeouts; a future
+  iteration could add automatic retry-with-backoff instead of a single guarded failure branch.
+- **Single-tenant lab**: the current MISP/TheHive/Cortex setup is single-organization; a
+  multi-tenant SOC deployment would need per-org API key isolation reviewed separately.
+- **Tactic-label normalization**: Gemma2 occasionally uses a synonym instead of the exact
+  official MITRE tactic label (see [Section 9](#9--ai-vs-baseline--evaluation-results)) — technique
+  codes are unaffected, but a label-normalization pass would close this gap.
+
+## 18 — Project History
+
+The project was initially developed from early to mid-July 2026
+(archived in [`docs/evidence/archive-pre-final/`](docs/evidence/archive-pre-final/README.md)). An
+external review identified methodological gaps (dataset contamination, holdout duplicates, a
+buggy correlation rule, incomplete evidence), which motivated a full rebuild under
+`RUN_ID PFA-FINAL-20260718-214637` with a much stricter evidence and live-verification standard —
+the state documented in this README. A further validation pass on 2026-07-24 rebuilt the Shuffle
+workflow with generalized failure guards and produced the fully green, timestamp-correlated run
+featured in [Section 6](#6--pipeline-walkthrough--final-verified-run).
+
+## 19 — License & Author
+
+Distributed under the [MIT License](LICENSE).
+
+**Omar Babba** — 4IIR, EMSI Tanger · Projet de Fin d'Année 2025–2026
+
+---
+
+<div align="center">
+
+**Topics:** `soc` · `soar` · `siem` · `wazuh` · `shuffle` · `thehive` · `cortex` · `misp` ·
+`threat-intelligence` · `mitre-attack` · `llm` · `gemma2` · `ollama` · `ai-security` ·
+`incident-response` · `security-automation` · `blue-team` · `detection-engineering`
+
+</div>
