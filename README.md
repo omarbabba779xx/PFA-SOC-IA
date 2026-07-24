@@ -108,7 +108,7 @@ model would return a triage in a few seconds.
 ## 4 — Architecture
 
 <p align="center">
-  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/architecture_pipeline.svg" width="100%" alt="Aegis-SOC-IA seven-stage pipeline architecture">
+  <img src="docs/evidence/final/PFA-FINAL-20260718-214637/presentation_finale/screenshots/architecture_pipeline.png" width="100%" alt="Aegis-SOC-IA seven-stage pipeline architecture">
 </p>
 
 | # | Stage | Role |
