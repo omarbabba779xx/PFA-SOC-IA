@@ -1,7 +1,6 @@
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.util import Emu, Inches, Pt
 
 SS = r"C:\Users\nextlevel\Desktop\PFA-SOC-IA\docs\evidence\final\PFA-FINAL-20260718-214637\presentation_finale\screenshots"
 
