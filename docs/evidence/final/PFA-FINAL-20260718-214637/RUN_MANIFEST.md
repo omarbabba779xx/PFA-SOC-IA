@@ -7,11 +7,14 @@
 - **Branche Git** : `final-e2e-validation-PFA-FINAL-20260718-214637`
 - **Commit initial** (avant toute action de ce run) : `29af680` (master, avant création de la branche)
 
-## Statut : BLOQUÉ à la Phase 0 → Phase 1
+## Statut : ✅ TERMINÉ — toutes les phases complétées (dernière mise à jour : 2026-07-24)
 
-Ce manifeste documente honnêtement l'état réel au moment où ce run a été initié. Aucune
-alerte, résultat, capture ou identifiant n'a été produit pour ce RUN_ID — voir la section
-"Blocage" ci-dessous avant de lire le reste de ce document.
+Ce manifeste documente honnêtement l'état réel du run, phase par phase, dans l'ordre où les
+choses se sont produites — y compris le blocage initial (section "Blocage" ci-dessous), qui a
+été résolu dès le 2026-07-18. **Ce blocage ne reflète plus l'état actuel du projet** : toutes
+les phases (0 à 13) sont désormais complétées, et une validation finale complémentaire a été
+réalisée le 2026-07-24 (voir la dernière section de ce document). Le reste de ce fichier est
+conservé tel quel, dans son ordre chronologique réel, pour la traçabilité.
 
 ## Environnement VM (collecté via VBoxManage sur l'hôte, PAS via un shell dans la VM)
 
@@ -238,6 +241,38 @@ MITRE native de Wazuh (`rule.mitre`) : 0/6 — sans le triage LLM, aucune de ces
 n'aurait de technique MITRE associée automatiquement. Détail complet dans
 `evaluation/EVALUATION.md` et `evaluation/DATASET_FINAL.json`.
 
+### Phase 13 — Rapport de synthèse final : ✅ complétée
+
+Voir [`RAPPORT_SYNTHESE_FINAL.md`](RAPPORT_SYNTHESE_FINAL.md).
+
+## Mise à jour — Validation finale complémentaire, workflow Shuffle à 13 nœuds (2026-07-24)
+
+Une dernière passe de validation a été réalisée avant la soutenance, sur une version étendue
+du workflow Shuffle "Orchestration complete SOC-IA" : **13 éléments visuels** (1 déclencheur
+webhook + 6 nœuds métier + 6 nœuds de garde d'échec dédiés, un par étape critique), contre
+l'architecture antérieure à gardes limitées documentée en Phase 8.
+
+- Alerte Wazuh réelle rejouée avec son timestamp d'origine préservé (`2026-07-24T18:03:15.715Z`,
+  règle `100103`, `rule.level: 10`) pour permettre une corrélation temporelle exacte entre
+  chaque preuve.
+- Exécution Shuffle `63e59cbe-9d4a-4c67-b1f9-8aae54dd3609` : statut `FINISHED`, 12/12 résultats
+  reçus, tous les nœuds métier `SUCCESS`, les 6 gardes d'échec correctement `SKIPPED`.
+- Chaîne complète vérifiée : Gemma2 (triage réel, ~5 min d'inférence) → TheHive (cas `~57392`,
+  #35, triage Gemma2 brut visible dans la description) → Cortex (job `Rh6dlZ8B_DcSw-yRJeZw`,
+  AbuseIPDB, score de malveillance 100/100) → routage sur `rule.level` du SIEM (pas sur la
+  criticité du LLM) → MISP (événement `#19`, "First recorded change: 2026-07-24 19:32:19",
+  corrélé à la minute près) → notification (relais réel par e-mail, `email_forwarded: true`).
+- Deux échecs transitoires réels rencontrés et correctement absorbés par les gardes lors des
+  tentatives précédentes de cette même run : un `500` TheHive sous pression RAM (starvation de
+  threads JVM pendant l'appel Gemma2), et une course de templating Shuffle ayant brièvement
+  laissé un champ vide — les deux ont déclenché le nœud de garde attendu, confirmant que le
+  mécanisme de garde fonctionne bien en conditions réelles, pas seulement en théorie.
+
+Captures et hashes SHA-256 correspondants :
+[`presentation_finale/screenshots/`](presentation_finale/screenshots/) (fichiers `40` à `45`) et
+[`presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv`](presentation_finale/screenshots/SHA256SUMS_presentation_finale.csv).
+
 ## Prochaine action
 
-Phase 13 (rapport de synthèse final) reste à réaliser.
+Aucune action bloquante restante côté validation technique. Rédaction du rapport de stage en
+cours.
